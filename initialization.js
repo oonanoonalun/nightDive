@@ -33,13 +33,15 @@ var frameCounter = 0,
                 'maxRadius': 100,
                 'minDiffusion': cells[0].size,
                 'maxDiffusion': cells[0].size * 13,
+                'minDeathChance': 0.01, // chance that the light will be removed when it goes dark. 1 = will certainly die when it goes dark.
+                'maxDeathChance': 0.025,
                 'parentCellsArray': cells,
                 'minCellIndex': 0,
                 'maxCellIndex': totalNumberOfCells - 1
         };
 
-settings.oscillators.push(makeOscillator(5000, 0, SINE, 'firstTestOscillator'));
-
+//settings.oscillators.push(makeOscillator(5000, 0, SINE, 'firstTestOscillator'));
+makeRandomOscillators(10, 2000, 12000, settings.oscillators);
 makeRandomLights(30, randomLightSettingsDefault, settings.entities.lights, settings.oscillators);
 
 //these sets of numberOfCells and cellsPerRow work for our 800 x 600 canvas (double the number of cells pers row = 4x the number of cells overall):

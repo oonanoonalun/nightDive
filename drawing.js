@@ -4,7 +4,7 @@ function drawAllCells(cellsArray) {
                 getCellColor20180108(cell, cells);
         }
         // DON'T DELETE THIS--it's important even if it's commented out (the 'noramlizeCellsArrayBrightnessRange' line)
-        normalizeCellsArrayBrightnessRange(cellsArray, 0, 255);
+        //normalizeCellsArrayBrightnessRange(cellsArray, 0, 255);
         // final steps for drawing the cells and making sure its color is valid
         for (var j = 0; j < cellsArray.length; j++) {
                 cellsArray[j].color = toHexColor(capColorBrightness(cellsArray[j].color, [255, 255, 255]));
@@ -36,31 +36,46 @@ function makeRandomLights(numberOfLights, randomLightParametersObject, destinati
                         randomCellIndex = randomNumberBetweenNumbers(lightSettings.minCellIndex, lightSettings.maxCellIndex, true),
                         randomOscillator = oscillatorsArray[randomNumberBetweenNumbers(0, (oscillatorsArray.length - 1), true)],
                         randomDiffusion = randomNumberBetweenNumbers(lightSettings.minDiffusion, lightSettings.maxDiffusion, true),
+                        randomDeathChance = randomNumberBetweenNumbers(lightSettings.minDeathChance, lightSettings.maxDeathChance, false),
                         allCellsList = lightSettings.parentCellsArray;
-                destinationArray.push(makeLight(randomBrightness, randomRadius, randomCellIndex, randomOscillator, randomDiffusion, allCellsList));
+                destinationArray.push(makeLight(randomBrightness, randomRadius, randomCellIndex, randomOscillator, randomDiffusion, randomDeathChance, allCellsList, destinationArray));
         }
 }
 
-function makeLight(brightness, radius, cellIndex, oscillator, diffusion, allCellsList) {
+function makeLight(brightness, radius, cellIndex, oscillator, diffusion, deathChance, allCellsList, lightsArray) {
         var light = {
                 'brightness': brightness,
                 'radius': radius,
                 'diffusion': diffusion,
                 'oscillator': oscillator,
-                'parentCellsArray': allCellsList,
+                'deathChance': deathChance,
+                'parentCellsArray': allCellsList, // large cellsList of which light's cell is a part
+                'lightParentArray': lightsArray, // lights array
                 'cellIndex': cellIndex,
                 'cell': allCellsList[cellIndex]
         };
         return light;
 }
 
+
 function updateLight(light) {
+        // possible death
+        if (Math.random() <= light.deathChance && light.oscillator.value < 0.1) {
+                var lightsArrayIndex = light.lightParentArray.indexOf(light);
+                light.lightParentArray.splice(lightsArrayIndex, 1);
+        }
         // update location
         light.cell = light.parentCellsArray[light.cellIndex];
 }
 
-function updateLights(arrayOfLights) {
-        for (var i = 0; i < arrayOfLights.length; i++) updateLight(arrayOfLights[i]);       
+function updateLights(arrayOfLights, minLights, maxLights) {
+        // individual light update
+        for (var i = 0; i < arrayOfLights.length; i++) updateLight(arrayOfLights[i]);
+        // keeping enough lights alive
+        if (arrayOfLights.length < maxLights) {
+                if (arrayOfLights.length < minLights) makeRandomLights(1, randomLightSettingsDefault, settings.entities.lights, settings.oscillators);
+                else if (Math.random() < 0.05) makeRandomLights(1, randomLightSettingsDefault, settings.entities.lights, settings.oscillators);
+        }
 }
 
 function moveEntity(entity, direction, numberOfCells) {
@@ -109,9 +124,23 @@ function moveArrayOfEntities(arrayOfEntities, direction, numberOfCells) {
 
 function makeOscillator(period, phase, waveShape, name) {
         // WRONG should have a 'phaseWanderingScale' property with an update that maybe gives the phase a 'wandering velocity'
-        var osc = {'period': period, 'value': 0, 'phase': phase, 'waveShape': waveShape, 'name': name};
+        var osc = {
+                'period': period,
+                'value': 0,
+                'phase': phase,
+                'waveShape': waveShape,
+                'name': name
+        };
         osc.halfPeriod = 0.5 * osc.period;
         return osc;
+}
+
+function makeRandomOscillators(numberOfOscillators, minPeriod, maxPeriod, destinationArray) {
+        for (var i = 0; i < numberOfOscillators; i++) {
+                var randomPeriod = randomNumberBetweenNumbers(minPeriod, maxPeriod, true),
+                        newOsc = makeOscillator(randomPeriod, Math.random(), SINE, 'randomOscillator');
+                destinationArray.push(newOsc);
+        }
 }
 
 function updateOscillator(oscillator) {
@@ -133,21 +162,6 @@ function updateOscillator(oscillator) {
 
 function updateOscillators(arrayOfOscillators) {
         for (var i = 0; i < arrayOfOscillators.length; i++) updateOscillator(arrayOfOscillators[i]);
-}
-
-function drawAllCells(cellsArray) {
-        for (var i = 0; i < cellsArray.length; i++) {
-                var cell = cellsArray[i];
-                getCellColor20180108(cell, cells);
-        }
-        // DON'T DELETE THIS--it's important even if it's commented out (the 'noramlizeCellsArrayBrightnessRange' line)
-        normalizeCellsArrayBrightnessRange(cellsArray, 0, 255);
-        // final steps for drawing the cells and making sure its color is valid
-        for (var j = 0; j < cellsArray.length; j++) {
-                cellsArray[j].color = toHexColor(capColorBrightness(cellsArray[j].color, [255, 255, 255]));
-                context.fillStyle = cellsArray[j].color;
-                context.fillRect(cellsArray[j].left, cellsArray[j].top, cellsArray[j].size, cellsArray[j].size);
-        }
 }
 
 function normalizeCellsArrayBrightnessRange(cellsArray, darkestValue, brightestValue) {

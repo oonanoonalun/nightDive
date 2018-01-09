@@ -15,12 +15,13 @@ function mainLoop() {
     context.clearRect(0, 0, 800, 600);
     countFPS();
     updateOscillators(settings.oscillators);
-    updateLights(settings.entities.lights);
+    updateLights(settings.entities.lights, 15, 45);
     moveCameraWithButtons();
     drawAllCells(cells);
     requestAnimFrame();
     if (frameCounter % 60 === 0) {  //show fps every two seconds if at 30fps
         console.log('FPS: ' + fps.toFixed(0));
+        console.log(settings.entities.lights.length);
     }
 }
 
