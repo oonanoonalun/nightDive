@@ -2,6 +2,15 @@ function drawAllCells(cellsArray) {
         for (var i = 0; i < cellsArray.length; i++) {
                 var cell = cellsArray[i];
                 getCellColor20180108(cell, cells);
+                // reticle is tinted
+                if (interfaceSettings.showReticle) {
+                        if (interfaceSettings.reticleCenterCells.indexOf(cell) !== -1) cell.color = addColors(cell.color, [0, 0, 0]);
+                        if (interfaceSettings.reticleOuterCornerCells.indexOf(cell) !== -1) cell.color = addColors(cell.color, [0, 0, 0]);
+                        if (interfaceSettings.reticleFarOuterCornerCells.indexOf(cell) !== -1) cell.color = addColors(cell.color, [128, 0, 0]);
+                        /*var upLeftCenterCell = cells[(totalNumberOfCells / 2) + (cellsPerRow / 2)],
+                                distanceToCenter = findDistanceBetweenPoints([upLeftCenterCell.left + cells[0].size, upLeftCenterCell.top + cells[0].size], cell.centerXY);
+                        if (distanceToCenter < 20) cell.color = addColors(cell.color, [128, 0, 0]);*/
+                }
         }
         // DON'T DELETE THIS--it's important even if it's commented out (the 'noramlizeCellsArrayBrightnessRange' line)
         //normalizeCellsArrayBrightnessRange(cellsArray, 0, 255);
@@ -64,6 +73,8 @@ function updateLight(light) {
                 var lightsArrayIndex = light.lightParentArray.indexOf(light);
                 light.lightParentArray.splice(lightsArrayIndex, 1);
         }
+        // reticle kills lights
+        
         // update location
         light.cell = light.parentCellsArray[light.cellIndex];
 }

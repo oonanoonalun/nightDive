@@ -44,6 +44,8 @@ var frameCounter = 0,
 makeRandomOscillators(10, 5000, 20000, settings.oscillators);
 makeRandomLights(30, randomLightSettingsDefault, settings.entities.lights, settings.oscillators);
 
+initializeReticle();
+
 //these sets of numberOfCells and cellsPerRow work for our 800 x 600 canvas (double the number of cells pers row = 4x the number of cells overall):
 //300, 20
 //768, 32
@@ -217,6 +219,28 @@ function countFPS() {   //have to turn on time stamps in Chrome inspector for th
         //console.log('Frame: ' + (frameCounter + 1));  //should be ten seconds apart at 30fps
     }
     frameCounter++;
+}
+
+function initializeReticle() {
+        var centerUpperLeftCellIndex = (totalNumberOfCells / 2) + (cellsPerRow / 2);
+        interfaceSettings.reticleCenterCells = [
+                cells[centerUpperLeftCellIndex],
+                cells[centerUpperLeftCellIndex + 1],
+                cells[centerUpperLeftCellIndex + cellsPerRow],
+                cells[centerUpperLeftCellIndex + cellsPerRow + 1]
+        ];
+        interfaceSettings.reticleOuterCornerCells = [
+                cells[centerUpperLeftCellIndex].neighborUpLeft,
+                cells[centerUpperLeftCellIndex + 1].neighborUpRight,
+                cells[centerUpperLeftCellIndex + cellsPerRow].neighborDownLeft,
+                cells[centerUpperLeftCellIndex + cellsPerRow + 1].neighborDownRight                      
+        ];
+        interfaceSettings.reticleFarOuterCornerCells = [
+                cells[centerUpperLeftCellIndex].neighborUpLeft.neighborUpLeft,
+                cells[centerUpperLeftCellIndex + 1].neighborUpRight.neighborUpRight,
+                cells[centerUpperLeftCellIndex + cellsPerRow].neighborDownLeft.neighborDownLeft,
+                cells[centerUpperLeftCellIndex + cellsPerRow + 1].neighborDownRight.neighborDownRight                 
+        ];
 }
 
 //FROM STACK OVERFLOW.COM for counteing fps

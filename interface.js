@@ -6,12 +6,17 @@ var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68,
         KEY_D = 68,
         KEY_SPACE = 32,
         keysDown = [],
+        CONTINUOUS_MOVEMENT = 'continuousMovementControlScheme',
+        NON_CONTINUOUS_MOVEMENT = 'nonContinuousMovementControlScheme',
         interfaceSettings = {
                 'noUpMoveUntil': Date.now(),
                 'noDownMoveUntil': Date.now(),
                 'noLeftMoveUntil': Date.now(),
                 'noRightMoveUntil': Date.now(),
-                'moveRepeatDelay': 30
+                'cellsPerMove': 2,
+                'moveRepeatDelay': 0,
+                'controlScheme': CONTINUOUS_MOVEMENT,
+                'showReticle': true
         };
 
 function moveCameraWithButtons() {
@@ -49,30 +54,59 @@ function moveCameraWithButtons() {
         });
         if (keysDown.indexOf(KEY_W) !== -1) { // move up
                 if (interfaceSettings.noUpMoveUntil <= Date.now()) {
-                        moveArrayOfEntities(settings.entities.lights, DOWN, 1);
+                        moveArrayOfEntities(settings.entities.lights, DOWN, interfaceSettings.cellsPerMove);
                         interfaceSettings.noUpMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
                 }
         }
         if (keysDown.indexOf(KEY_S) !== -1) { // move down
                 if (interfaceSettings.noDownMoveUntil <= Date.now()) {
-                        moveArrayOfEntities(settings.entities.lights, UP, 1);
+                        moveArrayOfEntities(settings.entities.lights, UP, interfaceSettings.cellsPerMove);
                         interfaceSettings.noDownMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
                 }
         }
         if (keysDown.indexOf(KEY_A) !== -1) { // move left
                 if (interfaceSettings.noLeftMoveUntil <= Date.now()) {
-                        moveArrayOfEntities(settings.entities.lights, RIGHT, 1);
+                        moveArrayOfEntities(settings.entities.lights, RIGHT, interfaceSettings.cellsPerMove);
                         interfaceSettings.noLeftMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
                 }
         }
         if (keysDown.indexOf(KEY_D) !== -1) { // move right
                 if (interfaceSettings.noRightMoveUntil <= Date.now()) {
-                        moveArrayOfEntities(settings.entities.lights, LEFT, 1);
+                        moveArrayOfEntities(settings.entities.lights, LEFT, interfaceSettings.cellsPerMove);
                         interfaceSettings.noRightMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
                 }
         }
 }
 
+function moveCameraWithButtonsContinuous() {
+        $('body').on('keydown', function (event) {
+                interfaceSettings.lastButtonPressed = event.which;
+        });
+        if (interfaceSettings.lastButtonPressed === KEY_W) { // move up
+                if (interfaceSettings.noUpMoveUntil <= Date.now()) {
+                        moveArrayOfEntities(settings.entities.lights, DOWN, interfaceSettings.cellsPerMove);
+                        interfaceSettings.noUpMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
+                }
+        }
+        if (interfaceSettings.lastButtonPressed === KEY_S) { // move down
+                if (interfaceSettings.noDownMoveUntil <= Date.now()) {
+                        moveArrayOfEntities(settings.entities.lights, UP, interfaceSettings.cellsPerMove);
+                        interfaceSettings.noDownMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
+                }
+        }
+        if (interfaceSettings.lastButtonPressed === KEY_A) { // move left
+                if (interfaceSettings.noLeftMoveUntil <= Date.now()) {
+                        moveArrayOfEntities(settings.entities.lights, RIGHT, interfaceSettings.cellsPerMove);
+                        interfaceSettings.noLeftMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
+                }
+        }
+        if (interfaceSettings.lastButtonPressed === KEY_D) { // move right
+                if (interfaceSettings.noRightMoveUntil <= Date.now()) {
+                        moveArrayOfEntities(settings.entities.lights, LEFT, interfaceSettings.cellsPerMove);
+                        interfaceSettings.noRightMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
+                }
+        }
+}
 
 function moveEntity(entity, direction, numberOfCells) {
         var index = entity.cellIndex;

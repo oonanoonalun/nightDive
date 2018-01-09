@@ -16,12 +16,16 @@ function mainLoop() {
     countFPS();
     updateOscillators(settings.oscillators);
     updateLights(settings.entities.lights, 8, 30);
-    moveCameraWithButtons();
+    if (interfaceSettings.controlScheme === NON_CONTINUOUS_MOVEMENT) {
+        moveCameraWithButtons();
+    }
+    if (interfaceSettings.controlScheme === CONTINUOUS_MOVEMENT) {
+        moveCameraWithButtonsContinuous();
+    }
     drawAllCells(cells);
     requestAnimFrame();
     if (frameCounter % 60 === 0) {  //show fps every two seconds if at 30fps
         console.log('FPS: ' + fps.toFixed(0));
-        console.log(settings.entities.lights.length);
     }
 }
 
