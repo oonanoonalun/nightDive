@@ -1,7 +1,5 @@
 //DRAWING CELLS
 
-
-
 function getCellColor20180108(cell, allCellsList) {
         var brightness;
         // applying lights
@@ -70,6 +68,10 @@ function moveEntity(entity, direction, numberOfCells) {
 }
 
 function moveArrayOfEntities(arrayOfEntities, direction, numberOfCells) {
+        // NOTE: the setting.entities property is an OBJECT. To move everything in it using this function as it is now, you
+        //      will/would have to push the contents of all the arrays that are properties of 'settings.entities' to a single array,
+        //      send each array to this function individually, or learn how to automate grabbing successive properties' values,
+        //      which I don't know how to do.
         for (var i = 0; i < arrayOfEntities.length; i++) {
                 var entity = arrayOfEntities[i];
                 moveEntity(entity, direction, numberOfCells);
@@ -108,18 +110,10 @@ function drawAllCells(cellsArray) {
         for (var i = 0; i < cellsArray.length; i++) {
                 var cell = cellsArray[i];
                 getCellColor20180108(cell, cells);
-                /////////
-                //cellsArray[i].color = getCellColor20180106(cellsArray[i]);
-                // just trying make larger-scale patterns, with a cell's color drawing on a wider swath of other cells as influence. But really, the influence of cells should be weighted with distance.
-                //var averageBrightnessOfNearbyCells = getAverageBrightnessOfCellsInRadiusOfCell(cellsArray[i], cellsArray, 150);
-                /*for (var k = 0; k < 3; k++) {
-                        cellsArray[i].color[k] = (cellsArray[i].color[k] + averageBrightnessOfNearbyCells) / 2;
-                }*/
-                //varyCellBrightnessBasedOnProximityToEmittersAndDampers(cellsArray[i], modifierCells);
-                //////////
         }
         // DON'T DELETE THIS--it's important even if it's commented out (the 'noramlizeCellsArrayBrightnessRange' line)
         //normalizeCellsArrayBrightnessRange(cellsArray, 0, 255);
+        // final steps for drawing the cells and making sure its color is valid
         for (var j = 0; j < cellsArray.length; j++) {
                 cellsArray[j].color = toHexColor(capColorBrightness(cellsArray[j].color, [255, 255, 255]));
                 context.fillStyle = cellsArray[j].color;

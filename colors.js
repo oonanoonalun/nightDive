@@ -88,6 +88,7 @@ function multiplyColorByNumber(color, multiplier) {
 }
 
 function colorToFixed(color) {
+        // what's this for? Probably just looking at logging of colors?
         var abbreviatedColor = [];
         for (var i = 0; i < 3; i++) {
                 abbreviatedColor[i] = Math.round(color[i]);     //wanted this to be "color[i].toFixed(2);" but for some reason that wasn't working.
@@ -151,73 +152,6 @@ function brightnessToSpectrum(darkThreshold, maxBrightness, cell) {  //should se
                 return newColor;
         }
 }
-
-function setCellColorGroup(value, cell) {
-        if (value <= 0.2) {
-                cell.colorGroup = 0; 
-        }
-        if (value > 0.2 && value <= 0.4) {
-                cell.colorGroup = 1; 
-        }
-        if (value > 0.4 && value <= 0.6) {
-                cell.colorGroup = 2; 
-        }
-        if (value > 0.6 && value <= 0.8) {
-                cell.colorGroup = 3; 
-        }
-        if (value > 0.8 && value <= 1) {
-                cell.colorGroup = 4; 
-        }
-}
-
-function impulseToColor (cell) {
-        if (cell.colorGroup === 0 && impulses[0] !== null) {
-        //if (averageBrightness(cell.color) < 255 && impulses[0] !== null) {    //this demonstrates that some flicker during impulses comes from the brightnessToSpectrum function.
-                cell.color = addColors(cell.color, impulses[0].currentColor);
-        }
-}
-
-
-//find the current, average color of a list of oscillators--essentially composites the current state of a group oscillators
-function findOscillatorsColor(oscillatorsList) {    //the oscillatorsList passed should be cell.oscillators
-        if (oscillatorsList.length > 0) {
-                var oscillatorsColor = oscillatorsList[0].currentColor;
-                if (oscillatorsList.length > 1) {
-                        for (var i = 1; i < oscillatorsList.length; i++) {
-                                oscillatorsColor = addColors(oscillatorsColor, oscillatorsList[i].currentColor);
-                        }
-                }
-                return (divideColorByNumber(oscillatorsColor, oscillatorsList.length));
-        }
-}
-
-
-function findImpulsesColor(impulsesList) {      //this will return a single color that is the sum of the colors of an array of impulses
-        if (impulsesList.length === 1) {        //if there's only one impulse in the list
-                return impulsesList[0].currentColor;    //then return its current color
-        }
-        var newImpulsesColor = impulsesList[0].currentColor;    //this var will hold the summed colors of a list of impulses
-        for (var i = 1; i < impulsesList.length; i++) {         //going over the whole list of impulses
-                addColors(newImpulsesColor, impulsesList[i].currentColor);      //and adding them to newImpulsesColor
-        }
-        return capColorBrightness(newImpulsesColor, [255, 255, 255]);   //returning a brightness-capped sum of all the impulses' colors
-}
-
-function findColorOfImpulsesAffectingCell(cell, impulsesList) {
-        var impulsesAffectingCell = [],         //this will hold all impulses that are currently affecting this cell
-        activeImpulses = findActiveImpulses(impulsesList);      //this creates an array of active impulses
-        for (var i = 0; i < activeImpulses.length; i++) {              //checking all active impulses
-                if (activeImpulses[i].cellsAffected.indexOf(cell) >= 0) {      //checking all active impulses to see if they have the cell being draw in their array of cellsAffected
-                        impulsesAffectingCell.push(activeImpulses[i]);          //and if they do, adding the impulse to an array of impulses whose color will be combined and added to the cell's color
-                }
-        }
-        if (impulsesAffectingCell.length > 0) {         //if any active impulses were found to have this cell on their list of cells they affect (impulse.cellsAffected)
-                return capColorBrightness(findImpulsesColor(impulsesAffectingCell), [255, 255, 255]);   //this function returns the sum of their colors
-        } else {
-                return [0, 0, 0];       //otherwise this function will return no additional color
-        }
-}
-
 
 
 //find the current, average color of all a cell's neighbors
