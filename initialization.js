@@ -4,9 +4,6 @@
 
 //GLOBAL VARS. Should there be no global vars? If so, figure out where all these should go.
 var cells = [],
-modifierCells = [],
-DAMPER = 'damperTypeModifierCell',
-EMITTER = 'emitterTypeModifierCell',
 buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68, F = 70, Z = 90, X = 88, C = 67, V = 86],
 BUTTON_SPACE = 32,
 frameCounter = 0,
@@ -36,7 +33,6 @@ var cellsPerRow = 80,
         maxCycleLength = minCycleLength * maxCycleLengthRatio;        // max possible cycle length is minCycleLenght times this number
 makeCells(totalNumberOfCells, cellsPerRow, cells, minCycleLength, maxCycleLength);
 findNeighbors(cells, cellsPerRow);
-blendCycleLengths(cells);
 
 settings.entities.lights.push(makeLight(255, 50, 1700, settings.oscillators[0], cells));
 
@@ -57,113 +53,6 @@ settings.entities.lights.push(makeLight(255, 50, 1700, settings.oscillators[0], 
 
 //sortCellsIntoRows(cells);
 //sortCellsIntoColumns(cells);
-
-function assignInitialModifierCells(
-        allCellsList,
-        numberOfEmitters,
-        minEmitterRadius,
-        maxEmitterRadius,
-        minEmitterIntensity,
-        maxEmitterIntensity,
-        minEmitterBirthDuration,
-        maxEmitterBirthDuration,
-        minEmitterLifeDuration,
-        maxEmitterLifeDuration,
-        minEmitterDeathDuration,
-        maxEmitterDeathDuration,
-        numberOfDampers,
-        minDamperRadius,
-        maxDamperRadius,
-        minDamperIntensity,
-        maxDamperIntensity,
-        minDamperBirthDuration,
-        maxDamperBirthDuration,
-        minDamperLifeDuration,
-        maxDamperLifeDuration,
-        minDamperDeathDuration,
-        maxDamperDeathDuration) {
-        for (var i = 0; i < numberOfEmitters; i++) {
-                assignEmitter(allCellsList,
-                        minEmitterRadius,
-                        maxEmitterRadius,
-                        minEmitterIntensity,
-                        maxEmitterIntensity,
-                        minEmitterBirthDuration,
-                        maxEmitterBirthDuration,
-                        minEmitterLifeDuration,
-                        maxEmitterLifeDuration,
-                        minEmitterDeathDuration,
-                        maxEmitterDeathDuration
-                );
-        }
-        for (var j = 0; j < numberOfDampers; j++) {
-                assignDamper(allCellsList,
-                        minDamperRadius,
-                        maxDamperRadius,
-                        minDamperIntensity,
-                        maxDamperIntensity,
-                        minDamperBirthDuration,
-                        maxDamperBirthDuration,
-                        minDamperLifeDuration,
-                        maxDamperLifeDuration,
-                        minDamperDeathDuration,
-                        maxDamperDeathDuration
-                );             
-        }
-}
-
-function assignEmitter(allCellsList, minRadius, maxRadius, minIntensity, maxIntensity, minBirthDuration, maxBirthDuration, minLifeDuration, maxLifeDuration, minDeathDuration, maxDeathDuration) {
-        var randomIndex = randomNumberBetweenNumbers(0, (allCellsList.length - 1), true),
-                randomRadius = randomNumberBetweenNumbers(minRadius, maxRadius , true),
-                randomIntensity = randomNumberBetweenNumbers(minIntensity, maxIntensity, true),
-                randomBirthDuration = randomNumberBetweenNumbers(minBirthDuration, maxBirthDuration, true),
-                randomLifeDuration = randomNumberBetweenNumbers(minLifeDuration, maxLifeDuration, true),
-                randomDeathDuration = randomNumberBetweenNumbers(minDeathDuration, maxDeathDuration, true);
-        // if this cell is current in the modifierCells array, pick a new random cell to turn into a damper
-        if (modifierCells.indexOf(allCellsList[randomIndex]) !== -1) randomDamperIndex = randomNumberBetweenNumbers(0, (allCellsList.length - 1), true);
-        // if it's not, make it a modifier cell
-        else {
-                var emitter = allCellsList[randomIndex];
-                emitter.modifierType = EMITTER;
-                emitter.radius = randomRadius;
-                emitter.maxRadius = randomRadius;
-                emitter.intensity = randomIntensity;
-                emitter.maxIntensity = randomIntensity;
-                // life stage changes are predetermined so that they can be passed on when a neighbor 'become' the cell as it moves.
-                emitter.createdAt = Date.now();
-                emitter.beingBornUntil = Date.now() + randomBirthDuration;
-                emitter.notDyingUntil = emitter.beingBornUntil + randomLifeDuration;
-                emitter.notDeadUntil = emitter.notDyingUntil + randomDeathDuration;
-                modifierCells.push(emitter);
-        }
-}
-
-function assignDamper(allCellsList, minRadius, maxRadius, minIntensity, maxIntensity, minBirthDuration, maxBirthDuration, minLifeDuration, maxLifeDuration, minDeathDuration, maxDeathDuration) {
-        var randomIndex = randomNumberBetweenNumbers(0, (allCellsList.length - 1), true),
-                randomRadius = randomNumberBetweenNumbers(minRadius, maxRadius , true),
-                randomIntensity = randomNumberBetweenNumbers(minIntensity, maxIntensity, true),
-                randomBirthDuration = randomNumberBetweenNumbers(minBirthDuration, maxBirthDuration, true),
-                randomLifeDuration = randomNumberBetweenNumbers(minLifeDuration, maxLifeDuration, true),
-                randomDeathDuration = randomNumberBetweenNumbers(minDeathDuration, maxDeathDuration, true);
-        // if this cell is current in the modifierCells array, pick a new random cell to turn into a damper
-        if (modifierCells.indexOf(allCellsList[randomIndex]) !== -1) randomDamperIndex = randomNumberBetweenNumbers(0, (allCellsList.length - 1), true);
-        // if it's not, make it a modifier cell
-        else {
-                var damper = allCellsList[randomIndex];
-                damper.modifierType = DAMPER;
-                damper.radius = randomRadius;
-                damper.maxRadius = randomRadius;
-                damper.intensity = randomIntensity;
-                damper.maxIntensity = randomIntensity;
-                // life stage changes are predetermined so that they can be passed on when a neighbor 'become' the cell as it moves.
-                damper.createdAt = Date.now();
-                damper.beingBornUntil = Date.now() + randomBirthDuration;
-                damper.notDyingUntil = damper.beingBornUntil + randomLifeDuration;
-                damper.notDeadUntil = damper.notDyingUntil + randomDeathDuration;
-                modifierCells.push(damper);
-        }
-}
-
 
 ////////////////////
 //CELLS
@@ -190,12 +79,8 @@ function makeCells(numberOfCells, cellsPerRow, cellsList, minCycleLength, maxCyc
                                 'neighborDownLeft': null,
                                 'neighborUpRight': null,
                                 'neighborUpLeft': null,
-                                'minCycleLength': minCycleLength,
-                                'maxCycleLength': maxCycleLength,
-                                'cycleLength': null,
                                 'centerXY': []
                         };
-                        newCell.cycleLength = newCell.minCycleLength + (Math.random() * (newCell.maxCycleLength - newCell.minCycleLength));
                         newCell.centerXY = [newCell.left + 0.5 * newCell.size, newCell.top + 0.5 * newCell.size];
                         cellsList.push(newCell);	//adding this cell to the list of all of the "geographical" cells in the level
                 }
