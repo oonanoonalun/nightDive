@@ -78,50 +78,6 @@ function updateLights(arrayOfLights, minLights, maxLights) {
         }
 }
 
-function moveEntity(entity, direction, numberOfCells) {
-        var index = entity.cellIndex;
-        if (direction === UP || direction === UP_LEFT || direction === UP_RIGHT) {
-                if (index < cellsPerRow) { // if it's on the top edge
-                        index += (numberOfCells * cellsPerRow) + (totalNumberOfCells - cellsPerRow);
-                } else {
-                        index -= numberOfCells * cellsPerRow;
-                }
-        }
-        if (direction === DOWN || direction === DOWN_LEFT || direction === DOWN_RIGHT) {
-                if (index >= totalNumberOfCells - cellsPerRow) { // i.e. if it's on the bottom edge
-                        index -= totalNumberOfCells - (cellsPerRow - (numberOfCells * cellsPerRow));
-                } else {
-                        index += numberOfCells * cellsPerRow;
-                }                
-        }
-        if (direction === LEFT || direction === UP_LEFT || direction === DOWN_LEFT) {
-                if (index === 0 || index % cellsPerRow === 0) { // if it's on the left edge
-                        index += cellsPerRow - numberOfCells;
-                } else {
-                        index -= numberOfCells;
-                }                    
-        }
-        if (direction === RIGHT || direction === UP_RIGHT || direction === DOWN_RIGHT) {
-                if (cellsPerRow % index === 1) { // if it's on the right edge
-                        index -= cellsPerRow - numberOfCells;
-                } else {
-                        index += numberOfCells;
-                }                  
-        }
-        entity.cellIndex = index;
-}
-
-function moveArrayOfEntities(arrayOfEntities, direction, numberOfCells) {
-        // NOTE: the setting.entities property is an OBJECT. To move everything in it using this function as it is now, you
-        //      will/would have to push the contents of all the arrays that are properties of 'settings.entities' to a single array,
-        //      send each array to this function individually, or learn how to automate grabbing successive properties' values,
-        //      which I don't know how to do.
-        for (var i = 0; i < arrayOfEntities.length; i++) {
-                var entity = arrayOfEntities[i];
-                moveEntity(entity, direction, numberOfCells);
-        }
-}
-
 function makeOscillator(period, phase, waveShape, name) {
         // WRONG should have a 'phaseWanderingScale' property with an update that maybe gives the phase a 'wandering velocity'
         var osc = {

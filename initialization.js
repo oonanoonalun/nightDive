@@ -32,7 +32,7 @@ var frameCounter = 0,
                 'minRadius': 30,
                 'maxRadius': 100,
                 'minDiffusion': cells[0].size,
-                'maxDiffusion': cells[0].size * 9,
+                'maxDiffusion': cells[0].size * 13,
                 'minDeathChance': 0.01, // chance that the light will be removed when it goes dark. 1 = will certainly die when it goes dark.
                 'maxDeathChance': 0.025,
                 'parentCellsArray': cells,

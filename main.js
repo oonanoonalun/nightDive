@@ -15,7 +15,7 @@ function mainLoop() {
     context.clearRect(0, 0, 800, 600);
     countFPS();
     updateOscillators(settings.oscillators);
-    updateLights(settings.entities.lights, 15, 45);
+    updateLights(settings.entities.lights, 8, 30);
     moveCameraWithButtons();
     drawAllCells(cells);
     requestAnimFrame();
