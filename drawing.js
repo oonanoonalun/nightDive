@@ -7,9 +7,14 @@ function drawAllCells(cellsArray) {
                         if (interfaceSettings.reticleCenterCells.indexOf(cell) !== -1) cell.color = addColors(cell.color, [0, 0, 0]);
                         if (interfaceSettings.reticleOuterCornerCells.indexOf(cell) !== -1) cell.color = addColors(cell.color, [0, 0, 0]);
                         if (interfaceSettings.reticleFarOuterCornerCells.indexOf(cell) !== -1) cell.color = addColors(cell.color, [128, 0, 0]);
-                        /*var upLeftCenterCell = cells[(totalNumberOfCells / 2) + (cellsPerRow / 2)],
-                                distanceToCenter = findDistanceBetweenPoints([upLeftCenterCell.left + cells[0].size, upLeftCenterCell.top + cells[0].size], cell.centerXY);
-                        if (distanceToCenter < 20) cell.color = addColors(cell.color, [128, 0, 0]);*/
+                }
+                // player light
+                if (interfaceSettings.showPlayerLight) {
+                        var playerLight = interfaceSettings.playerLight,
+                                distanceFromPlayerLight = findDistanceBetweenPoints(cell.centerXY, playerLight.centerXY),
+                                brightness;
+                        brightness = playerLight.radius / Math.max(playerLight.diffusion, distanceFromPlayerLight) * /*playerLight.oscillator.value **/ playerLight.brightness;
+                        cell.color = addColors(cell.color, [brightness * 0, brightness * 0, brightness]);
                 }
         }
         // DON'T DELETE THIS--it's important even if it's commented out (the 'noramlizeCellsArrayBrightnessRange' line)
@@ -61,9 +66,22 @@ function makeLight(brightness, radius, cellIndex, oscillator, diffusion, deathCh
                 'parentCellsArray': allCellsList, // large cellsList of which light's cell is a part
                 'lightParentArray': lightsArray, // lights array
                 'cellIndex': cellIndex,
-                'cell': allCellsList[cellIndex]
+                'cell': allCellsList[cellIndex],
         };
         return light;
+}
+
+function makePlayerLight(brightness, radius, diffusion, allCellsList) {
+        var centerUpperLeftCellIndex = (totalNumberOfCells / 2) + (cellsPerRow / 2);
+        var playerLight = {
+                'brightness': brightness,
+                'radius': radius,
+                'diffusion': diffusion,
+                'oscillator': makeOscillator(3000, 0, SINE, 'playerLightOscillator'),
+                'parentCellsArray': allCellsList, // large cellsList of which light's cell is a part
+                'centerXY': [allCellsList[centerUpperLeftCellIndex].left + allCellsList[0].size, allCellsList[centerUpperLeftCellIndex].top + allCellsList[0].size]
+        };
+        interfaceSettings.playerLight = playerLight;        
 }
 
 

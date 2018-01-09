@@ -43,6 +43,7 @@ var frameCounter = 0,
 //settings.oscillators.push(makeOscillator(5000, 0, SINE, 'firstTestOscillator'));
 makeRandomOscillators(10, 5000, 20000, settings.oscillators);
 makeRandomLights(30, randomLightSettingsDefault, settings.entities.lights, settings.oscillators);
+makePlayerLight(800, 5, 00, cells);
 
 initializeReticle();
 
@@ -220,6 +221,7 @@ function countFPS() {   //have to turn on time stamps in Chrome inspector for th
     }
     frameCounter++;
 }
+
 
 function initializeReticle() {
         var centerUpperLeftCellIndex = (totalNumberOfCells / 2) + (cellsPerRow / 2);
