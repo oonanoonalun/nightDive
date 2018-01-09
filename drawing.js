@@ -128,6 +128,7 @@ function makeOscillator(period, phase, waveShape, name) {
                 'period': period,
                 'value': 0,
                 'phase': phase,
+                'phaseShift': period * phase,
                 'waveShape': waveShape,
                 'name': name
         };
@@ -145,16 +146,15 @@ function makeRandomOscillators(numberOfOscillators, minPeriod, maxPeriod, destin
 
 function updateOscillator(oscillator) {
         // WRONG missing decreasing square wave?
-        var osc = oscillator,
-                phaseShift = osc.phase * osc.period;
+        var osc = oscillator;
         if (osc.waveShape !== SAW || SQUARE) {
-                if ((Date.now() + phaseShift) % osc.period < osc.halfPeriod) osc.value = ((Date.now() + phaseShift) % osc.halfPeriod) / osc.halfPeriod;
-                else osc.value = 1 - (((Date.now() + phaseShift) % osc.halfPeriod) / osc.halfPeriod);
+                if ((Date.now() + osc.phaseShift) % osc.period < osc.halfPeriod) osc.value = ((Date.now() + osc.phaseShift) % osc.halfPeriod) / osc.halfPeriod;
+                else osc.value = 1 - (((Date.now() + osc.phaseShift) % osc.halfPeriod) / osc.halfPeriod);
         }
-        if (osc.waveShape === SAW) osc.value = ((Date.now() + phaseShift) % osc.period) / osc.period;
+        if (osc.waveShape === SAW) osc.value = ((Date.now() + osc.phaseShift) % osc.period) / osc.period;
         if (osc.waveShape === SINE) osc.value = Math.sin(osc.value);
         if (osc.waveShape === SQUARE) {
-                if (Date.now() + phaseShift % osc.period < osc.halfPeriod) osc.value = 0;
+                if (Date.now() + osc.phaseShift % osc.period < osc.halfPeriod) osc.value = 0;
                 else osc.value = 1;
         }
         // if osc.waveShape === TRI, do nothing
