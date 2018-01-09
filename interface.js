@@ -1,4 +1,76 @@
 //INTERFACE
+var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68, F = 70, Z = 90, X = 88, C = 67, V = 86],
+        KEY_W = 87,
+        KEY_S = 83,
+        KEY_A = 65,
+        KEY_D = 68,
+        KEY_SPACE = 32,
+        keysDown = [],
+        interfaceSettings = {
+                'noUpMoveUntil': Date.now(),
+                'noDownMoveUntil': Date.now(),
+                'noLeftMoveUntil': Date.now(),
+                'noRightMoveUntil': Date.now(),
+                'moveRepeatDelay': 30
+        };
+
+function moveCameraWithButtons() {
+        $('body').on('keydown', function (event) {
+                if (event.which == KEY_W && keysDown.indexOf(KEY_W) == -1) {
+                        keysDown.push(KEY_W);
+                }
+                if (event.which == KEY_S && keysDown.indexOf(KEY_S) == -1) {
+                        keysDown.push(KEY_S);
+                }
+                if (event.which == KEY_A && keysDown.indexOf(KEY_A) == -1) {
+                        keysDown.push(KEY_A);
+                }
+                if (event.which == KEY_D && keysDown.indexOf(KEY_D) == -1) {
+                        keysDown.push(KEY_D);
+                }
+        });
+        $('body').on('keyup', function (event) {
+                if (event.which == KEY_W) {
+                        var wIndex = keysDown.indexOf(KEY_W);
+                        keysDown.splice(wIndex, 1);
+                }
+                if (event.which == KEY_S) {
+                        var sIndex = keysDown.indexOf(KEY_S);
+                        keysDown.splice(sIndex, 1);
+                }
+                if (event.which == KEY_A) {
+                        var aIndex = keysDown.indexOf(KEY_A);
+                        keysDown.splice(aIndex, 1);
+                }
+                if (event.which == KEY_D) {
+                        var dIndex = keysDown.indexOf(KEY_D);
+                        keysDown.splice(dIndex, 1);
+                }
+        });
+        if (keysDown.indexOf(KEY_W) !== -1) {
+                if (interfaceSettings.noUpMoveUntil <= Date.now()) {
+                        moveArrayOfEntities(settings.entities.lights, DOWN, 1);
+                        interfaceSettings.noUpMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
+                }
+        }
+        if (keysDown.indexOf(KEY_S) !== -1) {
+                if (interfaceSettings.noDownMoveUntil <= Date.now()) {
+                        moveArrayOfEntities(settings.entities.lights, UP, 1);
+                        interfaceSettings.noDownMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
+                }        }
+        if (keysDown.indexOf(KEY_A) !== -1) {
+                if (interfaceSettings.noLeftMoveUntil <= Date.now()) {
+                        moveArrayOfEntities(settings.entities.lights, RIGHT, 1);
+                        interfaceSettings.noLeftMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
+                }        }
+        if (keysDown.indexOf(KEY_D) !== -1) {
+                if (interfaceSettings.noRightMoveUntil <= Date.now()) {
+                        moveArrayOfEntities(settings.entities.lights, LEFT, 1);
+                        interfaceSettings.noRightMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
+                }
+        }
+}
+
 function cellSelect(cellsList, buttonsList) {
         $('body').on('keydown', function (event) {
                 //console.log(event.which);

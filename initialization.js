@@ -1,40 +1,46 @@
-//this block of code, immedialtely before "mainLoop" could all be inside a function called "initialization" or something
-//makeCells(numberOfCells, cellsPerRow, cellsList, oscsPerCell, periodMin, periodMax, maxColor, phase, neighborScaling)
-//"neighborScaling" is how much the state of a cell is influenced by the oscillators of its neighbors; where 1 is equally to its own oscillators, and 0.5 is half as much as its own.
-
-//GLOBAL VARS. Should there be no global vars? If so, figure out where all these should go.
 var cells = [],
-buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68, F = 70, Z = 90, X = 88, C = 67, V = 86],
-BUTTON_SPACE = 32,
-frameCounter = 0,
-// oscillator wave shapes
-SINE = 'sineWaveShape',
-TRI = 'triangularWaveShape',
-SQUARE = 'squareWaveShape',
-SAW = 'sawWaveShape',
-UP = 'up', // used for moving things around
-DOWN = 'down',
-LEFT = 'left',
-RIGHT = 'right',
-DOWN_LEFT = 'diagonalDownLeft',
-DOWN_RIGHT = 'diagonalDownRight',
-UP_LEFT = 'diagonalUpLeft',
-UP_RIGHT = 'diagonalUpRight',
-settings = {'oscillators': [], 'entities': {'lights': [], 'shadows': []}};
+        cellsPerRow = 80,
+        totalNumberOfCells = cellsPerRow * cellsPerRow * 0.75,
+        cellsPerColumn = totalNumberOfCells / cellsPerRow;
+makeCells(totalNumberOfCells, cellsPerRow, cells);
+findNeighbors(cells, cellsPerRow);
+
+var frameCounter = 0,
+        // oscillator wave shapes
+        SINE = 'sineWaveShape',
+        TRI = 'triangularWaveShape',
+        SQUARE = 'squareWaveShape',
+        SAW = 'sawWaveShape',
+        UP = 'up', // used for moving things around
+        DOWN = 'down',
+        LEFT = 'left',
+        RIGHT = 'right',
+        DOWN_LEFT = 'diagonalDownLeft',
+        DOWN_RIGHT = 'diagonalDownRight',
+        UP_LEFT = 'diagonalUpLeft',
+        UP_RIGHT = 'diagonalUpRight',
+        settings = {
+                'oscillators': [],
+                'entities': {
+                        'lights': [],
+                        'shadows': []
+                }
+        },
+        randomLightSettingsDefault = {
+                'minBrightness': 64,
+                'maxBrightness': 255,
+                'minRadius': 30,
+                'maxRadius': 100,
+                'minDiffusion': cells[0].size,
+                'maxDiffusion': cells[0].size * 13,
+                'parentCellsArray': cells,
+                'minCellIndex': 0,
+                'maxCellIndex': totalNumberOfCells - 1
+        };
 
 settings.oscillators.push(makeOscillator(5000, 0, SINE, 'firstTestOscillator'));
 
-
-var cellsPerRow = 80,
-        totalNumberOfCells = cellsPerRow * cellsPerRow * 0.75,
-        cellsPerColumn = totalNumberOfCells / cellsPerRow,
-        minCycleLength = 32000,          // ms lowest possible cell oscillation cycle length
-        maxCycleLengthRatio = 2,
-        maxCycleLength = minCycleLength * maxCycleLengthRatio;        // max possible cycle length is minCycleLenght times this number
-makeCells(totalNumberOfCells, cellsPerRow, cells, minCycleLength, maxCycleLength);
-findNeighbors(cells, cellsPerRow);
-
-settings.entities.lights.push(makeLight(255, 50, 1700, settings.oscillators[0], cells));
+makeRandomLights(30, randomLightSettingsDefault, settings.entities.lights, settings.oscillators);
 
 //these sets of numberOfCells and cellsPerRow work for our 800 x 600 canvas (double the number of cells pers row = 4x the number of cells overall):
 //300, 20
@@ -62,7 +68,7 @@ settings.entities.lights.push(makeLight(255, 50, 1700, settings.oscillators[0], 
 //Eventually I'll want cells to be able to retain (with various decay/damping characteristics) oscillations that were imparted
 //to them by active oscillators.
 
-function makeCells(numberOfCells, cellsPerRow, cellsList, minCycleLength, maxCycleLength) {
+function makeCells(numberOfCells, cellsPerRow, cellsList) {
         for (var i = 0; i < (numberOfCells / cellsPerRow); i++) {    //this should happen every time a row is complete
                 for (var j = 0; j < cellsPerRow; j++) {     //this should create a single row
                         var newCell = {

@@ -16,14 +16,10 @@ function mainLoop() {
     countFPS();
     updateOscillators(settings.oscillators);
     updateLights(settings.entities.lights);
-    //updateCellOscillators(homeOscillators);
-    //updateImpulsesList(impulses);
-    buttonsMakeImpulses();
-    //updateModifierCells(modifierCells, 0.03);
-    //movePage(cells, 0.15); // BROKEN not working :(
+    moveCameraWithButtons();
     drawAllCells(cells);
     requestAnimFrame();
-    if (frameCounter % 60 === 0) {  //show fps every two seconds
+    if (frameCounter % 60 === 0) {  //show fps every two seconds if at 30fps
         console.log('FPS: ' + fps.toFixed(0));
     }
 }

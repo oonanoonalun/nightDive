@@ -1,22 +1,51 @@
-//DRAWING CELLS
+function drawAllCells(cellsArray) {
+        for (var i = 0; i < cellsArray.length; i++) {
+                var cell = cellsArray[i];
+                getCellColor20180108(cell, cells);
+        }
+        // DON'T DELETE THIS--it's important even if it's commented out (the 'noramlizeCellsArrayBrightnessRange' line)
+        normalizeCellsArrayBrightnessRange(cellsArray, 0, 255);
+        // final steps for drawing the cells and making sure its color is valid
+        for (var j = 0; j < cellsArray.length; j++) {
+                cellsArray[j].color = toHexColor(capColorBrightness(cellsArray[j].color, [255, 255, 255]));
+                context.fillStyle = cellsArray[j].color;
+                context.fillRect(cellsArray[j].left, cellsArray[j].top, cellsArray[j].size, cellsArray[j].size);
+        }
+}
 
 function getCellColor20180108(cell, allCellsList) {
         var brightness;
+        cell.color = [0, 0, 0];
         // applying lights
         if (settings.entities.lights.length > 0) {
                 for (var i = 0; i < settings.entities.lights.length; i++) {
                         var light = settings.entities.lights[i],
                                 distanceFromLight = findDistanceBetweenPoints(cell.centerXY, light.cell.centerXY);
-                        brightness = light.radius / distanceFromLight * light.oscillator.value * light.brightness;
+                        brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * light.oscillator.value * light.brightness;
+                        cell.color = addColors(cell.color, [brightness, brightness, brightness]);
                 }
         }
-        cell.color = [brightness, brightness, brightness];
+        cell.color = divideColorByNumber(cell.color, settings.entities.lights.length + 1);
 }
 
-function makeLight(brightness, radius, cellIndex, oscillator, allCellsList) {
+function makeRandomLights(numberOfLights, randomLightParametersObject, destinationArray, oscillatorsArray) {
+        var lightSettings = randomLightParametersObject;
+        for (var i = 0; i < numberOfLights; i++) {
+                var randomBrightness = randomNumberBetweenNumbers(lightSettings.minBrightness, lightSettings.maxBrightness, true),
+                        randomRadius = randomNumberBetweenNumbers(lightSettings.minRadius, lightSettings.maxRadius, true),
+                        randomCellIndex = randomNumberBetweenNumbers(lightSettings.minCellIndex, lightSettings.maxCellIndex, true),
+                        randomOscillator = oscillatorsArray[randomNumberBetweenNumbers(0, (oscillatorsArray.length - 1), true)],
+                        randomDiffusion = randomNumberBetweenNumbers(lightSettings.minDiffusion, lightSettings.maxDiffusion, true),
+                        allCellsList = lightSettings.parentCellsArray;
+                destinationArray.push(makeLight(randomBrightness, randomRadius, randomCellIndex, randomOscillator, randomDiffusion, allCellsList));
+        }
+}
+
+function makeLight(brightness, radius, cellIndex, oscillator, diffusion, allCellsList) {
         var light = {
                 'brightness': brightness,
                 'radius': radius,
+                'diffusion': diffusion,
                 'oscillator': oscillator,
                 'parentCellsArray': allCellsList,
                 'cellIndex': cellIndex,
@@ -112,7 +141,7 @@ function drawAllCells(cellsArray) {
                 getCellColor20180108(cell, cells);
         }
         // DON'T DELETE THIS--it's important even if it's commented out (the 'noramlizeCellsArrayBrightnessRange' line)
-        //normalizeCellsArrayBrightnessRange(cellsArray, 0, 255);
+        normalizeCellsArrayBrightnessRange(cellsArray, 0, 255);
         // final steps for drawing the cells and making sure its color is valid
         for (var j = 0; j < cellsArray.length; j++) {
                 cellsArray[j].color = toHexColor(capColorBrightness(cellsArray[j].color, [255, 255, 255]));
@@ -122,6 +151,7 @@ function drawAllCells(cellsArray) {
 }
 
 function normalizeCellsArrayBrightnessRange(cellsArray, darkestValue, brightestValue) {
+        // this function ensures that the darkest cell will almost be the darkestValue, and the brightest cell will always be the brightestValue
         var darkestBrightness = 255,
                 brightestBrightness = 0,
                 brightnessRange,
