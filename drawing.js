@@ -2,6 +2,7 @@ function drawAllCells(cellsArray) {
         for (var i = 0; i < cellsArray.length; i++) {
                 var cell = cellsArray[i];
                 getCellColor20180108(cell, cells);
+                // WRONG make this retical/playerLight stuff into a single function
                 // reticle is tinted
                 if (interfaceSettings.showReticle) {
                         if (interfaceSettings.reticleCenterCells.indexOf(cell) !== -1) cell.color = addColors(cell.color, [0, 0, 0]);
@@ -37,9 +38,25 @@ function getCellColor20180108(cell, allCellsList) {
                                 distanceFromLight = findDistanceBetweenPoints(cell.centerXY, light.cell.centerXY);
                         brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * light.oscillator.value * light.brightness;
                         cell.color = addColors(cell.color, [brightness, brightness, brightness]);
+                        //cell.color = addNoiseToColor(cell.color, 0.5, 0.6, 1, 0.025, 1500, 5000);
                 }
         }
         cell.color = divideColorByNumber(cell.color, settings.entities.lights.length + 1);
+}
+
+function addNoiseToColor(color, redNoiseAmount, greenNoiseAmount, blueNoiseAmount, globalNoiseScale, minMsBetweenNoiseChanges, maxMsBetweenNoiseChanges) {
+        if (drawingSettings.noNoiseChangeUntil <= Date.now() || !drawingSettings.noNoiseChangeUntil) {
+                var rNoise = 1 - redNoiseAmount * Math.random() * globalNoiseScale,
+                        gNoise = 1 - greenNoiseAmount * Math.random() * globalNoiseScale,
+                        bNoise = 1 -blueNoiseAmount * Math.random() * globalNoiseScale,
+                        noiseColorScale = [rNoise, gNoise, bNoise],
+                        noiseColor = [];
+                for (var i = 0; i < 3; i++) {
+                        noiseColor[i] = color[i] * noiseColorScale[i];
+                }
+                drawingSettings.noNoiseChangeUntil = minMsBetweenNoiseChanges + Math.random() * (maxMsBetweenNoiseChanges - minMsBetweenNoiseChanges);
+                return noiseColor;
+        }
 }
 
 function makeRandomLights(numberOfLights, randomLightParametersObject, destinationArray, oscillatorsArray) {
@@ -72,7 +89,7 @@ function makeLight(brightness, radius, cellIndex, oscillator, diffusion, deathCh
 }
 
 function makePlayerLight(brightness, radius, diffusion, allCellsList) {
-        var centerUpperLeftCellIndex = (totalNumberOfCells / 2) + (cellsPerRow / 2);
+        var centerUpperLeftCellIndex = Math.round((totalNumberOfCells / 2)) + Math.round((cellsPerRow / 2));
         var playerLight = {
                 'brightness': brightness,
                 'radius': radius,

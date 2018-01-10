@@ -1,9 +1,16 @@
 var cells = [],
-        cellsPerRow = 80,
+        canvasWidth = 800,
+        canvasHeight = 600,
+        arrayOfValidCellsPerRow = findValidCellsPerRowForCanvas(canvasWidth, canvasHeight, true),
+        cellsPerRow = arrayOfValidCellsPerRow[11],  // 0-10 valid if last argument to findValid... is 'true,' 0-16 if 'false.' Smaller is chunkier. You can put any number here instead of the array items, but there might be some weird artifacts that show up.
+        //cellsPerRow = cellSizeToCellsPerRow(13),
         totalNumberOfCells = cellsPerRow * cellsPerRow * 0.75,
         cellsPerColumn = totalNumberOfCells / cellsPerRow;
+console.log('The current cells size is: ' + (canvasWidth / cellsPerRow));
+console.log('The curent number of cells per row (long dimension) is: ' + cellsPerRow);
 makeCells(totalNumberOfCells, cellsPerRow, cells);
 findNeighbors(cells, cellsPerRow);
+
 
 var frameCounter = 0,
         // oscillator wave shapes
@@ -38,7 +45,8 @@ var frameCounter = 0,
                 'parentCellsArray': cells,
                 'minCellIndex': 0,
                 'maxCellIndex': totalNumberOfCells - 1
-        };
+        },
+        drawingSettings = {};
 
 //settings.oscillators.push(makeOscillator(5000, 0, SINE, 'firstTestOscillator'));
 makeRandomOscillators(10, 5000, 20000, settings.oscillators);
@@ -184,35 +192,61 @@ function sortCellsIntoColumns(cellsList, cellsPerRow, cellsPerColumn) {
         return columns;
 }
 
+function findValidCellsPerRowForCanvas(canvasWidth, canvasHeight, halfCellsOkTrueOrFalse) {
+        var validNumbersOfCellsPerLongDimensionForLongDimension = [],
+                validNumbersOfCellsPerLongDimensionForTotal = [],
+                longDimension,
+                shortDimension;
+        if (canvasWidth > canvasHeight) {
+                longDimension = canvasWidth;
+                shortDimension = canvasHeight;
+        } else {
+                longDimension = canvasHeight;
+                shortDimension = canvasWidth;
+        }
+        for (var i = 0; i < longDimension; i++) {
+                if (longDimension % i === 0) validNumbersOfCellsPerLongDimensionForLongDimension.push(i);
+        }
+        if (!halfCellsOkTrueOrFalse) {
+                for (var j = 0; j < validNumbersOfCellsPerLongDimensionForLongDimension.length; j++) {
+                        if (shortDimension % (longDimension / validNumbersOfCellsPerLongDimensionForLongDimension[j]) === 0) { // i.e. 'longDimension / validNumbersOfCellsPerLongDimensionForLongDimension' = cell width
+                                validNumbersOfCellsPerLongDimensionForTotal.push(validNumbersOfCellsPerLongDimensionForLongDimension[j]);
+                        }
+                }
+        } else validNumbersOfCellsPerLongDimensionForTotal = validNumbersOfCellsPerLongDimensionForLongDimension;
+        console.log('The array of valid numbers of cells per row (per long dimension, actually) (for resolution selection) can be sent values 0-' + (validNumbersOfCellsPerLongDimensionForTotal.length - 1) + '.');
+        // cell sizes per valid selection
+        console.log('Here are the cell sizes (in pixels) and cells per row (long dimension) associated with each index (array index: cell size, cells per row):');
+        for (var k = 0; k < validNumbersOfCellsPerLongDimensionForTotal.length; k++) {
+                var cellSize = longDimension / validNumbersOfCellsPerLongDimensionForTotal[k];
+                console.log(k + ': ' + cellSize + ', ' + validNumbersOfCellsPerLongDimensionForTotal[k]);
+        }
+        return validNumbersOfCellsPerLongDimensionForTotal;
+}
+
+// never used this but probably worth keeping?
+function reverseOrderOfArray(array) {
+        if (!array.length) {
+                console.log('reverseOrderOfArray function was sent an empty or invalid array as an argument.');
+                return null;
+        }
+        var reversedArray = [];
+        for (var i = (array.length - 1); i >= 0; i--) {
+                reversedArray.push(array[i]);
+        }
+        return array;
+}
 
 ////////////////////////
 //MISC
 ////////////////////////
 
-// OLD
-function randomNumber(minPossibleNumber, maxPossibleNumber) {
-        var newRandomNumber = Math.round(minPossibleNumber + (Math.random() * ((maxPossibleNumber - 1) - minPossibleNumber)));
-        return newRandomNumber;
-}
-
-// NEW
 function randomNumberBetweenNumbers(minPossibleNumber, maxPossibleNumber, roundOrDontRoundTrueOrFalse) {
         var newRandomNumber = minPossibleNumber + Math.random() * (maxPossibleNumber - minPossibleNumber);
         if (roundOrDontRoundTrueOrFalse === true) return Math.round(newRandomNumber);
         if (roundOrDontRoundTrueOrFalse === false) return newRandomNumber;
 }
 
-
-function selectRandomNonHomeCell(cellsList) {
-        var randomCellIndex = Math.round(randomNumber(0, cellsList.length));
-        for (var i = 0; i < cellsList.length; i++) {
-                if (cellsList[randomCellIndex].flags[1] !== true) {
-                        return cellsList[randomCellIndex];
-                } else {
-                        randomCellIndex = Math.round(randomNumber(0, cellsList.length));
-                }
-        }
-}
 
 function countFPS() {   //have to turn on time stamps in Chrome inspector for this to work (options menu in upper right of inspect-->console)
     if (frameCounter % 300 === 0) {
@@ -222,27 +256,9 @@ function countFPS() {   //have to turn on time stamps in Chrome inspector for th
     frameCounter++;
 }
 
-
-function initializeReticle() {
-        var centerUpperLeftCellIndex = (totalNumberOfCells / 2) + (cellsPerRow / 2);
-        interfaceSettings.reticleCenterCells = [
-                cells[centerUpperLeftCellIndex],
-                cells[centerUpperLeftCellIndex + 1],
-                cells[centerUpperLeftCellIndex + cellsPerRow],
-                cells[centerUpperLeftCellIndex + cellsPerRow + 1]
-        ];
-        interfaceSettings.reticleOuterCornerCells = [
-                cells[centerUpperLeftCellIndex].neighborUpLeft,
-                cells[centerUpperLeftCellIndex + 1].neighborUpRight,
-                cells[centerUpperLeftCellIndex + cellsPerRow].neighborDownLeft,
-                cells[centerUpperLeftCellIndex + cellsPerRow + 1].neighborDownRight                      
-        ];
-        interfaceSettings.reticleFarOuterCornerCells = [
-                cells[centerUpperLeftCellIndex].neighborUpLeft.neighborUpLeft,
-                cells[centerUpperLeftCellIndex + 1].neighborUpRight.neighborUpRight,
-                cells[centerUpperLeftCellIndex + cellsPerRow].neighborDownLeft.neighborDownLeft,
-                cells[centerUpperLeftCellIndex + cellsPerRow + 1].neighborDownRight.neighborDownRight                 
-        ];
+function cellSizeToCellsPerRow(cellSize) {
+        var newCellsPerRow = Math.floor(canvasWidth / cellSize);
+        return newCellsPerRow;
 }
 
 //FROM STACK OVERFLOW.COM for counteing fps

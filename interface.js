@@ -14,7 +14,7 @@ var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68,
                 'noLeftMoveUntil': Date.now(),
                 'noRightMoveUntil': Date.now(),
                 'cellsPerMove': 2,
-                'moveRepeatDelay': 0,
+                'moveRepeatDelay': 25,
                 'controlScheme': NON_CONTINUOUS_MOVEMENT,
                 'showReticle': false,
                 'showPlayerLight': false
@@ -151,4 +151,26 @@ function moveArrayOfEntities(arrayOfEntities, direction, numberOfCells) {
                 var entity = arrayOfEntities[i];
                 moveEntity(entity, direction, numberOfCells);
         }
+}
+
+function initializeReticle() {
+        var centerUpperLeftCellIndex = Math.round((totalNumberOfCells / 2)) + Math.round((cellsPerRow / 2));
+        interfaceSettings.reticleCenterCells = [
+                cells[centerUpperLeftCellIndex],
+                cells[centerUpperLeftCellIndex + 1],
+                cells[centerUpperLeftCellIndex + cellsPerRow],
+                cells[centerUpperLeftCellIndex + cellsPerRow + 1]
+        ];
+        interfaceSettings.reticleOuterCornerCells = [
+                cells[centerUpperLeftCellIndex].neighborUpLeft,
+                cells[centerUpperLeftCellIndex + 1].neighborUpRight,
+                cells[centerUpperLeftCellIndex + cellsPerRow].neighborDownLeft,
+                cells[centerUpperLeftCellIndex + cellsPerRow + 1].neighborDownRight                      
+        ];
+        interfaceSettings.reticleFarOuterCornerCells = [
+                cells[centerUpperLeftCellIndex].neighborUpLeft.neighborUpLeft,
+                cells[centerUpperLeftCellIndex + 1].neighborUpRight.neighborUpRight,
+                cells[centerUpperLeftCellIndex + cellsPerRow].neighborDownLeft.neighborDownLeft,
+                cells[centerUpperLeftCellIndex + cellsPerRow + 1].neighborDownRight.neighborDownRight                 
+        ];
 }
