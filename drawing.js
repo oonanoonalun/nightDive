@@ -42,8 +42,11 @@ function showLights(cell) {
         if (settings.entities.lights.length > 0) {
                 for (var i = 0; i < settings.entities.lights.length; i++) {
                         var light = settings.entities.lights[i],
-                                distanceFromLight = findDistanceBetweenPoints(cell.centerXY, light.cell.centerXY);
-                        brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * light.oscillator.value * light.brightness;
+                                distanceFromLight = findDistanceBetweenPoints(cell.centerXY, light.cell.centerXY),
+                                lightOscillatorValue;
+                        if (light.oscillator) lightOscillatorValue = light.oscillator.value;
+                        else lightOscillatorValue = 1;
+                        brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * lightOscillatorValue * light.brightness;
                         cell.color = addColors(cell.color, [brightness, brightness, brightness]);
                 }
                 cell.color = divideColorByNumber(cell.color, settings.entities.lights.length + 1);
@@ -138,26 +141,25 @@ function updateLight(light) {
 }
 
 function temperatureMovesLightsIcarus(light) {
-        // WRONG cool and warm movement thresholds should be player properties,
-        //      and delay between light movements and how they scale off the player's temperature
+        // WRONG Delay between light movements and how they scale off the player's temperature
         //      should be light properties. Maybe based on their brightness and/or diffusion?
         //      Could make the number of cells moved in the moveEntity calls below scale off of something.
         if (light.noTemperatureMoveUntil <= Date.now() || !light.noTemperatureMoveUntil) {
                 if (light.cellIndex < totalNumberOfCells / 2) { // i.e. cell is in the UPPER HALF
                         if (player.temperature < 0.5) moveEntity(light, UP, 1); // cool players repel lights
-                        if (player.temperature > 0.5) moveEntity(light, DOWN, 1); // hot players attract lights
+                        if (player.temperature >= 0.5) moveEntity(light, DOWN, 1); // hot players attract lights
                 }
                 if (light.cellIndex > totalNumberOfCells / 2) { // i.e. cell is in the LOWER HALF
                         if (player.temperature < 0.5) moveEntity(light, DOWN, 1); // cool players repel lights
-                        if (player.temperature > 0.5) moveEntity(light, UP, 1); // hot players attract lights                        
+                        if (player.temperature >= 0.5) moveEntity(light, UP, 1); // hot players attract lights                        
                 }
                 if (light.cellIndex % cellsPerRow < cellsPerRow / 2) { // i.e. cell is in the LEFT HALF
                         if (player.temperature < 0.5) moveEntity(light, LEFT, 1); // cool players repel lights
-                        if (player.temperature > 0.5) moveEntity(light, RIGHT, 1); // hot players attract lights                        
+                        if (player.temperature >= 0.5) moveEntity(light, RIGHT, 1); // hot players attract lights                        
                 }
-                if (light.cellIndex & cellsPerRow > cellsPerRow / 2) { // i.e. cell is in the RIGHT HALF
+                if (light.cellIndex % cellsPerRow > cellsPerRow / 2) { // i.e. cell is in the RIGHT HALF
                         if (player.temperature < 0.5) moveEntity(light, RIGHT, 1); // cool players repel lights
-                        if (player.temperature > 0.5) moveEntity(light, LEFT, 1); // hot players attract lights                        
+                        if (player.temperature >= 0.5) moveEntity(light, LEFT, 1); // hot players attract lights                        
                 }
                 light.noTemperatureMoveUntil = Date.now() + Math.max(200, (500 - (player.temperatureCircular * 500))); // WRONG MAYBE maybe light brightness and/or diffusion should figure into how fast they move?
         }
