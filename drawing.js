@@ -2,21 +2,8 @@ function drawAllCells(cellsArray) {
         for (var i = 0; i < cellsArray.length; i++) {
                 var cell = cellsArray[i];
                 getCellColor20180108(cell, cells);
-                // WRONG make this retical/playerLight stuff into a single function
-                // reticle is tinted
-                if (interfaceSettings.showReticle) {
-                        if (interfaceSettings.reticleCenterCells.indexOf(cell) !== -1) cell.color = addColors(cell.color, [0, 0, 0]);
-                        if (interfaceSettings.reticleOuterCornerCells.indexOf(cell) !== -1) cell.color = addColors(cell.color, [0, 0, 0]);
-                        if (interfaceSettings.reticleFarOuterCornerCells.indexOf(cell) !== -1) cell.color = addColors(cell.color, [128, 0, 0]);
-                }
-                // player light
-                if (interfaceSettings.showPlayerLight) {
-                        var playerLight = interfaceSettings.playerLight,
-                                distanceFromPlayerLight = findDistanceBetweenPoints(cell.centerXY, playerLight.centerXY),
-                                brightness;
-                        brightness = playerLight.radius / Math.max(playerLight.diffusion, distanceFromPlayerLight) * /*playerLight.oscillator.value **/ playerLight.brightness;
-                        cell.color = addColors(cell.color, [brightness * 0, brightness * 0, brightness]);
-                }
+                if (interfaceSettings.showReticle) showReticle();
+                if (interfaceSettings.showPlayerLight) showPlayerLight();
         }
         // DON'T DELETE THIS--it's important even if it's commented out (the 'noramlizeCellsArrayBrightnessRange' line)
         //normalizeCellsArrayBrightnessRange(cellsArray, 0, 255);
@@ -38,7 +25,7 @@ function getCellColor20180108(cell, allCellsList) {
                                 distanceFromLight = findDistanceBetweenPoints(cell.centerXY, light.cell.centerXY);
                         brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * light.oscillator.value * light.brightness;
                         cell.color = addColors(cell.color, [brightness, brightness, brightness]);
-                        //cell.color = addNoiseToColor(cell.color, 0.5, 0.6, 1, 0.025, 1500, 5000);
+                        if (drawingSettings.addNoise) cell.color = addNoiseToColor(cell.color, 0.5, 0.6, 1, 0.025, 1500, 5000);
                 }
         }
         cell.color = divideColorByNumber(cell.color, settings.entities.lights.length + 1);
@@ -184,6 +171,20 @@ function normalizeCellsArrayBrightnessRange(cellsArray, darkestValue, brightestV
                 newBrightness = darkestValue + brightestValue * currentCellParametricBrightness;
                 cellsArray[j].color = [newBrightness, newBrightness, newBrightness];
         }
+}
+
+function showReticle() {
+        if (interfaceSettings.reticleCenterCells.indexOf(cell) !== -1) cell.color = addColors(cell.color, [0, 0, 0]);
+        if (interfaceSettings.reticleOuterCornerCells.indexOf(cell) !== -1) cell.color = addColors(cell.color, [0, 0, 0]);
+        if (interfaceSettings.reticleFarOuterCornerCells.indexOf(cell) !== -1) cell.color = addColors(cell.color, [128, 0, 0]);  
+}
+
+function showPlayerLight() {
+        var playerLight = interfaceSettings.playerLight,
+                distanceFromPlayerLight = findDistanceBetweenPoints(cell.centerXY, playerLight.centerXY),
+                brightness;
+        brightness = playerLight.radius / Math.max(playerLight.diffusion, distanceFromPlayerLight) * /*playerLight.oscillator.value **/ playerLight.brightness;
+        cell.color = addColors(cell.color, [brightness, brightness, brightness]);       
 }
 
 function findDistanceBetweenPoints(xyArray1, xyArray2) {

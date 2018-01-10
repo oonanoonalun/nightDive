@@ -2,7 +2,7 @@ var cells = [],
         canvasWidth = 800,
         canvasHeight = 600,
         arrayOfValidCellsPerRow = findValidCellsPerRowForCanvas(canvasWidth, canvasHeight, true),
-        cellsPerRow = arrayOfValidCellsPerRow[11],  // 0-10 valid if last argument to findValid... is 'true,' 0-16 if 'false.' Smaller is chunkier. You can put any number here instead of the array items, but there might be some weird artifacts that show up.
+        cellsPerRow = arrayOfValidCellsPerRow[12],  // 0-10 valid if last argument to findValid... is 'true,' 0-16 if 'false.' Smaller is chunkier. You can put any number here instead of the array items, but there might be some weird artifacts that show up.
         //cellsPerRow = cellSizeToCellsPerRow(13),
         totalNumberOfCells = cellsPerRow * cellsPerRow * 0.75,
         cellsPerColumn = totalNumberOfCells / cellsPerRow;
@@ -12,9 +12,7 @@ makeCells(totalNumberOfCells, cellsPerRow, cells);
 findNeighbors(cells, cellsPerRow);
 
 
-var frameCounter = 0,
-        // oscillator wave shapes
-        SINE = 'sineWaveShape',
+var SINE = 'sineWaveShape',
         TRI = 'triangularWaveShape',
         SQUARE = 'squareWaveShape',
         SAW = 'sawWaveShape',
@@ -31,7 +29,10 @@ var frameCounter = 0,
                 'entities': {
                         'lights': [],
                         'shadows': []
-                }
+                },
+                'minLights': 4, // min and max number of lights in the level/on the screen (depending on where development goes)
+                'maxLights': 20,
+                'noiseColorBase': []
         },
         randomLightSettingsDefault = {
                 'minBrightness': 64,
@@ -46,11 +47,19 @@ var frameCounter = 0,
                 'minCellIndex': 0,
                 'maxCellIndex': totalNumberOfCells - 1
         },
-        drawingSettings = {};
+        drawingSettings = {
+                'fpsDisplay': {
+                        'frameCounter': 0,
+                        'fpsDisplayInterval': 2000,
+                        'displayFps': true,
+                        'framesSinceLastDisplay': 0
+                },
+                'addNoise': true
+        };
 
 //settings.oscillators.push(makeOscillator(5000, 0, SINE, 'firstTestOscillator'));
 makeRandomOscillators(10, 5000, 20000, settings.oscillators);
-makeRandomLights(30, randomLightSettingsDefault, settings.entities.lights, settings.oscillators);
+makeRandomLights(settings.minLights, randomLightSettingsDefault, settings.entities.lights, settings.oscillators);
 makePlayerLight(800, 5, 00, cells);
 
 initializeReticle();
@@ -248,34 +257,11 @@ function randomNumberBetweenNumbers(minPossibleNumber, maxPossibleNumber, roundO
 }
 
 
-function countFPS() {   //have to turn on time stamps in Chrome inspector for this to work (options menu in upper right of inspect-->console)
-    if (frameCounter % 300 === 0) {
-        
-        //console.log('Frame: ' + (frameCounter + 1));  //should be ten seconds apart at 30fps
-    }
-    frameCounter++;
-}
-
 function cellSizeToCellsPerRow(cellSize) {
         var newCellsPerRow = Math.floor(canvasWidth / cellSize);
         return newCellsPerRow;
 }
 
-//FROM STACK OVERFLOW.COM for counteing fps
-var lastCalledTime;
-var fps;
-
-function requestAnimFrame() {
-
-  if(!lastCalledTime) {
-     lastCalledTime = Date.now();
-     fps = 0;
-     return;
-  }
-  delta = (Date.now() - lastCalledTime)/1000;
-  lastCalledTime = Date.now();
-  fps = 1/delta;
-} 
 
 //FROM CHRIS
 //this is from Chris and he adapted it from an online source. I have no idea how it works.
