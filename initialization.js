@@ -50,9 +50,9 @@ var SINE = 'sineWaveShape',
         drawingSettings = {
                 'fpsDisplay': {
                         'frameCounter': 0,
-                        'fpsDisplayInterval': 2000,
-                        'displayFps': true,
-                        'framesSinceLastDisplay': 0
+                        'fpsDisplayInterval': 2000, // for a regular fps display
+                        'fpsDisplayIntervalLongTerm': 10000, // to show an average over a longer period
+                        'displayFps': true
                 },
                 'noise': {
                         'addNoise': true,
