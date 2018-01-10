@@ -1,34 +1,51 @@
 function drawAllCells(cellsArray) {
+        if (interfaceSettings.showReticle) showReticle();
         for (var i = 0; i < cellsArray.length; i++) {
                 var cell = cellsArray[i];
-                getCellColor20180108(cell, cells);
-                if (interfaceSettings.showReticle) showReticle();
-                if (interfaceSettings.showPlayerLight) showPlayerLight();
+                getCellColor(cell);
+                if (!drawingSettings.normalizeBrightnesses) finalizeCellColorAndDrawCell(cell);
         }
-        // DON'T DELETE THIS--it's important even if it's commented out (the 'noramlizeCellsArrayBrightnessRange' line)
-        //normalizeCellsArrayBrightnessRange(cellsArray, 0, 255);
-        // final steps for drawing the cells and making sure its color is valid
-        for (var j = 0; j < cellsArray.length; j++) {
-                cellsArray[j].color = toHexColor(capColorBrightness(cellsArray[j].color, [255, 255, 255]));
-                context.fillStyle = cellsArray[j].color;
-                context.fillRect(cellsArray[j].left, cellsArray[j].top, cellsArray[j].size, cellsArray[j].size);
-        }
+        if (drawingSettings.normalizeBrightnesses) normalizeCellsArrayBrightnessRange(cellsArray, 0, 255); // requires a second pass over all the cells, necessarily (as it checks their relative brightnesses after all their brightnesses have been assigned), and so slows things down.
 }
 
-function getCellColor20180108(cell, allCellsList) {
-        var brightness;
+
+function getCellColor(cell) {
+        showLights(cell);
+        // just testing crap:
+                //var brightness = cell.color = cells.indexOf(cell) * 255 / cells.length;
+                //cell.color = [brightness, brightness, brightness];
+        if (interfaceSettings.showPlayerLight) showPlayerLight(cell);
+}
+
+function showLights(cell) {
         cell.color = [0, 0, 0];
-        // applying lights
+        var brightness;
         if (settings.entities.lights.length > 0) {
                 for (var i = 0; i < settings.entities.lights.length; i++) {
                         var light = settings.entities.lights[i],
                                 distanceFromLight = findDistanceBetweenPoints(cell.centerXY, light.cell.centerXY);
                         brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * light.oscillator.value * light.brightness;
                         cell.color = addColors(cell.color, [brightness, brightness, brightness]);
-                        if (drawingSettings.addNoise) cell.color = addNoiseToColor(cell.color, 0.5, 0.6, 1, 0.025, 1500, 5000);
                 }
+                cell.color = divideColorByNumber(cell.color, settings.entities.lights.length + 1);
         }
-        cell.color = divideColorByNumber(cell.color, settings.entities.lights.length + 1);
+        if (drawingSettings.noise.addNoise) {
+                cell.color = addNoiseToColor(
+                        cell.color,
+                        drawingSettings.noise.redNoise,
+                        drawingSettings.noise.greenNoise,
+                        drawingSettings.noise.blueNoise,
+                        drawingSettings.noise.globalNoiseScale,
+                        drawingSettings.noise.minMsBetweenNoiseChanges,
+                        drawingSettings.noise.maxMsBetweenNoiseChanges
+                );
+        }
+}
+
+function finalizeCellColorAndDrawCell(cell) {
+        cell.color = toHexColor(capColorBrightness(cell.color, [255, 255, 255]));
+        context.fillStyle = cell.color;
+        context.fillRect(cell.left, cell.top, cell.size, cell.size);
 }
 
 function addNoiseToColor(color, redNoiseAmount, greenNoiseAmount, blueNoiseAmount, globalNoiseScale, minMsBetweenNoiseChanges, maxMsBetweenNoiseChanges) {
@@ -170,21 +187,23 @@ function normalizeCellsArrayBrightnessRange(cellsArray, darkestValue, brightestV
                         currentCellParametricBrightness = (currentBrightness - darkestBrightness) / brightnessRange;
                 newBrightness = darkestValue + brightestValue * currentCellParametricBrightness;
                 cellsArray[j].color = [newBrightness, newBrightness, newBrightness];
+                finalizeCellColorAndDrawCell(cellsArray[i]);
         }
 }
 
-function showReticle() {
-        if (interfaceSettings.reticleCenterCells.indexOf(cell) !== -1) cell.color = addColors(cell.color, [0, 0, 0]);
-        if (interfaceSettings.reticleOuterCornerCells.indexOf(cell) !== -1) cell.color = addColors(cell.color, [0, 0, 0]);
-        if (interfaceSettings.reticleFarOuterCornerCells.indexOf(cell) !== -1) cell.color = addColors(cell.color, [128, 0, 0]);  
-}
-
-function showPlayerLight() {
+function showPlayerLight(cell) {
         var playerLight = interfaceSettings.playerLight,
                 distanceFromPlayerLight = findDistanceBetweenPoints(cell.centerXY, playerLight.centerXY),
                 brightness;
-        brightness = playerLight.radius / Math.max(playerLight.diffusion, distanceFromPlayerLight) * /*playerLight.oscillator.value **/ playerLight.brightness;
+        brightness = playerLight.radius / Math.max(playerLight.diffusion, distanceFromPlayerLight) * /*playerLight.oscillator.value **/ playerLight.brightness; // WRONG I don't know why the oscillator's not working here
         cell.color = addColors(cell.color, [brightness, brightness, brightness]);       
+}
+
+function showReticle() {
+        for (var i = 0; i < interfaceSettings.reticleFarOuterCornerCells.length; i++) {
+                var reticleCell = interfaceSettings.reticleFarOuterCornerCells[i];
+                reticleCell.color = addColors(reticleCell.color, [64, 0, 0]);
+        }
 }
 
 function findDistanceBetweenPoints(xyArray1, xyArray2) {

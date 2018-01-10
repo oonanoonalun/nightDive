@@ -54,13 +54,22 @@ var SINE = 'sineWaveShape',
                         'displayFps': true,
                         'framesSinceLastDisplay': 0
                 },
-                'addNoise': true
+                'noise': {
+                        'addNoise': true,
+                        'redNoise': 0.5,
+                        'greenNoise': 0.6,
+                        'blueNoise': 1,
+                        'globalNoiseScale': 0.05,
+                        'minMsBetweenNoiseChanges': 1500,
+                        'maxMsBetweenNoiseChanges': 5000
+                },
+                'normalizeBrightnesses': false // requires a second pass over all the cells, necessarily (as it checks their relative brightnesses after all their brightnesses have been assigned), and so slows things down.
         };
 
 //settings.oscillators.push(makeOscillator(5000, 0, SINE, 'firstTestOscillator'));
 makeRandomOscillators(10, 5000, 20000, settings.oscillators);
 makeRandomLights(settings.minLights, randomLightSettingsDefault, settings.entities.lights, settings.oscillators);
-makePlayerLight(800, 5, 00, cells);
+makePlayerLight(1200, 10, cells[0].size, cells);
 
 initializeReticle();
 
@@ -94,7 +103,7 @@ function makeCells(numberOfCells, cellsPerRow, cellsList) {
         for (var i = 0; i < (numberOfCells / cellsPerRow); i++) {    //this should happen every time a row is complete
                 for (var j = 0; j < cellsPerRow; j++) {     //this should create a single row
                         var newCell = {
-                                'color': [],  //should be hex rgb
+                                'color': [0, 0, 0],  //should eventually be hex rgb
                                 'size': 800 / cellsPerRow,              //size
                                 'left': j * (800 / cellsPerRow),        //left edge coordinate
                                 'top': (800 / cellsPerRow) * i,        //should be "size * ...rowCounter" but can't get it to work      //top edge coordinate
