@@ -1,3 +1,22 @@
+var drawingSettings = {
+                'fpsDisplay': {
+                        'displayFps': false,
+                        'fpsDisplayInterval': 2000, // for a regular fps display
+                        'fpsDisplayIntervalLongTerm': 10000, // to show an average over a longer period
+                        'frameCounter': 0
+                },
+                'noise': {
+                        'addNoise': true,
+                        'redNoise': 1,//0.5,
+                        'greenNoise': 1,//0.6,
+                        'blueNoise': 1,
+                        'globalNoiseScale': 0.05,
+                        'minMsBetweenNoiseChanges': 1500,
+                        'maxMsBetweenNoiseChanges': 5000
+                },
+                'normalizeBrightnesses': false // requires a second pass over all the cells, necessarily (as it checks their relative brightnesses after all their brightnesses have been assigned), and so slows things down.
+};
+
 function drawAllCells(cellsArray) {
         if (interfaceSettings.showReticle) showReticle();
         for (var i = 0; i < cellsArray.length; i++) {
@@ -112,12 +131,37 @@ function updateLight(light) {
                 var lightsArrayIndex = light.lightParentArray.indexOf(light);
                 light.lightParentArray.splice(lightsArrayIndex, 1);
         }
-        // reticle kills lights
-        
+        // lights move away from center when player is cooler, toward it when warmer
+        if (settings.gameType === GAME_TYPE_ICARUS) temperatureMovesLightsIcarus(light);
         // update location
         light.cell = light.parentCellsArray[light.cellIndex];
 }
 
+function temperatureMovesLightsIcarus(light) {
+        // WRONG cool and warm movement thresholds should be player properties,
+        //      and delay between light movements and how they scale off the player's temperature
+        //      should be light properties. Maybe based on their brightness and/or diffusion?
+        //      Could make the number of cells moved in the moveEntity calls below scale off of something.
+        if (light.noTemperatureMoveUntil <= Date.now() || !light.noTemperatureMoveUntil) {
+                if (light.cellIndex < totalNumberOfCells / 2) { // i.e. cell is in the UPPER HALF
+                        if (player.temperature < 0.5) moveEntity(light, UP, 1); // cool players repel lights
+                        if (player.temperature > 0.5) moveEntity(light, DOWN, 1); // hot players attract lights
+                }
+                if (light.cellIndex > totalNumberOfCells / 2) { // i.e. cell is in the LOWER HALF
+                        if (player.temperature < 0.5) moveEntity(light, DOWN, 1); // cool players repel lights
+                        if (player.temperature > 0.5) moveEntity(light, UP, 1); // hot players attract lights                        
+                }
+                if (light.cellIndex % cellsPerRow < cellsPerRow / 2) { // i.e. cell is in the LEFT HALF
+                        if (player.temperature < 0.5) moveEntity(light, LEFT, 1); // cool players repel lights
+                        if (player.temperature > 0.5) moveEntity(light, RIGHT, 1); // hot players attract lights                        
+                }
+                if (light.cellIndex & cellsPerRow > cellsPerRow / 2) { // i.e. cell is in the RIGHT HALF
+                        if (player.temperature < 0.5) moveEntity(light, RIGHT, 1); // cool players repel lights
+                        if (player.temperature > 0.5) moveEntity(light, LEFT, 1); // hot players attract lights                        
+                }
+                light.noTemperatureMoveUntil = Date.now() + Math.max(200, (500 - (player.temperatureCircular * 500))); // WRONG MAYBE maybe light brightness and/or diffusion should figure into how fast they move?
+        }
+}
 function updateLights(arrayOfLights, minLights, maxLights) {
         // individual light update
         for (var i = 0; i < arrayOfLights.length; i++) updateLight(arrayOfLights[i]);
@@ -168,6 +212,25 @@ function updateOscillator(oscillator) {
 
 function updateOscillators(arrayOfOscillators) {
         for (var i = 0; i < arrayOfOscillators.length; i++) updateOscillator(arrayOfOscillators[i]);
+}
+
+function updateNoise() {
+        drawingSettings.noise.globalNoiseScale = player.temperatureCircular * player.temperatureNoiseScale;
+        drawingSettings.noise.redNoise = 1 - player.temperature;
+        drawingSettings.noise.greenNoise = player.temperatureCircular * 0.5;
+        drawingSettings.noise.blueNoise = player.temperature;
+}
+
+function logPlayerTemperature(displayInterval) {
+        if (Date.now() % displayInterval < 50 && (player.noTemperatureLoggingUntil <= Date.now() || !player.noTemperatureLoggingUntil)) {
+                console.log('Temperature: ' + player.temperature.toFixed(2));
+                player.noTemperatureLoggingUntil = Date.now() + 100; // just keeps it from logging a few times during the necessarily non-tiny window.
+        }
+}
+
+function updatePlayer() {
+        player.temperature = settings.oscillators[settings.oscillators.length - 1].value;
+        player.temperatureCircular = Math.abs((player.temperature - 0.5) * 2); // i.e. 0 and 1 = 1, 0.5 = 0;
 }
 
 function normalizeCellsArrayBrightnessRange(cellsArray, darkestValue, brightestValue) {

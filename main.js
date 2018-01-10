@@ -10,6 +10,9 @@ var context = canvas.getContext('2d');
 function mainLoop() {
     context.clearRect(0, 0, 800, 600);
     updateOscillators(settings.oscillators);
+    updatePlayer();
+    if (player.logPlayerTemperature) logPlayerTemperature(500);
+    updateNoise();
     updateLights(settings.entities.lights, settings.minLights, settings.maxLights);
     if (interfaceSettings.controlScheme === NON_CONTINUOUS_MOVEMENT) {
         moveCameraWithButtons();

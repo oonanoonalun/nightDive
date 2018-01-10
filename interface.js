@@ -18,9 +18,6 @@ var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68,
                 'controlScheme': NON_CONTINUOUS_MOVEMENT,
                 'showReticle': false,
                 'showPlayerLight': false
-        },
-        player = {
-                'temperature': 0
         };
 
 function moveCameraWithButtons() {
@@ -154,7 +151,9 @@ function moveArrayOfEntities(arrayOfEntities, direction, numberOfCells) {
                 var entity = arrayOfEntities[i];
                 moveEntity(entity, direction, numberOfCells);
         }
-}
+        
+
+}///////////////////////////
 
 function initializeReticle() {
         var centerUpperLeftCellIndex = Math.round((totalNumberOfCells / 2)) + Math.round((cellsPerRow / 2));

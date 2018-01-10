@@ -16,6 +16,7 @@ var SINE = 'sineWaveShape',
         TRI = 'triangularWaveShape',
         SQUARE = 'squareWaveShape',
         SAW = 'sawWaveShape',
+        GAME_TYPE_ICARUS = 'icarusGameType',
         UP = 'up', // used for moving things around
         DOWN = 'down',
         LEFT = 'left',
@@ -32,7 +33,7 @@ var SINE = 'sineWaveShape',
                 },
                 'minLights': 4, // min and max number of lights in the level/on the screen (depending on where development goes)
                 'maxLights': 20,
-                'noiseColorBase': []
+                'gameType': GAME_TYPE_ICARUS
         },
         randomLightSettingsDefault = {
                 'minBrightness': 64,
@@ -47,46 +48,20 @@ var SINE = 'sineWaveShape',
                 'minCellIndex': 0,
                 'maxCellIndex': totalNumberOfCells - 1
         },
-        drawingSettings = {
-                'fpsDisplay': {
-                        'frameCounter': 0,
-                        'fpsDisplayInterval': 2000, // for a regular fps display
-                        'fpsDisplayIntervalLongTerm': 10000, // to show an average over a longer period
-                        'displayFps': true
-                },
-                'noise': {
-                        'addNoise': true,
-                        'redNoise': 0.5,
-                        'greenNoise': 0.6,
-                        'blueNoise': 1,
-                        'globalNoiseScale': 0.05,
-                        'minMsBetweenNoiseChanges': 1500,
-                        'maxMsBetweenNoiseChanges': 5000
-                },
-                'normalizeBrightnesses': false // requires a second pass over all the cells, necessarily (as it checks their relative brightnesses after all their brightnesses have been assigned), and so slows things down.
+        player = {
+                'temperatureNoiseScale': 1,
+                'centerXY': [canvasWidth * 0.5, canvasHeight * 0.5],
+                'logPlayerTemperature': false
         };
 
-//settings.oscillators.push(makeOscillator(5000, 0, SINE, 'firstTestOscillator'));
 makeRandomOscillators(10, 5000, 20000, settings.oscillators);
 makeRandomLights(settings.minLights, randomLightSettingsDefault, settings.entities.lights, settings.oscillators);
 makePlayerLight(1200, 10, cells[0].size, cells);
 
 initializeReticle();
 
-//these sets of numberOfCells and cellsPerRow work for our 800 x 600 canvas (double the number of cells pers row = 4x the number of cells overall):
-//300, 20
-//768, 32
-//1200, 40
-//3072, 64
-//4800, 80      //this seems to reduce the framerate significantly, even with just one native oscillator per cell. Is there a way to optimize so that this works?
-//12288, 128
-//19200, 160
-//49152, 256    // with new system, this tanks the framerate
-//modifyCells(cells);
-
-//makeHomeOscillators(homeOscillators, 2, 40, 40, [255, 192, 127], [255, 192, 127], 1);
-//homeCell = findInitialHomeCell(cells);
-
+// WRONG TEMPORARY REMOVE (this temporary player temperature oscillator);
+settings.oscillators.push(makeOscillator(10000, 0, SINE, 'temporaryPlayerTemperatureOscillator'));
 
 //sortCellsIntoRows(cells);
 //sortCellsIntoColumns(cells);
@@ -94,10 +69,6 @@ initializeReticle();
 ////////////////////
 //CELLS
 ////////////////////
-
-//CELLS
-//Eventually I'll want cells to be able to retain (with various decay/damping characteristics) oscillations that were imparted
-//to them by active oscillators.
 
 function makeCells(numberOfCells, cellsPerRow, cellsList) {
         for (var i = 0; i < (numberOfCells / cellsPerRow); i++) {    //this should happen every time a row is complete
