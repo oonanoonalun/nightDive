@@ -9,23 +9,36 @@ var context = canvas.getContext('2d');
 //MAIN LOOP
 function mainLoop() {
     context.clearRect(0, 0, 800, 600);
-    updateOscillators(settings.oscillators);
-    updatePlayer();
-    if (player.logPlayerTemperature) logPlayerTemperature(500);
-    updateNoise();
-    updateLights(settings.entities.lights, settings.minLights, settings.maxLights);
+    controls();
+    globalUpdates();
+    //getAverageBrightnessOfCenterCells(centerCells);
+    drawAllCells(cells);
+    logging();
+}
+
+// Every .033 seconds run the code in function mainLoop. 40(ms) is 25fps, 33.33etc.ms is 30.
+setInterval(mainLoop, (33.333333333333 * 0.01)); // high framerate is just to see how efficient things are by seeing how fast they can possibly go
+
+function controls() {
     if (interfaceSettings.controlScheme === NON_CONTINUOUS_MOVEMENT) {
         moveCameraWithButtons();
     }
     if (interfaceSettings.controlScheme === CONTINUOUS_MOVEMENT) {
         moveCameraWithButtonsContinuous();
-    }
-    drawAllCells(cells);
-    if (drawingSettings.fpsDisplay.displayFps) countFps(drawingSettings.fpsDisplay.fpsDisplayInterval, drawingSettings.fpsDisplay.fpsDisplayIntervalLongTerm);
+    }    
 }
 
-// Every .033 seconds run the code in function mainLoop. 40(ms) is 25fps, 33.33etc.ms is 30.
-setInterval(mainLoop, (33.333333333333 * 0.01)); // high framerate is just to see how efficient things are by seeing how fast they can possibly go
+function globalUpdates() {
+    updateOscillators(settings.oscillators);
+    updatePlayer();
+    updateNoise();
+    updateLights(settings.entities.lights, settings.minLights, settings.maxLights);    
+}
+
+function logging() {
+    if (player.logPlayerTemperature) logPlayerTemperature(500);
+    if (drawingSettings.fpsDisplay.displayFps) countFps(drawingSettings.fpsDisplay.fpsDisplayInterval, drawingSettings.fpsDisplay.fpsDisplayIntervalLongTerm);    
+}
 
 function countFps(displayInterval, displayIntervalLongTerm) {
     drawingSettings.fpsDisplay.frameCounter++;

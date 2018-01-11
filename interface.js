@@ -17,7 +17,8 @@ var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68,
                 'moveRepeatDelay': 25,
                 'controlScheme': NON_CONTINUOUS_MOVEMENT,
                 'showReticle': false,
-                'showPlayerLight': false
+                'showPlayerLight': false,
+                'centerCellsAverageBrightness': 0 // WRONG MAYBE: I just put this here to remind me that it exists, but it doesn't actually need to be declared here.
         };
 
 function moveCameraWithButtons() {
@@ -109,37 +110,23 @@ function moveCameraWithButtonsContinuous() {
         }
 }
 
-function moveEntity(entity, direction, numberOfCells) {
-        var index = entity.cellIndex;
+function moveEntity(entity, direction, numberOfCellsToMove) {
         if (direction === UP || direction === UP_LEFT || direction === UP_RIGHT) {
-                if (index < cellsPerRow) { // if it's on the top edge
-                        index += totalNumberOfCells - (cellsPerRow * numberOfCells);
-                } else {
-                        index -= numberOfCells * cellsPerRow;
-                }
+                if (entity.coordinates[1] < 0.5 * cellsPerColumn - numberOfCellsToMove) entity.coordinates[1] += numberOfCellsToMove; // if it WON'T CROSS the TOP EDGE next frame
+                else entity.coordinates[1] -= cellsPerColumn - numberOfCellsToMove;
         }
         if (direction === DOWN || direction === DOWN_LEFT || direction === DOWN_RIGHT) {
-                if (index >= totalNumberOfCells - cellsPerRow) { // i.e. if it's on the bottom edge
-                        index -= totalNumberOfCells - (numberOfCells * cellsPerRow);
-                } else {
-                        index += numberOfCells * cellsPerRow;
-                }                
+                if (entity.coordinates[1] > -(0.5 * cellsPerColumn - numberOfCellsToMove)) entity.coordinates[1] -= numberOfCellsToMove; // if it WON'T CROSS the BOTTOM EDGE next frame
+                else entity.coordinates[1] += cellsPerColumn - numberOfCellsToMove;
         }
         if (direction === LEFT || direction === UP_LEFT || direction === DOWN_LEFT) {
-                if (index === 0 || index % cellsPerRow === 0) { // if it's on the left edge
-                        index += cellsPerRow - numberOfCells;
-                } else {
-                        index -= numberOfCells;
-                }                    
+                if (entity.coordinates[0] > -(0.5 * cellsPerRow - numberOfCellsToMove)) entity.coordinates[0] -= numberOfCellsToMove; // if it WON'T CROSS the LEFT EDGE next frame
+                else entity.coordinates[0] += cellsPerRow - numberOfCellsToMove;
         }
         if (direction === RIGHT || direction === UP_RIGHT || direction === DOWN_RIGHT) {
-                if (cellsPerRow % index === 1) { // if it's on the right edge
-                        index -= cellsPerRow - numberOfCells;
-                } else {
-                        index += numberOfCells;
-                }                  
+                if (entity.coordinates[0] < 0.5 * cellsPerRow - numberOfCellsToMove) entity.coordinates[0] += numberOfCellsToMove; // if it WON'T CROSS the RIGHT EDGE next frame
+                else entity.coordinates[0] -= cellsPerRow - numberOfCellsToMove;
         }
-        entity.cellIndex = index;
 }
 
 function moveArrayOfEntities(arrayOfEntities, direction, numberOfCells) {
@@ -151,9 +138,9 @@ function moveArrayOfEntities(arrayOfEntities, direction, numberOfCells) {
                 var entity = arrayOfEntities[i];
                 moveEntity(entity, direction, numberOfCells);
         }
-        
+}  
 
-}///////////////////////////
+///////////////////////////
 
 function initializeReticle() {
         var centerUpperLeftCellIndex = Math.round((totalNumberOfCells / 2)) + Math.round((cellsPerRow / 2));

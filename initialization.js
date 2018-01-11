@@ -1,16 +1,18 @@
 var cells = [],
         canvasWidth = 800,
         canvasHeight = 600,
-        arrayOfValidCellsPerRow = findValidCellsPerRowForCanvas(canvasWidth, canvasHeight, true),
-        cellsPerRow = arrayOfValidCellsPerRow[12],  // 0-10 valid if last argument to findValid... is 'true,' 0-16 if 'false.' Smaller is chunkier. You can put any number here instead of the array items, but there might be some weird artifacts that show up.
+        // WRONG current coordinate system needs even number of cells in rows and columns. Either update findValidCellsPerRowForCanvas so that an option is to lock it even numbers in both directions, or update assignCoordinatesToCells. coordinatesToIndex won't work with odd numbers, either
+        arrayOfValidCellsPerRow = findValidCellsPerRowForCanvas(canvasWidth, canvasHeight, false),
+        cellsPerRow = arrayOfValidCellsPerRow[6],  // 0-16 (12 is good for look and framerate) valid if last argument to findValid... is 'true,' 0-10 (7 is good for look and framerate) if 'false.' Smaller is chunkier. You can put any number here instead of the array items, but there might be some weird artifacts that show up.
         //cellsPerRow = cellSizeToCellsPerRow(13),
-        totalNumberOfCells = cellsPerRow * cellsPerRow * 0.75,
-        cellsPerColumn = totalNumberOfCells / cellsPerRow;
-console.log('The current cells size is: ' + (canvasWidth / cellsPerRow));
-console.log('The curent number of cells per row (long dimension) is: ' + cellsPerRow);
+        totalNumberOfCells = cellsPerRow * cellsPerRow * 0.75, // only works for 4:3 ratio
+        cellsPerColumn = totalNumberOfCells / cellsPerRow,
+        centerCells = [];
+if (drawingSettings.displayResolutionInformation) console.log('The current cells size is: ' + (canvasWidth / cellsPerRow));
+if (drawingSettings.displayResolutionInformation) console.log('The curent number of cells per row (long dimension) is: ' + cellsPerRow);
 makeCells(totalNumberOfCells, cellsPerRow, cells);
 findNeighbors(cells, cellsPerRow);
-
+assignCoordinatesToCells(cells);
 
 var SINE = 'sineWaveShape',
         TRI = 'triangularWaveShape',
@@ -59,6 +61,8 @@ makeRandomLights(settings.minLights, randomLightSettingsDefault, settings.entiti
 makePlayerLight(1200, 10, cells[0].size, cells);
 
 initializeReticle();
+initializeCenterCells(cells, 40, centerCells);
+
 
 // WRONG TEMPORARY REMOVE (this temporary player temperature oscillator);
 settings.oscillators.push(makeOscillator(10000, 0, SINE, 'temporaryPlayerTemperatureOscillator'));
@@ -69,6 +73,14 @@ settings.oscillators.push(makeOscillator(10000, 0, SINE, 'temporaryPlayerTempera
 ////////////////////
 //CELLS
 ////////////////////
+
+function initializeCenterCells(allCellsArray, radius, destinationArray) {
+        for (var i = 0; i < allCellsArray.length; i++) {
+                var cell = allCellsArray[i],
+                        distanceFromCenter = findDistanceBetweenPoints([canvasWidth / 2, canvasHeight / 2], cell.centerXY);
+                if (distanceFromCenter <= radius) destinationArray.push(cell);
+        }
+}
 
 function makeCells(numberOfCells, cellsPerRow, cellsList) {
         for (var i = 0; i < (numberOfCells / cellsPerRow); i++) {    //this should happen every time a row is complete
@@ -203,12 +215,12 @@ function findValidCellsPerRowForCanvas(canvasWidth, canvasHeight, halfCellsOkTru
                         }
                 }
         } else validNumbersOfCellsPerLongDimensionForTotal = validNumbersOfCellsPerLongDimensionForLongDimension;
-        console.log('The array of valid numbers of cells per row (per long dimension, actually) (for resolution selection) can be sent values 0-' + (validNumbersOfCellsPerLongDimensionForTotal.length - 1) + '.');
+        if (drawingSettings.displayResolutionInformation) console.log('The array of valid numbers of cells per row (per long dimension, actually) (for resolution selection) can be sent values 0-' + (validNumbersOfCellsPerLongDimensionForTotal.length - 1) + '.');
         // cell sizes per valid selection
-        console.log('Here are the cell sizes (in pixels) and cells per row (long dimension) associated with each index (array index: cell size, cells per row):');
+        if (drawingSettings.displayResolutionInformation) console.log('Here are the cell sizes (in pixels) and cells per row (long dimension) associated with each index (array index: cell size, cells per row):');
         for (var k = 0; k < validNumbersOfCellsPerLongDimensionForTotal.length; k++) {
                 var cellSize = longDimension / validNumbersOfCellsPerLongDimensionForTotal[k];
-                console.log(k + ': ' + cellSize + ', ' + validNumbersOfCellsPerLongDimensionForTotal[k]);
+                if (drawingSettings.displayResolutionInformation) console.log(k + ': ' + cellSize + ', ' + validNumbersOfCellsPerLongDimensionForTotal[k]);
         }
         return validNumbersOfCellsPerLongDimensionForTotal;
 }
@@ -226,10 +238,6 @@ function reverseOrderOfArray(array) {
         return array;
 }
 
-////////////////////////
-//MISC
-////////////////////////
-
 function randomNumberBetweenNumbers(minPossibleNumber, maxPossibleNumber, roundOrDontRoundTrueOrFalse) {
         var newRandomNumber = minPossibleNumber + Math.random() * (maxPossibleNumber - minPossibleNumber);
         if (roundOrDontRoundTrueOrFalse === true) return Math.round(newRandomNumber);
@@ -240,6 +248,39 @@ function randomNumberBetweenNumbers(minPossibleNumber, maxPossibleNumber, roundO
 function cellSizeToCellsPerRow(cellSize) {
         var newCellsPerRow = Math.floor(canvasWidth / cellSize);
         return newCellsPerRow;
+}
+
+function assignCoordinatesToCells(allCellsArray) {
+        // 0, 0 is the center of the screen, but no cell has that coordinate
+        if (cellsPerRow % 2 === 0 && cellsPerColumn % 2 === 0) {
+                for (var i = 0; i < allCellsArray.length; i++) {
+                        var cell = allCellsArray[i],
+                                coordinates = [];
+                        if (i % cellsPerRow >= 0.5 * cellsPerRow) coordinates[0] = (i % cellsPerRow) - (0.5 * cellsPerRow) + 1; // if cell is in the RIGHT HALF of the screen
+                        else coordinates[0] = -((0.5 * cellsPerRow) - (i % cellsPerRow)); // if cell is in the LEFT HALF of the screen
+                        if (i < 0.5 * totalNumberOfCells) coordinates[1] = (0.5 * cellsPerColumn) - (Math.floor(i / cellsPerRow));// if cell is in the TOP HALF of the screen
+                        else coordinates[1] = -(Math.floor(i / cellsPerRow) - (0.5 * cellsPerColumn) + 1);// if cell is in the BOTTOM HALF of the screen
+                        cell.coordinates = coordinates;
+                }
+        } else {
+                console.log('assignCoordinatesToCells function failed. The canvas has an odd number of cells in at least one dimension.');
+                return null;
+        }
+}
+
+function coordinatesToIndex(XYArrayOfCoordinates) {
+        var x = XYArrayOfCoordinates[0],
+                y = XYArrayOfCoordinates[1],
+                index;
+        if (x > 0) index = x + cellsPerRow * 0.5 - 1;
+        else index = x + cellsPerRow * 0.5;
+        if (y > 0) index += cellsPerRow * (cellsPerColumn * 0.5 - y);
+        else index += cellsPerRow * (cellsPerColumn * 0.5 - y - 1);
+        if (index > totalNumberOfCells - 1) {
+                console.log('coordinatesToIndex returned an invalid index: ' + index);
+                return;
+        }
+        return index;
 }
 
 

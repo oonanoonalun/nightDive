@@ -14,7 +14,8 @@ var drawingSettings = {
                         'minMsBetweenNoiseChanges': 1500,
                         'maxMsBetweenNoiseChanges': 5000
                 },
-                'normalizeBrightnesses': false // requires a second pass over all the cells, necessarily (as it checks their relative brightnesses after all their brightnesses have been assigned), and so slows things down.
+                'normalizeBrightnesses': false, // requires a second pass over all the cells, necessarily (as it checks their relative brightnesses after all their brightnesses have been assigned), and so slows things down.
+                'displayResolutionInformation': false
 };
 
 function drawAllCells(cellsArray) {
@@ -99,6 +100,7 @@ function makeRandomLights(numberOfLights, randomLightParametersObject, destinati
         }
 }
 
+//WRONG the "make" functions should be in initialization.js (I don't want to move them till everything else is stable)
 function makeLight(brightness, radius, cellIndex, oscillator, diffusion, deathChance, allCellsList, lightsArray) {
         var light = {
                 'brightness': brightness,
@@ -110,6 +112,7 @@ function makeLight(brightness, radius, cellIndex, oscillator, diffusion, deathCh
                 'lightParentArray': lightsArray, // lights array
                 'cellIndex': cellIndex,
                 'cell': allCellsList[cellIndex],
+                'coordinates': allCellsList[cellIndex].coordinates
         };
         return light;
 }
@@ -137,33 +140,38 @@ function updateLight(light) {
         // lights move away from center when player is cooler, toward it when warmer
         if (settings.gameType === GAME_TYPE_ICARUS) temperatureMovesLightsIcarus(light);
         // update location
-        light.cell = light.parentCellsArray[light.cellIndex];
+        light.cell = light.parentCellsArray[coordinatesToIndex(light.coordinates)]; // this light's cell become whatever cell has this light's coordinates
+        //light.cell = light.parentCellsArray[light.cellIndex];
 }
 
 function temperatureMovesLightsIcarus(light) {
         // WRONG Delay between light movements and how they scale off the player's temperature
         //      should be light properties. Maybe based on their brightness and/or diffusion?
         //      Could make the number of cells moved in the moveEntity calls below scale off of something.
+        // WRONG should work out a way for things to move toward a given point.
+        // WRONG Number of cells moved should scale with resolution, or you should be able to send pixels
+        //      to moveEntity and have it translate them to cells at the current resolution.
         if (light.noTemperatureMoveUntil <= Date.now() || !light.noTemperatureMoveUntil) {
-                if (light.cellIndex < totalNumberOfCells / 2) { // i.e. cell is in the UPPER HALF
+                if (light.coordinates[1] > 0) { // i.e. cell is in the UPPER HALF
                         if (player.temperature < 0.5) moveEntity(light, UP, 1); // cool players repel lights
                         if (player.temperature >= 0.5) moveEntity(light, DOWN, 1); // hot players attract lights
                 }
-                if (light.cellIndex > totalNumberOfCells / 2) { // i.e. cell is in the LOWER HALF
+                if (light.coordinates[1] < 0) { // i.e. cell is in the LOWER HALF
                         if (player.temperature < 0.5) moveEntity(light, DOWN, 1); // cool players repel lights
                         if (player.temperature >= 0.5) moveEntity(light, UP, 1); // hot players attract lights                        
                 }
-                if (light.cellIndex % cellsPerRow < cellsPerRow / 2) { // i.e. cell is in the LEFT HALF
+                if (light.coordinates[0] < 0) { // i.e. cell is in the LEFT HALF
                         if (player.temperature < 0.5) moveEntity(light, LEFT, 1); // cool players repel lights
                         if (player.temperature >= 0.5) moveEntity(light, RIGHT, 1); // hot players attract lights                        
                 }
-                if (light.cellIndex % cellsPerRow > cellsPerRow / 2) { // i.e. cell is in the RIGHT HALF
+                if (light.coordinates[0] > 0) { // i.e. cell is in the RIGHT HALF
                         if (player.temperature < 0.5) moveEntity(light, RIGHT, 1); // cool players repel lights
                         if (player.temperature >= 0.5) moveEntity(light, LEFT, 1); // hot players attract lights                        
                 }
                 light.noTemperatureMoveUntil = Date.now() + Math.max(200, (500 - (player.temperatureCircular * 500))); // WRONG MAYBE maybe light brightness and/or diffusion should figure into how fast they move?
         }
 }
+
 function updateLights(arrayOfLights, minLights, maxLights) {
         // individual light update
         for (var i = 0; i < arrayOfLights.length; i++) updateLight(arrayOfLights[i]);

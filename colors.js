@@ -193,3 +193,13 @@ function findBrightestNeighbor(neighborsList) {         //not including the cell
         }
         return brightestNeighbor;
 }
+
+
+/*function getAverageBrightnessOfCenterCells(centerCellsArray) {
+        var newBrightness = 0;
+        for (var i = 0; i < centerCellsArray.length; i++) {
+                var cell = centerCellsArray[i];
+                newBrightness += averageBrightness(cell.color);
+        }
+        interfaceSettings.centerCellsAverageBrightness = newBrightness;
+}*/
