@@ -16,8 +16,6 @@ var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68,
                 'cellsPerMove': 2,
                 'moveRepeatDelay': 25,
                 'controlScheme': NON_CONTINUOUS_MOVEMENT,
-                'showReticle': false,
-                'showPlayerLight': false,
                 'centerCellsAverageBrightness': 0 // WRONG MAYBE: I just put this here to remind me that it exists, but it doesn't actually need to be declared here.
         };
 
@@ -139,27 +137,3 @@ function moveArrayOfEntities(arrayOfEntities, direction, numberOfCells) {
                 moveEntity(entity, direction, numberOfCells);
         }
 }  
-
-///////////////////////////
-
-function initializeReticle() {
-        var centerUpperLeftCellIndex = Math.round((totalNumberOfCells / 2)) + Math.round((cellsPerRow / 2));
-        interfaceSettings.reticleCenterCells = [
-                cells[centerUpperLeftCellIndex],
-                cells[centerUpperLeftCellIndex + 1],
-                cells[centerUpperLeftCellIndex + cellsPerRow],
-                cells[centerUpperLeftCellIndex + cellsPerRow + 1]
-        ];
-        interfaceSettings.reticleOuterCornerCells = [
-                cells[centerUpperLeftCellIndex].neighborUpLeft,
-                cells[centerUpperLeftCellIndex + 1].neighborUpRight,
-                cells[centerUpperLeftCellIndex + cellsPerRow].neighborDownLeft,
-                cells[centerUpperLeftCellIndex + cellsPerRow + 1].neighborDownRight                      
-        ];
-        interfaceSettings.reticleFarOuterCornerCells = [
-                cells[centerUpperLeftCellIndex].neighborUpLeft.neighborUpLeft,
-                cells[centerUpperLeftCellIndex + 1].neighborUpRight.neighborUpRight,
-                cells[centerUpperLeftCellIndex + cellsPerRow].neighborDownLeft.neighborDownLeft,
-                cells[centerUpperLeftCellIndex + cellsPerRow + 1].neighborDownRight.neighborDownRight                 
-        ];
-}

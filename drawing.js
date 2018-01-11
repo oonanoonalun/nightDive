@@ -19,7 +19,6 @@ var drawingSettings = {
 };
 
 function drawAllCells(cellsArray) {
-        if (interfaceSettings.showReticle) showReticle();
         for (var i = 0; i < cellsArray.length; i++) {
                 var cell = cellsArray[i];
                 getCellColor(cell);
@@ -31,10 +30,6 @@ function drawAllCells(cellsArray) {
 
 function getCellColor(cell) {
         showLights(cell);
-        // just testing crap:
-                //var brightness = cell.color = cells.indexOf(cell) * 255 / cells.length;
-                //cell.color = [brightness, brightness, brightness];
-        if (interfaceSettings.showPlayerLight) showPlayerLight(cell);
 }
 
 function showLights(cell) {
@@ -116,20 +111,6 @@ function makeLight(brightness, radius, cellIndex, oscillator, diffusion, deathCh
         };
         return light;
 }
-
-function makePlayerLight(brightness, radius, diffusion, allCellsList) {
-        var centerUpperLeftCellIndex = Math.round((totalNumberOfCells / 2)) + Math.round((cellsPerRow / 2));
-        var playerLight = {
-                'brightness': brightness,
-                'radius': radius,
-                'diffusion': diffusion,
-                'oscillator': makeOscillator(3000, 0, SINE, 'playerLightOscillator'),
-                'parentCellsArray': allCellsList, // large cellsList of which light's cell is a part
-                'centerXY': [allCellsList[centerUpperLeftCellIndex].left + allCellsList[0].size, allCellsList[centerUpperLeftCellIndex].top + allCellsList[0].size]
-        };
-        interfaceSettings.playerLight = playerLight;        
-}
-
 
 function updateLight(light) {
         // possible death
@@ -270,13 +251,6 @@ function showPlayerLight(cell) {
                 brightness;
         brightness = playerLight.radius / Math.max(playerLight.diffusion, distanceFromPlayerLight) * /*playerLight.oscillator.value **/ playerLight.brightness; // WRONG I don't know why the oscillator's not working here
         cell.color = addColors(cell.color, [brightness, brightness, brightness]);       
-}
-
-function showReticle() {
-        for (var i = 0; i < interfaceSettings.reticleFarOuterCornerCells.length; i++) {
-                var reticleCell = interfaceSettings.reticleFarOuterCornerCells[i];
-                reticleCell.color = addColors(reticleCell.color, [64, 0, 0]);
-        }
 }
 
 function findDistanceBetweenPoints(xyArray1, xyArray2) {

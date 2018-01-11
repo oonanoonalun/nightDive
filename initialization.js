@@ -58,13 +58,8 @@ var SINE = 'sineWaveShape',
 
 makeRandomOscillators(10, 5000, 20000, settings.oscillators);
 makeRandomLights(settings.minLights, randomLightSettingsDefault, settings.entities.lights, settings.oscillators);
-makePlayerLight(1200, 10, cells[0].size, cells);
 
-initializeReticle();
-initializeCenterCells(cells, 40, centerCells);
-
-
-// WRONG TEMPORARY REMOVE (this temporary player temperature oscillator);
+// WRONG TEMPORARY REMOVE this (temporary player temperature oscillator);
 settings.oscillators.push(makeOscillator(10000, 0, SINE, 'temporaryPlayerTemperatureOscillator'));
 
 //sortCellsIntoRows(cells);
@@ -73,14 +68,6 @@ settings.oscillators.push(makeOscillator(10000, 0, SINE, 'temporaryPlayerTempera
 ////////////////////
 //CELLS
 ////////////////////
-
-function initializeCenterCells(allCellsArray, radius, destinationArray) {
-        for (var i = 0; i < allCellsArray.length; i++) {
-                var cell = allCellsArray[i],
-                        distanceFromCenter = findDistanceBetweenPoints([canvasWidth / 2, canvasHeight / 2], cell.centerXY);
-                if (distanceFromCenter <= radius) destinationArray.push(cell);
-        }
-}
 
 function makeCells(numberOfCells, cellsPerRow, cellsList) {
         for (var i = 0; i < (numberOfCells / cellsPerRow); i++) {    //this should happen every time a row is complete
