@@ -212,13 +212,6 @@ function updateNoise() {
         drawingSettings.noise.blueNoise = player.temperature;
 }
 
-function logPlayerTemperature(displayInterval) {
-        if (Date.now() % displayInterval < 50 && (player.noTemperatureLoggingUntil <= Date.now() || !player.noTemperatureLoggingUntil)) {
-                console.log('Temperature: ' + player.temperature.toFixed(2));
-                player.noTemperatureLoggingUntil = Date.now() + 100; // just keeps it from logging a few times during the necessarily non-tiny window.
-        }
-}
-
 function updatePlayer() {
         player.temperature = settings.oscillators[settings.oscillators.length - 1].value;
         player.temperatureCircular = Math.abs((player.temperature - 0.5) * 2); // i.e. 0 and 1 = 1, 0.5 = 0;
@@ -243,14 +236,6 @@ function normalizeCellsArrayBrightnessRange(cellsArray, darkestValue, brightestV
                 cellsArray[j].color = [newBrightness, newBrightness, newBrightness];
                 finalizeCellColorAndDrawCell(cellsArray[i]);
         }
-}
-
-function showPlayerLight(cell) {
-        var playerLight = interfaceSettings.playerLight,
-                distanceFromPlayerLight = findDistanceBetweenPoints(cell.centerXY, playerLight.centerXY),
-                brightness;
-        brightness = playerLight.radius / Math.max(playerLight.diffusion, distanceFromPlayerLight) * /*playerLight.oscillator.value **/ playerLight.brightness; // WRONG I don't know why the oscillator's not working here
-        cell.color = addColors(cell.color, [brightness, brightness, brightness]);       
 }
 
 function findDistanceBetweenPoints(xyArray1, xyArray2) {

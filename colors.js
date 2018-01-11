@@ -22,7 +22,6 @@ function hexToDec(hexNumber) {
         return decColor;
 }
 
-
 function capColorBrightness(color, maxColor) {
     for (var i = 0; i < 3; i++) {
         color[i] = Math.min(maxColor[i], color[i]);
@@ -46,9 +45,6 @@ function divideColors(colorA, colorB) {
         }
         return newColor;
 }
-
-var testColorGroup = [[71, 36, 19], [41, 8, 30], [61, 89, 42], [28, 71, 80], [17, 31, 57]];
-
 
 function addAllColors(colorsArray) {     //colorGroup should be an array of colors
         var newColor = colorsArray[0];
@@ -152,54 +148,3 @@ function brightnessToSpectrum(darkThreshold, maxBrightness, cell) {  //should se
                 return newColor;
         }
 }
-
-
-//find the current, average color of all a cell's neighbors
-//if we could parse a cell's color from hex back into dec then this would easier and simpler.
-//Work to do that is partially done, and should be completed at some point.
-function findNeighborsColor(neighborsList) {    //value passed here should be cell.neighbors
-        var neighborsColor = [0, 0, 0];
-        for (var i = 0; i < neighborsList.length; i++) {
-                for (var j; j < 3; j++) {
-                        neighborsColor[j] += neighborsList[i][j];
-                }
-        }
-        neighborsColor = divideColorByNumber(neighborsColor, neighborsList.length);
-        return neighborsColor;
-}
-
-function findCellColor (cell, darkThreshold, warningThreshold, impulsesList) {
-        var colorSourcesList = [];
-        colorSourcesList.push(findOscillatorsColor(cell.oscillators), findNeighborsColor(cell.neighbors), findColorOfImpulsesAffectingCell(cell, impulsesList));
-        cell.color = divideColorByNumber(addAllColors(colorSourcesList), (colorSourcesList.length - 1));        //the "1" is findColorOfImpulsesAffectingCell, as impulses shouldn't figure into dividing/averaging a cell's final color--if it did, their brief life would lower the cell's overall brightness for whole said life (esp. during cooldown), and we want them to brighten the cell for their whole life
-        if (averageBrightness(cell.color) < darkThreshold) {    //if cell brightness is under dark threshold, then
-                cell.color = [0, 0, 0];                                 //make cell black
-        //} else { if (averageBrightness(cell.color) <= warningThreshold) {
-            //            cell.color[0] += 32;        
-        } else {
-                cell.color = brightnessToSpectrum(darkThreshold, 255, cell);    //also assigns color groups. sets cell's color to a rainbow-esque color based on the cell's total brightness
-        }
-}
-
-function findBrightestNeighbor(neighborsList) {         //not including the cell that was most recently Home Cell
-        var brightestNeighbor;
-        for (var i = 1; i < (neighborsList.length - 1); i++) {
-                if (sumColor(hexToDec(neighborsList[i - 1].color)) > sumColor(hexToDec(neighborsList[i].color)) && neighborsList[i - 1].flags[2] === false) {
-                        brightestNeighbor = neighborsList[i - 1];
-                }
-        }
-        if (sumColor(hexToDec(brightestNeighbor.color)) < sumColor(hexToDec(neighborsList[neighborsList.length - 1].color)) && neighborsList[neighborsList.length - 1].flags[2] === false) {  //gives the last neighbor in the list a chance to be brightestNeighbor
-                brightestNeighbor = neighborsList[neighborsList.length - 1];
-        }
-        return brightestNeighbor;
-}
-
-
-/*function getAverageBrightnessOfCenterCells(centerCellsArray) {
-        var newBrightness = 0;
-        for (var i = 0; i < centerCellsArray.length; i++) {
-                var cell = centerCellsArray[i];
-                newBrightness += averageBrightness(cell.color);
-        }
-        interfaceSettings.centerCellsAverageBrightness = newBrightness;
-}*/

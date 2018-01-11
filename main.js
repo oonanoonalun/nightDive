@@ -64,3 +64,9 @@ function countFps(displayInterval, displayIntervalLongTerm) {
     }
 }
 
+function logPlayerTemperature(displayInterval) {
+        if (Date.now() % displayInterval < 50 && (player.noTemperatureLoggingUntil <= Date.now() || !player.noTemperatureLoggingUntil)) {
+                console.log('Temperature: ' + player.temperature.toFixed(2));
+                player.noTemperatureLoggingUntil = Date.now() + 100; // just keeps it from logging a few times during the necessarily non-tiny window.
+        }
+}
