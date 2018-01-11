@@ -59,7 +59,7 @@ var SINE = 'sineWaveShape',
                 'intervalBetweenTemperatureUpdates': 200,
                 'temperatureChangeRateScale': 0.0003,
                 'health': 100,
-                'intervalBetweenHealthUpdates': 200,
+                'intervalBetweenHealthUpdates': 133,
                 'displayHealth': true
         };
 
@@ -72,15 +72,19 @@ makeRandomLights(settings.minLights, randomLightSettingsDefault, settings.entiti
 player.oscillator = makeOscillator(3000, 0, SINE, 'playerOscillator');
 settings.oscillators.push(player.oscillator);
 player.light = makeLight(1000, 10, [1, 1], player.oscillator, 10, 0, cells);
-// WRONG TEMPORARY REMOVE this (temporary player temperature oscillator);
-settings.oscillators.push(makeOscillator(10000, 0, SINE, 'temporaryPlayerTemperatureOscillator'));
 
 initializeDeathAphorisms();
 
 function initializeDeathAphorisms() {
         deathAphorisms.push(
                 'Every ending is a new beginning.',
-                'Death is only part of the journey.'
+                'Death is only part of the journey.',
+                'Death is the greatest adventure.',
+                'Without death, can life really be meaningful?',
+                'Today is a good day to die.',
+                'If life is only a dream, perhaps death is waking up.',
+                'Farewell, mortal coil!',
+                'Game over, man!'
         );
 }
 

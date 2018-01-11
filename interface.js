@@ -185,7 +185,7 @@ function updatePlayerTemperature() {
         player.temperatureCircular = Math.abs((player.temperature - 0.5) * 2); // i.e. 0 and 1 = 1, 0.5 = 0;
 }
 
-function updatePlayerHealth(cell) {
+function updatePlayerHealth(cell) { // cell is passed because this will go in getCellColor and affect colors being drawn
         // if player is alive
         if (player.health > 0) {
                 // extremes negatively impact health
@@ -198,7 +198,7 @@ function updatePlayerHealth(cell) {
                 if (player.displayHealth) {
                         if (
                                 (player.temperature === 0 || player.temperature === 1) &&
-                                player.health % 5 === 0 &&
+                                player.health % 5 === 0 && player.health !== 0 &&
                                 (player.health !== player.lastLoggedHealth || !player.lastLoggedHealth)
                         ) {
                                 console.log('Health: ' + player.health);
