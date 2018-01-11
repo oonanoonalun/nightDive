@@ -182,4 +182,34 @@ function updatePlayerTemperature() {
         // limit temperature to within 0-1
         player.temperature = Math.min(1, player.temperature);
         player.temperature = Math.max(0, player.temperature);
+        player.temperatureCircular = Math.abs((player.temperature - 0.5) * 2); // i.e. 0 and 1 = 1, 0.5 = 0;
+}
+
+function updatePlayerHealth(cell) {
+        // if player is alive
+        if (player.health > 0) {
+                // extremes negatively impact health
+                if ((player.temperature === 0 || player.temperature === 1) && (player.noHealthUpdateUntil <= Date.now() || !player.noHealthUpdateUntil)) {
+                        player.health--;
+                        player.noHealthUpdateUntil = Date.now() + player.intervalBetweenHealthUpdates;
+                }
+                if (player.temperature === 0) cell.color = addColors(cell.color, [0, 64, 128]);
+                if (player.temperature === 1) cell.color = addColors(cell.color, [128, 32, 0]);
+                if (player.displayHealth) {
+                        if (
+                                (player.temperature === 0 || player.temperature === 1) &&
+                                player.health % 5 === 0 &&
+                                (player.health !== player.lastLoggedHealth || !player.lastLoggedHealth)
+                        ) {
+                                console.log('Health: ' + player.health);
+                                player.lastLoggedHealth = player.health;
+                        }
+                }
+        } else {
+                cell.color = [0, 0, 0]; // player is dead
+                if (!player.died) {
+                        console.log(deathAphorisms[Math.round(Math.random() * (deathAphorisms.length - 1))]);
+                        player.died = true;
+                }
+        }
 }

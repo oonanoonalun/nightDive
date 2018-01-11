@@ -25,6 +25,7 @@ var SINE = 'sineWaveShape',
         DOWN_RIGHT = 'diagonalDownRight',
         UP_LEFT = 'diagonalUpLeft',
         UP_RIGHT = 'diagonalUpRight',
+        deathAphorisms = [],
         settings = {
                 'oscillators': [],
                 'entities': {
@@ -49,14 +50,17 @@ var SINE = 'sineWaveShape',
                 'maxCellIndex': totalNumberOfCells - 1
         },
         player = {
-                'temperatureNoiseScale': 1,
+                'temperatureNoiseScale': 0.67,
                 'centerXY': [canvasWidth * 0.5, canvasHeight * 0.5],
                 'logPlayerTemperature': false,  // WRONG should probably just make a logging object with all the logging options in it
                 'oscillator': null, // WRONG I'd rather just define these here, but I don't know how to reference player's properties from within itself (i.e. send a oscillator defined here to a light defined here). 'this.oscillator' didn't seem to work.
                 'light': null,
                 'temperature': 0.5,
                 'intervalBetweenTemperatureUpdates': 200,
-                'temperatureChangeRateScale': 0.0003
+                'temperatureChangeRateScale': 0.0003,
+                'health': 100,
+                'intervalBetweenHealthUpdates': 200,
+                'displayHealth': true
         };
 
 makeRandomOscillators(10, 5000, 20000, settings.oscillators);
@@ -70,6 +74,15 @@ settings.oscillators.push(player.oscillator);
 player.light = makeLight(1000, 10, [1, 1], player.oscillator, 10, 0, cells);
 // WRONG TEMPORARY REMOVE this (temporary player temperature oscillator);
 settings.oscillators.push(makeOscillator(10000, 0, SINE, 'temporaryPlayerTemperatureOscillator'));
+
+initializeDeathAphorisms();
+
+function initializeDeathAphorisms() {
+        deathAphorisms.push(
+                'Every ending is a new beginning.',
+                'Death is only part of the journey.'
+        );
+}
 
 function makeCells(numberOfCells, cellsPerRow, cellsList) {
         for (var i = 0; i < (numberOfCells / cellsPerRow); i++) {    //this should happen every time a row is complete

@@ -42,9 +42,7 @@ function getCellColor(cell) {
                         drawingSettings.noise.maxMsBetweenNoiseChanges
                 );
         }
-        // too hot or cold
-        if (player.temperature === 0) cell.color = addColors(cell.color, [0, 0, 128]);
-        if (player.temperature === 1) cell.color = addColors(cell.color, [128, 0, 0]);
+        updatePlayerHealth(cell); // this needs to be here because it impacts cell colors
 }
 
 function showLights(cell) {
@@ -232,9 +230,7 @@ function updateNoise() {
 }
 
 function updatePlayer() {
-        //player.temperature = settings.oscillators[settings.oscillators.length - 1].value;
         updatePlayerTemperature();
-        player.temperatureCircular = Math.abs((player.temperature - 0.5) * 2); // i.e. 0 and 1 = 1, 0.5 = 0;
 }
 
 function normalizeCellsArrayBrightnessRange(cellsArray, darkestValue, brightestValue) {
