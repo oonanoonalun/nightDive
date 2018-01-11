@@ -16,7 +16,12 @@ var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68,
                 'cellsPerMove': 2,
                 'moveRepeatDelay': 25,
                 'controlScheme': NON_CONTINUOUS_MOVEMENT,
-                'centerCellsAverageBrightness': 0 // WRONG MAYBE: I just put this here to remind me that it exists, but it doesn't actually need to be declared here.
+                'showPlayerLight': true,
+                'centerCellsRadius': 35,
+                'showCenterCells': false, // not as efficient as it could be, cpu-wise (?), so only turn on if needed.
+                'centerCells': [],
+                'centerCellsAverageBrightness': null,
+                'displayCenterCellsAverageBrightness': [false, 500] // second item is display interval
         };
 
 function moveCameraWithButtons() {
@@ -136,4 +141,45 @@ function moveArrayOfEntities(arrayOfEntities, direction, numberOfCells) {
                 var entity = arrayOfEntities[i];
                 moveEntity(entity, direction, numberOfCells);
         }
-}  
+}
+
+/*function findAverageBrightnessOfCenterCells() {
+        var brightness = 0;
+        for (var i = 0; i < interfaceSettings.centerCells.length; i++) {
+                brightness += averageBrightness(interfaceSettings.centerCells[i].color);
+        }
+        brightness /= interfaceSettings.centerCells.length;
+        interfaceSettings.centerCellsAverageBrightness = brightness;
+}*/
+
+function findAverageBrightnessOfCenterCells(cell) {
+        // WRONG, sort of. This is a sloppy way to do this, and it may not be very efficient to put it where
+        //      it is in drawAllCells, but it's hard to insert it in the right place, while the cells' colors
+        //      still aren't in hex, and when they haven't been wiped by getCellColor.
+        if (cells.indexOf(cell) === 0) interfaceSettings.centerCellsAverageBrightness = 0;
+        if (interfaceSettings.centerCells.indexOf(cell) !== -1) {
+                showCenterCells(cell);
+                interfaceSettings.centerCellsAverageBrightness += averageBrightness(cell.color);
+        }
+        // average color when done looking at all cells
+        if (cells.indexOf(cell) === totalNumberOfCells - 1) {
+                interfaceSettings.centerCellsAverageBrightness /= interfaceSettings.centerCells.length;
+        }
+}
+
+function showCenterCells(cell) {
+        if (interfaceSettings.showCenterCells) {
+                cell.color = addColors(cell.color, [64, 0, 0]);
+        }       
+}
+
+function updatePlayerTemperature() {
+        if (player.noTemperatureChangeUntil <= Date.now() || !player.noTemperatureChangeUntil) {
+                if (interfaceSettings.centerCellsAverageBrightness <= 127) player.temperature -= interfaceSettings.centerCellsAverageBrightness * player.temperatureChangeRateScale;
+                else player.temperature += interfaceSettings.centerCellsAverageBrightness * player.temperatureChangeRateScale;
+                player.noTemperatureChangeUntil = Date.now() + player.intervalBetweenTemperatureUpdates;
+        }
+        // limit temperature to within 0-1
+        player.temperature = Math.min(1, player.temperature);
+        player.temperature = Math.max(0, player.temperature);
+}

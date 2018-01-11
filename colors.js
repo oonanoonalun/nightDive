@@ -105,8 +105,6 @@ function averageBrightness(color) {
         return Math.round(sumColor(color) / 3); // the '/ 3' takes summed R, G, and B values and puts the sum back under 256
 }
 
-
-
 function valueToHue (value) {
         //receives a number between 0 and 1, inclusively and converts it to a hue. Value 0 = red, val 0.25 = yellow, val 0.5 = green, val 0.75 = cyan, val 1 = blue
         var hue;

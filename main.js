@@ -11,7 +11,6 @@ function mainLoop() {
     context.clearRect(0, 0, 800, 600);
     controls();
     globalUpdates();
-    //getAverageBrightnessOfCenterCells(centerCells);
     drawAllCells(cells);
     logging();
 }
@@ -28,6 +27,13 @@ function controls() {
     }    
 }
 
+function displayCenterCellsAverageBrightness(displayInterval) {
+    if (interfaceSettings.noCenterCellsAverageBrightnessDisplayUntil <= Date.now() || !interfaceSettings.noCenterCellsAverageBrightnessDisplayUntil) {
+        console.log('Center cells average brightness is: ' + interfaceSettings.centerCellsAverageBrightness);
+        interfaceSettings.noCenterCellsAverageBrightnessDisplayUntil = Date.now() + interfaceSettings.displayCenterCellsAverageBrightness[1];
+    }
+}
+
 function globalUpdates() {
     updateOscillators(settings.oscillators);
     updatePlayer();
@@ -38,6 +44,7 @@ function globalUpdates() {
 function logging() {
     if (player.logPlayerTemperature) logPlayerTemperature(500);
     if (drawingSettings.fpsDisplay.displayFps) countFps(drawingSettings.fpsDisplay.fpsDisplayInterval, drawingSettings.fpsDisplay.fpsDisplayIntervalLongTerm);    
+    if (interfaceSettings.displayCenterCellsAverageBrightness[0]) displayCenterCellsAverageBrightness(interfaceSettings.displayCenterCellsAverageBrightness[1]);
 }
 
 function countFps(displayInterval, displayIntervalLongTerm) {

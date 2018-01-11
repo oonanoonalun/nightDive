@@ -14,7 +14,7 @@ var drawingSettings = {
                         'minMsBetweenNoiseChanges': 1500,
                         'maxMsBetweenNoiseChanges': 5000
                 },
-                'normalizeBrightnesses': false, // requires a second pass over all the cells, necessarily (as it checks their relative brightnesses after all their brightnesses have been assigned), and so slows things down.
+                'normalizeBrightnesses': false, // BROKEN doesn't work anymore. Would be worth fixing before deciding whether to ditch it or not. // requires a second pass over all the cells, necessarily (as it checks their relative brightnesses after all their brightnesses have been assigned), and so slows things down.
                 'displayResolutionInformation': false
 };
 
@@ -22,31 +22,15 @@ function drawAllCells(cellsArray) {
         for (var i = 0; i < cellsArray.length; i++) {
                 var cell = cellsArray[i];
                 getCellColor(cell);
+                findAverageBrightnessOfCenterCells(cell);
                 if (!drawingSettings.normalizeBrightnesses) finalizeCellColorAndDrawCell(cell);
         }
         if (drawingSettings.normalizeBrightnesses) normalizeCellsArrayBrightnessRange(cellsArray, 0, 255); // requires a second pass over all the cells, necessarily (as it checks their relative brightnesses after all their brightnesses have been assigned), and so slows things down.
 }
 
-
 function getCellColor(cell) {
         showLights(cell);
-}
-
-function showLights(cell) {
-        cell.color = [0, 0, 0];
-        var brightness;
-        if (settings.entities.lights.length > 0) {
-                for (var i = 0; i < settings.entities.lights.length; i++) {
-                        var light = settings.entities.lights[i],
-                                distanceFromLight = findDistanceBetweenPoints(cell.centerXY, light.cell.centerXY),
-                                lightOscillatorValue;
-                        if (light.oscillator) lightOscillatorValue = light.oscillator.value;
-                        else lightOscillatorValue = 1;
-                        brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * lightOscillatorValue * light.brightness;
-                        cell.color = addColors(cell.color, [brightness, brightness, brightness]);
-                }
-                cell.color = divideColorByNumber(cell.color, settings.entities.lights.length + 1);
-        }
+        // add noise
         if (drawingSettings.noise.addNoise) {
                 cell.color = addNoiseToColor(
                         cell.color,
@@ -57,6 +41,38 @@ function showLights(cell) {
                         drawingSettings.noise.minMsBetweenNoiseChanges,
                         drawingSettings.noise.maxMsBetweenNoiseChanges
                 );
+        }
+        // too hot or cold
+        if (player.temperature === 0) cell.color = addColors(cell.color, [0, 0, 128]);
+        if (player.temperature === 1) cell.color = addColors(cell.color, [128, 0, 0]);
+}
+
+function showLights(cell) {
+        cell.color = [0, 0, 0];
+        var brightness,
+                playerLightDivisor = 0;
+        if (settings.entities.lights.length > 0) {
+                for (var i = 0; i < settings.entities.lights.length; i++) {
+                        var light = settings.entities.lights[i],
+                                distanceFromLight = findDistanceBetweenPoints(cell.centerXY, light.cell.centerXY),
+                                lightOscillatorValue;
+                        if (light.oscillator) lightOscillatorValue = light.oscillator.value;
+                        else lightOscillatorValue = 1;
+                        brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * lightOscillatorValue * light.brightness;
+                        cell.color = addColors(cell.color, [brightness, brightness, brightness]);
+                }
+                // player light at center of screen
+                if (interfaceSettings.showPlayerLight) {
+                        playerLightDivisor = 1;
+                        var playerLight = player.light,
+                                distanceFromPlayerLight = findDistanceBetweenPoints(cell.centerXY, playerLight.cell.centerXY),
+                                playerLightOscillatorValue;
+                        if (playerLight.oscillator) playerLightOscillatorValue = Math.max(0.67, playerLight.oscillator.value); // player light never goes dark (at least not normally). WRONG: Ideally this would cycle smootly from a min to max value. Maybe add a min and max the oscillator cycles between to the oscillators?
+                        else playerLightOscillatorValue = 1;
+                        brightness = playerLight.radius / Math.max(playerLight.diffusion, distanceFromPlayerLight) * playerLightOscillatorValue * playerLight.brightness;
+                        cell.color = addColors(cell.color, [brightness, brightness, brightness]);
+                }
+                cell.color = divideColorByNumber(cell.color, settings.entities.lights.length + 1 + playerLightDivisor);
         }
 }
 
@@ -86,17 +102,21 @@ function makeRandomLights(numberOfLights, randomLightParametersObject, destinati
         for (var i = 0; i < numberOfLights; i++) {
                 var randomBrightness = randomNumberBetweenNumbers(lightSettings.minBrightness, lightSettings.maxBrightness, true),
                         randomRadius = randomNumberBetweenNumbers(lightSettings.minRadius, lightSettings.maxRadius, true),
-                        randomCellIndex = randomNumberBetweenNumbers(lightSettings.minCellIndex, lightSettings.maxCellIndex, true),
+                        randomXY = [],
                         randomOscillator = oscillatorsArray[randomNumberBetweenNumbers(0, (oscillatorsArray.length - 1), true)],
                         randomDiffusion = randomNumberBetweenNumbers(lightSettings.minDiffusion, lightSettings.maxDiffusion, true),
                         randomDeathChance = randomNumberBetweenNumbers(lightSettings.minDeathChance, lightSettings.maxDeathChance, false),
                         allCellsList = lightSettings.parentCellsArray;
-                destinationArray.push(makeLight(randomBrightness, randomRadius, randomCellIndex, randomOscillator, randomDiffusion, randomDeathChance, allCellsList, destinationArray));
+                if (Math.random() > 0.5) randomXY[0] = randomNumberBetweenNumbers(1, 0.5 * cellsPerRow, true);
+                else randomXY[0] = -randomNumberBetweenNumbers(1, 0.5 * cellsPerRow, true);
+                if (Math.random() > 0.5) randomXY[1] = randomNumberBetweenNumbers(1, 0.5 * cellsPerColumn, true);
+                else randomXY[1] = -randomNumberBetweenNumbers(1, 0.5 * cellsPerColumn, true);
+                destinationArray.push(makeLight(randomBrightness, randomRadius, randomXY, randomOscillator, randomDiffusion, randomDeathChance, allCellsList, destinationArray));
         }
 }
 
 //WRONG the "make" functions should be in initialization.js (I don't want to move them till everything else is stable)
-function makeLight(brightness, radius, cellIndex, oscillator, diffusion, deathChance, allCellsList, lightsArray) {
+function makeLight(brightness, radius, coordinates, oscillator, diffusion, deathChance, allCellsList, lightsArray) {
         var light = {
                 'brightness': brightness,
                 'radius': radius,
@@ -105,9 +125,8 @@ function makeLight(brightness, radius, cellIndex, oscillator, diffusion, deathCh
                 'deathChance': deathChance,
                 'parentCellsArray': allCellsList, // large cellsList of which light's cell is a part
                 'lightParentArray': lightsArray, // lights array
-                'cellIndex': cellIndex,
-                'cell': allCellsList[cellIndex],
-                'coordinates': allCellsList[cellIndex].coordinates
+                'coordinates': coordinates,
+                'cell': allCellsList[coordinatesToIndex(coordinates)]
         };
         return light;
 }
@@ -135,19 +154,19 @@ function temperatureMovesLightsIcarus(light) {
         if (light.noTemperatureMoveUntil <= Date.now() || !light.noTemperatureMoveUntil) {
                 if (light.coordinates[1] > 0) { // i.e. cell is in the UPPER HALF
                         if (player.temperature < 0.5) moveEntity(light, UP, 1); // cool players repel lights
-                        if (player.temperature >= 0.5) moveEntity(light, DOWN, 1); // hot players attract lights
+                        if (player.temperature > 0.5) moveEntity(light, DOWN, 1); // hot players attract lights
                 }
                 if (light.coordinates[1] < 0) { // i.e. cell is in the LOWER HALF
                         if (player.temperature < 0.5) moveEntity(light, DOWN, 1); // cool players repel lights
-                        if (player.temperature >= 0.5) moveEntity(light, UP, 1); // hot players attract lights                        
+                        if (player.temperature > 0.5) moveEntity(light, UP, 1); // hot players attract lights                        
                 }
                 if (light.coordinates[0] < 0) { // i.e. cell is in the LEFT HALF
                         if (player.temperature < 0.5) moveEntity(light, LEFT, 1); // cool players repel lights
-                        if (player.temperature >= 0.5) moveEntity(light, RIGHT, 1); // hot players attract lights                        
+                        if (player.temperature > 0.5) moveEntity(light, RIGHT, 1); // hot players attract lights                        
                 }
                 if (light.coordinates[0] > 0) { // i.e. cell is in the RIGHT HALF
                         if (player.temperature < 0.5) moveEntity(light, RIGHT, 1); // cool players repel lights
-                        if (player.temperature >= 0.5) moveEntity(light, LEFT, 1); // hot players attract lights                        
+                        if (player.temperature > 0.5) moveEntity(light, LEFT, 1); // hot players attract lights                        
                 }
                 light.noTemperatureMoveUntil = Date.now() + Math.max(200, (500 - (player.temperatureCircular * 500))); // WRONG MAYBE maybe light brightness and/or diffusion should figure into how fast they move?
         }
@@ -213,7 +232,8 @@ function updateNoise() {
 }
 
 function updatePlayer() {
-        player.temperature = settings.oscillators[settings.oscillators.length - 1].value;
+        //player.temperature = settings.oscillators[settings.oscillators.length - 1].value;
+        updatePlayerTemperature();
         player.temperatureCircular = Math.abs((player.temperature - 0.5) * 2); // i.e. 0 and 1 = 1, 0.5 = 0;
 }
 
