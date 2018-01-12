@@ -24,7 +24,8 @@ function controls() {
     }
     if (interfaceSettings.controlScheme === CONTINUOUS_MOVEMENT) {
         moveCameraWithButtonsContinuous();
-    }    
+    }
+    abilitiyEmergencyPushBack(settings.entities.lights);
 }
 
 function displayCenterCellsAverageBrightness(displayInterval) {
@@ -38,7 +39,7 @@ function globalUpdates() {
     updateOscillators(settings.oscillators);
     updatePlayer();
     updateNoise();
-    updateLights(settings.entities.lights, settings.minLights, settings.maxLights);    
+    updateLights(settings.entities.lights, settings.minLights, settings.maxLights);
 }
 
 function logging() {

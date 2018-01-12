@@ -34,7 +34,8 @@ var SINE = 'sineWaveShape',
                 },
                 'minLights': 4, // min and max number of lights in the level/on the screen (depending on where development goes)
                 'maxLights': 20,
-                'gameType': GAME_TYPE_ICARUS
+                'gameType': GAME_TYPE_ICARUS,
+                'gameStartTime': Date.now()
         },
         randomLightSettingsDefault = {
                 'minBrightness': 64,
@@ -60,7 +61,9 @@ var SINE = 'sineWaveShape',
                 'temperatureChangeRateScale': 0.0003,
                 'health': 100,
                 'intervalBetweenHealthUpdates': 133,
-                'displayHealth': true
+                'displayHealth': true,
+                'emergencyPushBackCooldown': 10000,
+                'emergencyPushBackDuration': 3500
         };
 
 makeRandomOscillators(10, 5000, 20000, settings.oscillators);
@@ -81,7 +84,7 @@ function initializeDeathAphorisms() {
                 'Death is only part of the journey.',
                 'Death is the greatest adventure.',
                 'Without death, can life really be meaningful?',
-                'Today is a good day to die.',
+                'Today is a good day to die. - Chief Crazy Horse',
                 'If life is only a dream, perhaps death is waking up.',
                 'Farewell, mortal coil!',
                 'Game over, man!'

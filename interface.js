@@ -22,6 +22,16 @@ var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68,
                 'centerCells': [],
                 'centerCellsAverageBrightness': null,
                 'displayCenterCellsAverageBrightness': [false, 500] // second item is display interval
+        },
+        HUDSettings = {
+                'pushBack': {
+                        'indicatorCoordinatesReady': [[40, -30], [40, -29], [37, -30], [37, -29], [34, -30], [34, -29]],
+                        'indicatorCoordinatesMidReady': [[40, -30], [40, -29], [37, -30], [37, -29]],
+                        'indicatorCoordinatesNotReady': [[40, -30], [40, -29]],
+                        'readyColor': [0, 255, 0],
+                        'midReadyColor': [255, 255, 0],
+                        'notReadyColor': [255, 0, 0]
+                }
         };
 
 function moveCameraWithButtons() {
@@ -210,6 +220,59 @@ function updatePlayerHealth(cell) { // cell is passed because this will go in ge
                 if (!player.died) {
                         console.log(deathAphorisms[Math.round(Math.random() * (deathAphorisms.length - 1))]);
                         player.died = true;
+                        console.log('Play time was ' + ((Date.now() - settings.gameStartTime) / 1000).toFixed(2) + ' seconds.');
                 }
         }
+}
+
+function abilitiyEmergencyPushBack(arrayOfLights) {
+        if (player.noEmergencyPushBackUntil <= Date.now() || !player.noEmergencyPushBackUntil) {
+                $('body').on('keydown', function (event) {
+                        if (event.which == KEY_SPACE) {
+                                player.emergencyPushBackUntil = Date.now() + player.emergencyPushBackDuration;
+                                player.noEmergencyPushBackUntil = Date.now() + player.emergencyPushBackCooldown;
+                                player.emergencyPushedBackAt = Date.now();
+                        }
+                });
+        }
+        if (player.emergencyPushBackUntil && player.emergencyPushBackUntil > Date.now()) {
+                emergencyPushBackMovesLights(arrayOfLights);
+        }
+}
+
+function updateEmergencyPushBackIndicator(cell) {
+        // push back readiness indicator
+        var readyCoords = HUDSettings.pushBack.indicatorCoordinatesReady,
+                notReadyCoords = HUDSettings.pushBack.indicatorCoordinatesNotReady,
+                midReadyCoords = HUDSettings.pushBack.indicatorCoordinatesMidReady,
+                midReadyTime = player.emergencyPushedBackAt + player.emergencyPushBackCooldown / 2,
+                readyTime = player.noEmergencyPushBackUntil;
+        for (var i = 0; i < readyCoords.length; i++) {
+                if (cell.coordinates[0] === readyCoords[i][0] && cell.coordinates[1] === readyCoords[i][1]) {
+                        if (!readyTime || readyTime <= Date.now()) {
+                                cell.color = HUDSettings.pushBack.readyColor;
+                        }
+                }
+
+        }
+        for (var j = 0; j < notReadyCoords.length; j++) {
+                if (cell.coordinates[0] === notReadyCoords[j][0] && cell.coordinates[1] === notReadyCoords[j][1]) {
+                        if (midReadyTime > Date.now()) {
+                                cell.color = HUDSettings.pushBack.notReadyColor;
+                        }
+                }
+
+        }
+        for (var k = 0; k < midReadyCoords.length; k++) {
+                if (cell.coordinates[0] === midReadyCoords[k][0] && cell.coordinates[1] === midReadyCoords[k][1]) {
+                        if (midReadyTime <= Date.now() && readyTime > Date.now()) {
+                                cell.color = HUDSettings.pushBack.midReadyColor;
+                        }
+                }
+
+        }
+}
+
+function updateHUD(cell) {
+        updateEmergencyPushBackIndicator(cell);
 }

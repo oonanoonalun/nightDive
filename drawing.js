@@ -29,7 +29,10 @@ function drawAllCells(cellsArray) {
 }
 
 function getCellColor(cell) {
+        // draw lights
         showLights(cell);
+        // draw HUD/UI
+        updateHUD(cell);
         // add noise
         if (drawingSettings.noise.addNoise) {
                 cell.color = addNoiseToColor(
@@ -43,6 +46,7 @@ function getCellColor(cell) {
                 );
         }
         updatePlayerHealth(cell); // this needs to be here because it impacts cell colors
+
 }
 
 function showLights(cell) {
@@ -142,6 +146,11 @@ function updateLight(light) {
         //light.cell = light.parentCellsArray[light.cellIndex];
 }
 
+function isIcarusLightMovementEnabled() {
+        if (player.emergencyPushBackUntil > Date.now()) return false;
+        else return true;
+}
+
 function temperatureMovesLightsIcarus(light) {
         // WRONG Delay between light movements and how they scale off the player's temperature
         //      should be light properties. Maybe based on their brightness and/or diffusion?
@@ -149,7 +158,7 @@ function temperatureMovesLightsIcarus(light) {
         // WRONG should work out a way for things to move toward a given point.
         // WRONG Number of cells moved should scale with resolution, or you should be able to send pixels
         //      to moveEntity and have it translate them to cells at the current resolution.
-        if (light.noTemperatureMoveUntil <= Date.now() || !light.noTemperatureMoveUntil) {
+        if ((light.noTemperatureMoveUntil <= Date.now() || !light.noTemperatureMoveUntil) && isIcarusLightMovementEnabled()) {
                 if (light.coordinates[1] > 0) { // i.e. cell is in the UPPER HALF
                         if (player.temperature < 0.5) moveEntity(light, UP, 1); // cool players repel lights
                         if (player.temperature > 0.5) moveEntity(light, DOWN, 1); // hot players attract lights
@@ -167,6 +176,34 @@ function temperatureMovesLightsIcarus(light) {
                         if (player.temperature > 0.5) moveEntity(light, LEFT, 1); // hot players attract lights                        
                 }
                 light.noTemperatureMoveUntil = Date.now() + Math.max(200, (500 - (player.temperatureCircular * 500))); // WRONG MAYBE maybe light brightness and/or diffusion should figure into how fast they move?
+        }
+}
+
+function emergencyPushBackMovesLights(arrayOfLights) {
+        for (var i = 0; i < arrayOfLights.length; i++) {
+                var light = arrayOfLights[i];
+                // WRONG Delay between light movements and how they scale off the player's temperature
+                //      should be light properties. Maybe based on their brightness and/or diffusion?
+                //      Could make the number of cells moved in the moveEntity calls below scale off of something.
+                // WRONG should work out a way for things to move toward a given point.
+                // WRONG Number of cells moved should scale with resolution, or you should be able to send pixels
+                //      to moveEntity and have it translate them to cells at the current resolution.
+                if (light.noEmergencyPushBackMoveUntil <= Date.now() || !light.noEmergencyPushBackMoveUntil) {
+                        var remainingPushBackDuration = player.emergencyPushBackUntil - Date.now();
+                        if (light.coordinates[1] > 0) { // i.e. cell is in the UPPER HALF
+                                moveEntity(light, UP, 1 * Math.min(3, Math.round((remainingPushBackDuration * 2) / player.emergencyPushBackDuration)));
+                        }
+                        if (light.coordinates[1] < 0) { // i.e. cell is in the LOWER HALF
+                                moveEntity(light, DOWN, 1 * Math.min(3, Math.round((remainingPushBackDuration * 2) / player.emergencyPushBackDuration)));
+                        }
+                        if (light.coordinates[0] < 0) { // i.e. cell is in the LEFT HALF
+                                moveEntity(light, LEFT, 1 * Math.min(3, Math.round((remainingPushBackDuration * 2) / player.emergencyPushBackDuration)));
+                        }
+                        if (light.coordinates[0] > 0) { // i.e. cell is in the RIGHT HALF
+                                moveEntity(light, RIGHT, 1 * Math.min(3, Math.round((remainingPushBackDuration * 2) / player.emergencyPushBackDuration)));
+                        }
+                        light.noEmergencyPushBackMoveUntil = Date.now() + ((player.emergencyPushBackDuration * 1.01) - remainingPushBackDuration);
+                }
         }
 }
 
