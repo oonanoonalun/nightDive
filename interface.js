@@ -9,6 +9,7 @@ var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68,
         KEY_E = 69,
         KEY_Z = 90,
         KEY_X = 88,
+        KEY_C = 67,
         keysDown = [],
         X_AXIS = 'xAxis', // for telling straight lines how to draw
         Y_AXIS = 'yAxis',
@@ -188,8 +189,8 @@ function updatePlayerTemperature() {
         if (player.noTemperatureChangeUntil <= Date.now() || !player.noTemperatureChangeUntil) {
                 // temperature shift pivot point is biased toward higher brightness because the map gets very bright, but never very dark.
                 // Cooling happens a little faster than heating, too.
-                if (interfaceSettings.centerCellsAverageBrightness <= player.brightnessThresholdForTemperatureGainOrLoss) player.temperature -= interfaceSettings.centerCellsAverageBrightness * (255 / (player.brightnessThresholdForTemperatureGainOrLoss * 1.5)) *player.temperatureChangeRateScale;
-                else player.temperature += interfaceSettings.centerCellsAverageBrightness * player.temperatureChangeRateScale;
+                if (interfaceSettings.centerCellsAverageBrightness <= player.brightnessThresholdForTemperatureGainOrLoss) player.temperature -= interfaceSettings.centerCellsAverageBrightness * player.coolingScale * player.temperatureChangeRateScale;
+                else player.temperature += interfaceSettings.centerCellsAverageBrightness * player.heatingScale * player.temperatureChangeRateScale;
                 player.noTemperatureChangeUntil = Date.now() + player.intervalBetweenTemperatureUpdates;
         }
         // limit temperature to within 0-1

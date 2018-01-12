@@ -30,9 +30,9 @@ function controls() {
 }
 
 function loggingToggles() {
-            $('body').on('keyup', function (event) {
+        $('body').on('keyup', function (event) {
                 if (event.which == KEY_E) drawingSettings.fpsDisplay.displayFps = !drawingSettings.fpsDisplay.displayFps;
-                if (event.which == KEY_Q) HUDSettings.displayHUD = !HUDSettings.displayHUD;
+                if (event.which == KEY_Q) HUDSettings.displayHUD = !HUDSettings.displayHUD;      
         });
 }
 

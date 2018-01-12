@@ -70,7 +70,9 @@ var SINE = 'sineWaveShape',
                 'regenerateHealth': true,
                 'healthRegenerationAmount': 1,  // regenerate this amount of health
                 'healthRegenerationInterval': 1000,      // every this many milliseconds. Don't it too small (i.e. <200ms) because there's a little cooldown (150ms) to make sure you don't accidentally get two health bumps in one iteration. You can always just give more health at longer intervals.
-                'brightnessThresholdForTemperatureGainOrLoss': 160 // brightnesses over this will make you hotter; under, colder. Biased toward high end becaue the map tends to get very bright, but rarely very dark
+                'brightnessThresholdForTemperatureGainOrLoss': 140, // brightnesses over this will make you hotter; under, colder. Biased toward high end becaue the map tends to get very bright, but rarely very dark
+                'coolingScale': 1.15, // scale the rate at which you heat and cool for balancing purposes (or for special effects)
+                'heatingScale': 1
         };
 settings.oscillators.push(player.damageOscillator);
 makeRandomOscillators(10, 5000, 20000, settings.oscillators);
