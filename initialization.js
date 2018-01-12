@@ -60,12 +60,19 @@ var SINE = 'sineWaveShape',
                 'intervalBetweenTemperatureUpdates': 200,
                 'temperatureChangeRateScale': 0.0003,
                 'health': 100,
+                'maxHealth': 100,
                 'intervalBetweenHealthUpdates': 133,
-                'displayHealth': true,
+                'displayHealth': false, // logs in the console
                 'emergencyPushBackCooldown': 10000,
-                'emergencyPushBackDuration': 3500
+                'emergencyPushBackDuration': 3500,
+                'damageWarningDuration': 350,
+                'damageOscillator': makeOscillator(150, 0, SINE, 'playerDamageOscillator'),
+                'regenerateHealth': true,
+                'healthRegenerationAmount': 1,  // regenerate this amount of health
+                'healthRegenerationInterval': 1000,      // every this many milliseconds. Don't it too small (i.e. <200ms) because there's a little cooldown (150ms) to make sure you don't accidentally get two health bumps in one iteration. You can always just give more health at longer intervals.
+                'brightnessThresholdForTemperatureGainOrLoss': 160 // brightnesses over this will make you hotter; under, colder. Biased toward high end becaue the map tends to get very bright, but rarely very dark
         };
-
+settings.oscillators.push(player.damageOscillator);
 makeRandomOscillators(10, 5000, 20000, settings.oscillators);
 makeRandomLights(settings.minLights, randomLightSettingsDefault, settings.entities.lights, settings.oscillators);
 

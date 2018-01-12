@@ -6,6 +6,10 @@ var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68,
         KEY_D = 68,
         KEY_SPACE = 32,
         keysDown = [],
+        X_AXIS = 'xAxis', // for telling straight lines how to draw
+        Y_AXIS = 'yAxis',
+        POS = 'positive', // for telling straight lines which direction to lengthen and contract in
+        NEG = 'negative', 
         CONTINUOUS_MOVEMENT = 'continuousMovementControlScheme',
         NON_CONTINUOUS_MOVEMENT = 'nonContinuousMovementControlScheme',
         interfaceSettings = {
@@ -24,14 +28,7 @@ var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68,
                 'displayCenterCellsAverageBrightness': [false, 500] // second item is display interval
         },
         HUDSettings = {
-                'pushBack': {
-                        'indicatorCoordinatesReady': [[40, -30], [40, -29], [37, -30], [37, -29], [34, -30], [34, -29]],
-                        'indicatorCoordinatesMidReady': [[40, -30], [40, -29], [37, -30], [37, -29]],
-                        'indicatorCoordinatesNotReady': [[40, -30], [40, -29]],
-                        'readyColor': [0, 255, 0],
-                        'midReadyColor': [255, 255, 0],
-                        'notReadyColor': [255, 0, 0]
-                }
+                'displayHUD': true
         };
 
 function moveCameraWithButtons() {
@@ -185,7 +182,9 @@ function showCenterCells(cell) {
 
 function updatePlayerTemperature() {
         if (player.noTemperatureChangeUntil <= Date.now() || !player.noTemperatureChangeUntil) {
-                if (interfaceSettings.centerCellsAverageBrightness <= 127) player.temperature -= interfaceSettings.centerCellsAverageBrightness * player.temperatureChangeRateScale;
+                // temperature shift pivot point is biased toward higher brightness because the map gets very bright, but never very dark.
+                // Cooling happens a little faster than heating, too.
+                if (interfaceSettings.centerCellsAverageBrightness <= player.brightnessThresholdForTemperatureGainOrLoss) player.temperature -= interfaceSettings.centerCellsAverageBrightness * (255 / (player.brightnessThresholdForTemperatureGainOrLoss * 1.5)) *player.temperatureChangeRateScale;
                 else player.temperature += interfaceSettings.centerCellsAverageBrightness * player.temperatureChangeRateScale;
                 player.noTemperatureChangeUntil = Date.now() + player.intervalBetweenTemperatureUpdates;
         }
@@ -201,6 +200,7 @@ function updatePlayerHealth(cell) { // cell is passed because this will go in ge
                 // extremes negatively impact health
                 if ((player.temperature === 0 || player.temperature === 1) && (player.noHealthUpdateUntil <= Date.now() || !player.noHealthUpdateUntil)) {
                         player.health--;
+                        player.damageWarningUntil = Date.now() + player.damageWarningDuration;
                         player.noHealthUpdateUntil = Date.now() + player.intervalBetweenHealthUpdates;
                 }
                 if (player.temperature === 0) cell.color = addColors(cell.color, [0, 64, 128]);
@@ -215,6 +215,13 @@ function updatePlayerHealth(cell) { // cell is passed because this will go in ge
                                 player.lastLoggedHealth = player.health;
                         }
                 }
+                // health regeneration
+                if (player.regenerateHealth && Date.now() - settings.gameStartTime % player.healthRegenerationAmount < 50 &&
+                    (player.noHealthRegenUntil <= Date.now() || !player.noHealthRegenUntil)
+                ) {
+                        player.health += player.healthRegenerationAmount;
+                        player.noHealthRegenUntil = Date.now() + 150; // just to keep you from getting more than one helath bump in the 50ms window that opens up to make sure you don't miss it altogether.
+                }
         } else {
                 cell.color = [0, 0, 0]; // player is dead
                 if (!player.died) {
@@ -224,6 +231,8 @@ function updatePlayerHealth(cell) { // cell is passed because this will go in ge
                 }
         }
 }
+
+
 
 function abilitiyEmergencyPushBack(arrayOfLights) {
         if (player.noEmergencyPushBackUntil <= Date.now() || !player.noEmergencyPushBackUntil) {
@@ -241,38 +250,129 @@ function abilitiyEmergencyPushBack(arrayOfLights) {
 }
 
 function updateEmergencyPushBackIndicator(cell) {
-        // push back readiness indicator
-        var readyCoords = HUDSettings.pushBack.indicatorCoordinatesReady,
-                notReadyCoords = HUDSettings.pushBack.indicatorCoordinatesNotReady,
-                midReadyCoords = HUDSettings.pushBack.indicatorCoordinatesMidReady,
-                midReadyTime = player.emergencyPushedBackAt + player.emergencyPushBackCooldown / 2,
-                readyTime = player.noEmergencyPushBackUntil;
-        for (var i = 0; i < readyCoords.length; i++) {
-                if (cell.coordinates[0] === readyCoords[i][0] && cell.coordinates[1] === readyCoords[i][1]) {
-                        if (!readyTime || readyTime <= Date.now()) {
-                                cell.color = HUDSettings.pushBack.readyColor;
-                        }
+        // push-back readiness indicator
+        var startTime = player.emergencyPushedBackAt,
+                readyTime = player.noEmergencyPushBackUntil,
+                timeSinceStart = Date.now() - startTime,
+                cooldown = player.emergencyPushBackCooldown, // could be readyTime - startTime
+                chargeBarBottom = [],
+                chargeBarTop = [],
+                parametricScreenLength = 0.33 * (Math.min(1, timeSinceStart / cooldown) || 1),
+                redValue = 1024 * (1 - timeSinceStart / cooldown),
+                greenValue = 384 * (timeSinceStart / cooldown),
+                blueValue = 0,
+                opacity = 0.67,
+                startCoordsTop = [0.5 * cellsPerRow, -(0.5 * cellsPerColumn) + 1],
+                startCoordsBottom = [0.5 * cellsPerRow, -(0.5 * cellsPerColumn)],
+                chargeFlashValue = 1024 * player.damageOscillator.value;
+        chargeBarTop = createStraightLine(X_AXIS, parametricScreenLength, startCoordsTop, NEG);
+        chargeBarBottom = createStraightLine(X_AXIS, parametricScreenLength, startCoordsBottom, NEG);
+        if (readyTime <= Date.now() || !readyTime) { // if full charged
+                if (Date.now() - readyTime < 800) { // if just reached charged state, flashes white for a few hundred milliseconds
+                        if (chargeBarTop.indexOf(cell) !== -1) cell.color = [chargeFlashValue, chargeFlashValue, chargeFlashValue];
+                        if (chargeBarBottom.indexOf(cell) !== -1) cell.color = [chargeFlashValue, chargeFlashValue, chargeFlashValue];
+                } else { // fully charge and has been for a short while
+                        if (chargeBarTop.indexOf(cell) !== -1) cell.color = addColors(multiplyColorByNumber(cell.color, 1 - opacity), [192 * opacity, 0 * opacity, 255 * opacity]); // violet when fully charged
+                        if (chargeBarBottom.indexOf(cell) !== -1) cell.color = addColors(multiplyColorByNumber(cell.color, 1 - opacity), [192 * opacity, 0 * opacity, 255 * opacity]);
                 }
-
-        }
-        for (var j = 0; j < notReadyCoords.length; j++) {
-                if (cell.coordinates[0] === notReadyCoords[j][0] && cell.coordinates[1] === notReadyCoords[j][1]) {
-                        if (midReadyTime > Date.now()) {
-                                cell.color = HUDSettings.pushBack.notReadyColor;
-                        }
-                }
-
-        }
-        for (var k = 0; k < midReadyCoords.length; k++) {
-                if (cell.coordinates[0] === midReadyCoords[k][0] && cell.coordinates[1] === midReadyCoords[k][1]) {
-                        if (midReadyTime <= Date.now() && readyTime > Date.now()) {
-                                cell.color = HUDSettings.pushBack.midReadyColor;
-                        }
-                }
-
+        } else { // not fully charged
+                if (chargeBarTop.indexOf(cell) !== -1) cell.color = addColors(multiplyColorByNumber(cell.color, 1 - opacity), [redValue * opacity, greenValue * opacity, blueValue * opacity]);
+                if (chargeBarBottom.indexOf(cell) !== -1) cell.color = addColors(multiplyColorByNumber(cell.color, 1 - opacity), [redValue * opacity, greenValue * opacity, blueValue * opacity]);
         }
 }
 
+
+
+function updateHealthIndicator(cell) { // WRONG should genericize these color-and-length-changing meter bars
+        var healthBarLeft = [],
+                healthBarRight = [],
+                parametricScreenLength = 0.5 * (player.health / player.maxHealth),
+                redValue = 1024 * (1 - player.health / player.maxHealth),
+                greenValue = 384 * (player.health / player.maxHealth),
+                blueValue = 0,
+                damageValue = 1024 * player.damageOscillator.value,
+                opacity = 0.67,
+                startCoordsLeft = [-(0.5 * cellsPerRow), -(0.5 * cellsPerColumn)],
+                startCoordsRight = [-(0.5 * cellsPerRow) + 1, -(0.5 * cellsPerColumn)];
+        healthBarLeft = createStraightLine(Y_AXIS, parametricScreenLength, startCoordsLeft, POS);
+        healthBarRight = createStraightLine(Y_AXIS, parametricScreenLength, startCoordsRight, POS);
+        // health bar flashes white on taking damage
+        if (player.damageWarningUntil > Date.now()) {
+                if (healthBarLeft.indexOf(cell) !== -1) cell.color = [damageValue, damageValue , damageValue];
+                if (healthBarRight.indexOf(cell) !== -1) cell.color = [damageValue, damageValue , damageValue];
+        }
+        else {
+                if (healthBarLeft.indexOf(cell) !== -1) cell.color = addColors(multiplyColorByNumber(cell.color, 1 - opacity), [redValue * opacity, greenValue * opacity, blueValue * opacity]);
+                if (healthBarRight.indexOf(cell) !== -1) cell.color = addColors(multiplyColorByNumber(cell.color, 1 - opacity), [redValue * opacity, greenValue * opacity, blueValue * opacity]);
+        }
+}
+
+function createStraightLine(X_AXISor_Y_AXIS, parametricScreenLength, startCoords, directionPOSorNEG) {
+        // don't try to do anything if the start coordinates are off the cell grid or include fractions
+        if (Math.abs(startCoords[0]) > cellsPerRow / 2 || Math.abs(startCoords[1]) > cellsPerColumn / 2 ||
+                startCoords[0] === 0 || startCoords[1] === 0 ||
+                startCoords[0] % 1 !== 0 || startCoords[1] % 1 !== 0
+        ) {
+                console.log('"createStraightLine" was passed invalid starting position coordinates. The coordinate could have fallen outside the cell grid, been fractional, or been 0 (which does not exist on this even-numbered grid).');
+                return;
+        }
+        var line = [],
+                currentCoords = startCoords,
+                lengthInCells,
+                newCoords;
+        if (X_AXISor_Y_AXIS === X_AXIS) {
+                lengthInCells = Math.round(parametricScreenLength * cellsPerRow);
+                if (directionPOSorNEG === POS) {
+                        for (var i = 0; i < lengthInCells; i++) {
+                                newCoords = [currentCoords[0]++, startCoords[1]];
+                                if (newCoords[0] === 0) newCoords[0]++; // there's no zero coord in this system
+                                if (newCoords[0] <= cellsPerRow / 2) line.push(cells[coordinatesToIndex(newCoords)]);// making sure we don't go offscreen into invalid coords
+                                else return line; // just return as much of the line as fits on the screen
+                        }
+                }
+                if (directionPOSorNEG === NEG) {
+                        for (var j = 0; j < lengthInCells; j++) {
+                                newCoords = [currentCoords[0]--, startCoords[1]];
+                                if (newCoords[0] === 0) newCoords[0]--;
+                                if (newCoords[0] >= -(cellsPerRow / 2)) line.push(cells[coordinatesToIndex(newCoords)]);// making sure we don't go offscreen into invalid coords
+                                else return line; // just return as much of the line as fits on the screen
+                        }
+                }
+        }
+        if (X_AXISor_Y_AXIS === Y_AXIS) {
+                lengthInCells = Math.round(parametricScreenLength * cellsPerColumn);
+                if (directionPOSorNEG === POS) {
+                        for (var k = 0; k < lengthInCells; k++) {
+                                newCoords = [startCoords[0], currentCoords[1]++];
+                                if (newCoords[1] === 0) newCoords[1]++;
+                                if (newCoords[0] <= cellsPerRow / 2) line.push(cells[coordinatesToIndex(newCoords)]);// making sure we don't go offscreen into invalid coords
+                                else return line; // just return as much of the line as fits on the screen
+                        }
+                }
+                if (directionPOSorNEG === NEG) {
+                        for (var m = 0; m < lengthInCells; m++) {
+                                if (newCoords[1] === 0) newCoords[1]--;
+                                if (newCoords[0] >= -(cellsPerRow / 2)) line.push(cells[coordinatesToIndex(newCoords)]);// making sure we don't go offscreen into invalid coords
+                                else return line; // just return as much of the line as fits on the screen
+                        }
+                }
+        }
+        return line;
+}
+
+function createLine(startCoords, endCoords, destinationArray) {
+        var dx = startCoords[0] - endCoords[0],
+                dy = startCoords[1] - endCoords[1],
+                line = [];
+        /* pseudo code: y movement per x movement equals dx / dy
+        */
+        line.push();
+        return line;
+}
+
 function updateHUD(cell) {
-        updateEmergencyPushBackIndicator(cell);
+        if (HUDSettings.displayHUD && !player.died) {
+                updateHealthIndicator(cell);
+                updateEmergencyPushBackIndicator(cell);
+        }
 }

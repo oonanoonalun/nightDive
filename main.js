@@ -13,6 +13,7 @@ function mainLoop() {
     globalUpdates();
     drawAllCells(cells);
     logging();
+    console.log('hey' + player.emergencyPushBackUntil <= Date.now());
 }
 
 // Every .033 seconds run the code in function mainLoop. 40(ms) is 25fps, 33.33etc.ms is 30.
