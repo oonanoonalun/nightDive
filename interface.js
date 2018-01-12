@@ -234,16 +234,16 @@ function updatePlayerHealth(cell) { // cell is passed because this will go in ge
 
 
 
-function abilitiyEmergencyPushBack(arrayOfLights) {
-        if (player.noEmergencyPushBackUntil <= Date.now() || !player.noEmergencyPushBackUntil) {
-                $('body').on('keydown', function (event) {
+function abilityEmergencyPushBack(arrayOfLights) {
+        $('body').on('keydown', function (event) {
+                if (player.noEmergencyPushBackUntil <= Date.now() || !player.noEmergencyPushBackUntil) {                        
                         if (event.which == KEY_SPACE) {
                                 player.emergencyPushBackUntil = Date.now() + player.emergencyPushBackDuration;
                                 player.noEmergencyPushBackUntil = Date.now() + player.emergencyPushBackCooldown;
                                 player.emergencyPushedBackAt = Date.now();
                         }
-                });
-        }
+                }
+        });
         if (player.emergencyPushBackUntil && player.emergencyPushBackUntil > Date.now()) {
                 emergencyPushBackMovesLights(arrayOfLights);
         }
