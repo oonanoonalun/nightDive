@@ -13,7 +13,6 @@ function mainLoop() {
     globalUpdates();
     drawAllCells(cells);
     logging();
-    console.log(player.noEmergencyPushBackUntil <= Date.now());
 }
 
 // Every .033 seconds run the code in function mainLoop. 40(ms) is 25fps, 33.33etc.ms is 30.
@@ -27,11 +26,18 @@ function controls() {
         moveCameraWithButtonsContinuous();
     }
     abilityEmergencyPushBack(settings.entities.lights);
+    loggingToggles();
+}
+
+function loggingToggles() {
+            $('body').on('keyup', function (event) {
+                if (event.which == KEY_E) drawingSettings.fpsDisplay.displayFps = !drawingSettings.fpsDisplay.displayFps;
+                if (event.which == KEY_Q) HUDSettings.displayHUD = !HUDSettings.displayHUD;
+        });
 }
 
 function displayCenterCellsAverageBrightness(displayInterval) {
     if (interfaceSettings.noCenterCellsAverageBrightnessDisplayUntil <= Date.now() || !interfaceSettings.noCenterCellsAverageBrightnessDisplayUntil) {
-        console.log('Center cells average brightness is: ' + interfaceSettings.centerCellsAverageBrightness);
         interfaceSettings.noCenterCellsAverageBrightnessDisplayUntil = Date.now() + interfaceSettings.displayCenterCellsAverageBrightness[1];
     }
 }

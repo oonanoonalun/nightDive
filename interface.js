@@ -5,6 +5,10 @@ var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68,
         KEY_A = 65,
         KEY_D = 68,
         KEY_SPACE = 32,
+        KEY_Q = 81,
+        KEY_E = 69,
+        KEY_Z = 90,
+        KEY_X = 88,
         keysDown = [],
         X_AXIS = 'xAxis', // for telling straight lines how to draw
         Y_AXIS = 'yAxis',
@@ -249,35 +253,90 @@ function abilityEmergencyPushBack(arrayOfLights) {
         }
 }
 
-function updateEmergencyPushBackIndicator(cell) {
+function updateTemperatureIndicators(cell) {
+        updateTemperatureIndicatorHot(cell);
+        updateTemperatureIndicatorCold(cell);
+}
+
+function updateTemperatureIndicatorHot(cell) {
+        var tempBarTop = [],
+                tempBarRight = [],
+                parametricScreenLength,
+                redValue = 1024 * player.temperature,
+                greenValue = 384 * (1 - (player.temperature - 0.5)),
+                blueValue = 0,
+                damageValue = 1024 * player.damageOscillator.value,
+                opacity = 0.67,
+                startCoordsTop = [1, -(0.5 * cellsPerColumn) + 1],
+                startCoordsBottom = [1, -(0.5 * cellsPerColumn)];
+        if (player.temperature > 0.5) parametricScreenLength = 0.92 * (player.temperature - 0.5);
+        tempBarTop = createStraightLine(X_AXIS, parametricScreenLength, startCoordsTop, POS);
+        tempBarRight = createStraightLine(X_AXIS, parametricScreenLength, startCoordsBottom, POS);
+        // health bar flashes white on taking damage
+        if (player.damageWarningUntil > Date.now() && player.temperature > 0.5) {
+                if (tempBarTop.indexOf(cell) !== -1) cell.color = [damageValue, damageValue , damageValue];
+                if (tempBarRight.indexOf(cell) !== -1) cell.color = [damageValue, damageValue , damageValue];
+        }
+        else {
+                if (tempBarTop.indexOf(cell) !== -1) cell.color = addColors(multiplyColorByNumber(cell.color, 1 - opacity), [redValue * opacity, greenValue * opacity, blueValue * opacity]);
+                if (tempBarRight.indexOf(cell) !== -1) cell.color = addColors(multiplyColorByNumber(cell.color, 1 - opacity), [redValue * opacity, greenValue * opacity, blueValue * opacity]);
+        }
+}
+
+function updateTemperatureIndicatorCold(cell) {
+        var tempBarTop = [],
+                tempBarRight = [],
+                parametricScreenLength,
+                redValue = 0,
+                greenValue = 384 * (1 + (player.temperature - 0.5)),
+                blueValue = 1024 * (player.temperature + 0.5),
+                damageValue = 1024 * player.damageOscillator.value,
+                opacity = 0.67,
+                startCoordsTop = [-1, -(0.5 * cellsPerColumn) + 1],
+                startCoordsBottom = [-1, -(0.5 * cellsPerColumn)];
+        if (player.temperature < 0.5) parametricScreenLength = -0.92 * (player.temperature - 0.5);
+        tempBarTop = createStraightLine(X_AXIS, parametricScreenLength, startCoordsTop, NEG);
+        tempBarRight = createStraightLine(X_AXIS, parametricScreenLength, startCoordsBottom, NEG);
+        // health bar flashes white on taking damage
+        if (player.damageWarningUntil > Date.now() && player.temperature > 0.5) {
+                if (tempBarTop.indexOf(cell) !== -1) cell.color = [damageValue, damageValue , damageValue];
+                if (tempBarRight.indexOf(cell) !== -1) cell.color = [damageValue, damageValue , damageValue];
+        }
+        else {
+                if (tempBarTop.indexOf(cell) !== -1) cell.color = addColors(multiplyColorByNumber(cell.color, 1 - opacity), [redValue * opacity, greenValue * opacity, blueValue * opacity]);
+                if (tempBarRight.indexOf(cell) !== -1) cell.color = addColors(multiplyColorByNumber(cell.color, 1 - opacity), [redValue * opacity, greenValue * opacity, blueValue * opacity]);
+        }
+}
+
+function updateEnergyIndicator(cell) {
         // push-back readiness indicator
         var startTime = player.emergencyPushedBackAt,
                 readyTime = player.noEmergencyPushBackUntil,
                 timeSinceStart = Date.now() - startTime,
                 cooldown = player.emergencyPushBackCooldown, // could be readyTime - startTime
-                chargeBarBottom = [],
-                chargeBarTop = [],
-                parametricScreenLength = 0.33 * (Math.min(1, timeSinceStart / cooldown) || 1),
+                chargeBarLeft = [],
+                chargeBarRight = [],
+                parametricScreenLength = 0.5 * (Math.min(1, timeSinceStart / cooldown) || 1),
                 redValue = 1024 * (1 - timeSinceStart / cooldown),
                 greenValue = 384 * (timeSinceStart / cooldown),
                 blueValue = 0,
                 opacity = 0.67,
-                startCoordsTop = [0.5 * cellsPerRow, -(0.5 * cellsPerColumn) + 1],
-                startCoordsBottom = [0.5 * cellsPerRow, -(0.5 * cellsPerColumn)],
+                startCoordsLeft = [0.5 * cellsPerRow - 1, -(0.5 * cellsPerColumn)],
+                startCoordsRight = [0.5 * cellsPerRow, -(0.5 * cellsPerColumn)],
                 chargeFlashValue = 1024 * player.damageOscillator.value;
-        chargeBarTop = createStraightLine(X_AXIS, parametricScreenLength, startCoordsTop, NEG);
-        chargeBarBottom = createStraightLine(X_AXIS, parametricScreenLength, startCoordsBottom, NEG);
+        chargeBarLeft = createStraightLine(Y_AXIS, parametricScreenLength, startCoordsLeft, POS);
+        chargeBarRight = createStraightLine(Y_AXIS, parametricScreenLength, startCoordsRight, POS);
         if (readyTime <= Date.now() || !readyTime) { // if full charged
                 if (Date.now() - readyTime < 800) { // if just reached charged state, flashes white for a few hundred milliseconds
-                        if (chargeBarTop.indexOf(cell) !== -1) cell.color = [chargeFlashValue, chargeFlashValue, chargeFlashValue];
-                        if (chargeBarBottom.indexOf(cell) !== -1) cell.color = [chargeFlashValue, chargeFlashValue, chargeFlashValue];
+                        if (chargeBarLeft.indexOf(cell) !== -1) cell.color = [chargeFlashValue, chargeFlashValue, chargeFlashValue];
+                        if (chargeBarRight.indexOf(cell) !== -1) cell.color = [chargeFlashValue, chargeFlashValue, chargeFlashValue];
                 } else { // fully charge and has been for a short while
-                        if (chargeBarTop.indexOf(cell) !== -1) cell.color = addColors(multiplyColorByNumber(cell.color, 1 - opacity), [192 * opacity, 0 * opacity, 255 * opacity]); // violet when fully charged
-                        if (chargeBarBottom.indexOf(cell) !== -1) cell.color = addColors(multiplyColorByNumber(cell.color, 1 - opacity), [192 * opacity, 0 * opacity, 255 * opacity]);
+                        if (chargeBarLeft.indexOf(cell) !== -1) cell.color = addColors(multiplyColorByNumber(cell.color, 1 - opacity), [192 * opacity, 0 * opacity, 255 * opacity]); // violet when fully charged
+                        if (chargeBarRight.indexOf(cell) !== -1) cell.color = addColors(multiplyColorByNumber(cell.color, 1 - opacity), [192 * opacity, 0 * opacity, 255 * opacity]);
                 }
         } else { // not fully charged
-                if (chargeBarTop.indexOf(cell) !== -1) cell.color = addColors(multiplyColorByNumber(cell.color, 1 - opacity), [redValue * opacity, greenValue * opacity, blueValue * opacity]);
-                if (chargeBarBottom.indexOf(cell) !== -1) cell.color = addColors(multiplyColorByNumber(cell.color, 1 - opacity), [redValue * opacity, greenValue * opacity, blueValue * opacity]);
+                if (chargeBarLeft.indexOf(cell) !== -1) cell.color = addColors(multiplyColorByNumber(cell.color, 1 - opacity), [redValue * opacity, greenValue * opacity, blueValue * opacity]);
+                if (chargeBarRight.indexOf(cell) !== -1) cell.color = addColors(multiplyColorByNumber(cell.color, 1 - opacity), [redValue * opacity, greenValue * opacity, blueValue * opacity]);
         }
 }
 
@@ -373,6 +432,7 @@ function createLine(startCoords, endCoords, destinationArray) {
 function updateHUD(cell) {
         if (HUDSettings.displayHUD && !player.died) {
                 updateHealthIndicator(cell);
-                updateEmergencyPushBackIndicator(cell);
+                updateEnergyIndicator(cell);
+                updateTemperatureIndicators(cell);
         }
 }
