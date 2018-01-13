@@ -36,8 +36,20 @@ var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68,
                 'displayHUD': false
         };
 
+//Chris recommeded this to make controls significantly less CPU-intensive:
+var keysDown = {};
+$('body').on('keydown', event => {
+   keysDown[event.which] = true;
+});
+$('body').on('keyup', event => {
+   keysDown[event.which] = false;
+});
+//In your control code then you can just check keysDown[KEY_W]
+//to see if W is currently pressed.
+
+
 function moveCameraWithButtons() {
-        $('body').on('keydown', function (event) {
+        /*$('body').on('keydown', function (event) {
                 if (event.which == KEY_W && keysDown.indexOf(KEY_W) === -1) {
                         keysDown.push(KEY_W);
                 }
@@ -88,6 +100,30 @@ function moveCameraWithButtons() {
                 }
         }
         if (keysDown.indexOf(KEY_D) !== -1) { // move right
+                if (interfaceSettings.noRightMoveUntil <= Date.now()) {
+                        moveArrayOfEntities(settings.entities.lights, LEFT, interfaceSettings.cellsPerMove);
+                        interfaceSettings.noRightMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
+                }
+        }*/
+        if (keysDown[KEY_W]) { // move up
+                if (interfaceSettings.noUpMoveUntil <= Date.now()) {
+                        moveArrayOfEntities(settings.entities.lights, DOWN, interfaceSettings.cellsPerMove);
+                        interfaceSettings.noUpMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
+                }
+        }
+        if (keysDown[KEY_S]) { // move down
+                if (interfaceSettings.noDownMoveUntil <= Date.now()) {
+                        moveArrayOfEntities(settings.entities.lights, UP, interfaceSettings.cellsPerMove);
+                        interfaceSettings.noDownMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
+                }
+        }
+        if (keysDown[KEY_A]) { // move left
+                if (interfaceSettings.noLeftMoveUntil <= Date.now()) {
+                        moveArrayOfEntities(settings.entities.lights, RIGHT, interfaceSettings.cellsPerMove);
+                        interfaceSettings.noLeftMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
+                }
+        }
+        if (keysDown[KEY_D]) { // move right
                 if (interfaceSettings.noRightMoveUntil <= Date.now()) {
                         moveArrayOfEntities(settings.entities.lights, LEFT, interfaceSettings.cellsPerMove);
                         interfaceSettings.noRightMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
@@ -154,15 +190,6 @@ function moveArrayOfEntities(arrayOfEntities, direction, numberOfCells) {
                 moveEntity(entity, direction, numberOfCells);
         }
 }
-
-/*function findAverageBrightnessOfCenterCells() {
-        var brightness = 0;
-        for (var i = 0; i < interfaceSettings.centerCells.length; i++) {
-                brightness += averageBrightness(interfaceSettings.centerCells[i].color);
-        }
-        brightness /= interfaceSettings.centerCells.length;
-        interfaceSettings.centerCellsAverageBrightness = brightness;
-}*/
 
 function findAverageBrightnessOfCenterCells(cell) {
         // this resets interfaceSettings.centerCellsAverageBrightness to 0 at the beginng of each pass through all the cells

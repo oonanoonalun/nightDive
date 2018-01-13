@@ -139,6 +139,7 @@ function valueToHue (value) {
         return hue;
 }
 
+// WRONG I think the < 0.5 part of this is ok, though
 function curveNormalizedValue(value) {
         var newVal;
         if (value < 0.5) {

@@ -7,7 +7,7 @@ var cells = [],
                 'oscillators': [],
                 'entities': {
                         'lights': [],
-                        'shadows': []
+                        'rectangles': []
                 },
                 'minLights': 8, // min and max number of lights in the level/on the screen (depending on where development goes)
                 'maxLights': 20,
@@ -96,6 +96,8 @@ function setPreferences() {
         // how cold or hot the player has to get before taking damage (0-1);
         player.heatDamageThreshold = 0.85;
         player.coldDamageThreshold = 0.43;
+        // how many ms between player movements if you hold a key down and the framerate allows
+        interfaceSettings.moveRepeatDelay = 25;
         // minimum and maximum number of lights on the map at any one time
         settings.minLights = 12;
         settings.maxLights = 25;
@@ -116,7 +118,8 @@ var //current coordinate system needs even number of cells in rows and columns. 
         cellsPerRow = arrayOfValidCellsPerRow[resolutionFactor], // Smaller is chunkier.
         //cellsPerRow = cellSizeToCellsPerRow(13),
         totalNumberOfCells = cellsPerRow * cellsPerRow * 0.75, // only works for 4:3 ratio
-        cellsPerColumn = totalNumberOfCells / cellsPerRow;
+        cellsPerColumn = totalNumberOfCells / cellsPerRow,
+        cellSize = canvasWidth / cellsPerRow;
 if (drawingSettings.displayResolutionInformation) console.log('The current cells size is: ' + (canvasWidth / cellsPerRow));
 if (drawingSettings.displayResolutionInformation) console.log('The curent number of cells per row (long dimension) is: ' + cellsPerRow);
 makeCells(totalNumberOfCells, cellsPerRow, cells);

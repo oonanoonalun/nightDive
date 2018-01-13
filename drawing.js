@@ -354,6 +354,68 @@ function findDistanceBetweenPoints(xyArray1, xyArray2) {
         return distance;
 }
 
+function  rejectAndLogInvalidCoords(coordsXYArray, functionSentBadCoords) {
+        // don't try to do anything if coordinates are off the cell grid or include fractions or are 0 (which this coord system doesn't have)
+        var coords = coordsXYArray,
+                func = functionSentBadCoords;
+        if (Math.abs(coords[0]) > cellsPerRow / 2 || Math.abs(coords[1]) > cellsPerColumn / 2 ||
+                coords[0] === 0 || coords[1] === 0 ||
+                coords[0] % 1 !== 0 || coords[1] % 1 !== 0
+        ) {
+                console.log('"' + func + '" was passed invalid coordinates. The coordinate could have fallen outside the cell grid, been fractional, or been 0 (which does not exist on this even-numbered grid).');
+                return;
+        } 
+}
+
+function makeRectangle(widthInPixels, heightInPixels, topLeftCoordinatesXYArray, brightness, radianceRangeInPixels, oscillator, directionOfMovement, msBetweenMovements, pixelsPerMovement, name) {
+        var rectangle = {
+                        'coreCells': [],
+                        'radianceCells': [],
+                        'brightness': brightness,
+                        'directionOfMovement': directionOfMovement,
+                        'msBetweenMovements': msBetweenMovements,
+                        'cellsPerMovement': Math.round(pixelsPerMovement / cellSize),
+                        'oscillator': oscillator,
+                        'widthInCells': Math.round(widthInPixels / cellSize),
+                        'heightInCells': Math.round(heightInPixels / cellSize),
+                        'radianceRangeInCells': radianceRangeInPixels / cellSize,
+                        'topLeftCoords': topLeftCoordinatesXYArray,
+                        'name': name
+                },
+                coords = topLeftCoordinatesXYArray;
+        for (var i = 0; i < rectangle.widthInCells; i++) {
+                var newCoords = [coords[0] + i, coords[1]];
+                if (newCoords[0] <= cellsPerRow / 2) {
+                        if (newCoords[0] === 0) newCoords[0]++;
+                        if (newCoords[1] === 0) newCoords[0]--;
+                        rectangle.coreCells.push(cells[coordinatesToIndex(coords[0], coords[1])]);
+                }
+                for (var j = 1; j < rectangle.heightInCells; j++) {
+                        if (newCoords[1] - j >= -(cellsPerColumn / 2)) {
+                                if (newCoords[1] - j === 0) newCoords[1]--;
+                                if (newCoords[1] - j >= -(cellsPerColumn / 2)) rectangle.coreCells.push(cells[coordinatesToIndex(coords[0], coords[1] - j)]);
+                        }
+                }
+        }
+        rectangle.push(settings.rectangles);
+        /* some ideas for radiance coloring borrowed from center cells shading
+        for (var j = 0; j <3; j++) {
+                cell.color[j] = ((cell.color[j] * paraLocation) + ((255 * player.temperature) * (1 - paraLocation)));
+        }
+        */
+}
+
+function updateRectangle(rectangle) {
+        // self-movement
+        
+}
+
+function updateRectangles(arrayOfRectangles) {
+        for (var i = 0; i < settings.entities.rectangles.length; i++) {
+                updateRectangle(settings.entities.rectangles[i]);
+        }
+}
+
 // WRONG: this function tanks the framerate, at least if run every frame.
 function findCellAtCoordinate(xyArray, allCellsList) {
         for (var i = 0; i < allCellsList.length; i++) {
