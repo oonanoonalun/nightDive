@@ -204,7 +204,7 @@ function temperatureMovesLightsIcarus(light) {
                         if (player.temperature < 0.5) moveEntity(light, RIGHT, 1); // cool players repel lights
                         if (player.temperature > 0.5) moveEntity(light, LEFT, 1); // hot players attract lights                        
                 }
-                light.noTemperatureMoveUntil = Date.now() + Math.max(200, (500 - (player.temperatureCircular * 500))); // WRONG MAYBE maybe light brightness and/or diffusion should figure into how fast they move?
+                light.noTemperatureMoveUntil = Date.now() + Math.max(50, (250 - (player.temperatureCircular * 500))); // WRONG MAYBE maybe light brightness and/or diffusion should figure into how fast they move?
         }
 }
 

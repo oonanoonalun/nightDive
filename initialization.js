@@ -1,6 +1,19 @@
-var resolutionFactor = 4,
+var cells = [],
+        resolutionFactor = 4,
         canvasWidth = 800,
         canvasHeight = 600,
+        GAME_TYPE_ICARUS = 'icarusGameType',
+        settings = {
+                'oscillators': [],
+                'entities': {
+                        'lights': [],
+                        'shadows': []
+                },
+                'minLights': 4, // min and max number of lights in the level/on the screen (depending on where development goes)
+                'maxLights': 20,
+                'gameType': GAME_TYPE_ICARUS,
+                'gameStartTime': Date.now()
+        },
         player = {
                 'temperatureNoiseScale': 0.67, // scales how much the global noise level is affected by player temperature
                 'centerXY': [canvasWidth * 0.5, canvasHeight * 0.5],
@@ -20,8 +33,6 @@ var resolutionFactor = 4,
                 'regenerateHealth': true,
                 'healthRegenerationAmount': 1,  // regenerate this amount of health
                 'healthRegenerationInterval': 1000,      // every this many milliseconds. Don't it too small (i.e. <200ms) because there's a little cooldown (150ms) to make sure you don't accidentally get two health bumps in one iteration. You can always just give more health at longer intervals.
-                // WRONG some of this making cooling more aggressive comes from just cancelling out the effect of the player light.
-                // Some of it is just because, when lights affect the whole screen, rarely is a anyplace really dark, while some places are very bright.
                 'temperatureChangeRateScale': 0.01, // affect how quickly the player gains and loses temperature based on center-screen brightnesspl
                 'coolingScale': 1, // scale the rate at which you heat and cool for balancing purposes (or for special effects)
                 'heatingScale': 1,
@@ -29,18 +40,32 @@ var resolutionFactor = 4,
                 //      damage thresholds off of it, but "this.etc" doesn't seem to work in objects. : /
                 'coldDamageThreshold': 0.33, // when player temperature falls below this, receive damage
                 'heatDamageThreshold': 0.67 // when player temperature rises above this, receive damage
+        },
+        randomLightSettingsDefault = {
+                'minBrightness': 64,
+                'maxBrightness': 2000, // WHY DOESN'T 255 create white here?
+                'minRadius': 30,
+                'maxRadius': 200,
+                'minDiffusion': 10, // in pixels
+                'maxDiffusion': 60,
+                'minDeathChance': 0.01, // chance that the light will be removed when it goes dark. 1 = will certainly die when it goes dark.
+                'maxDeathChance': 0.025,
+                'parentCellsArray': cells,
+                'minCellIndex': 0,
+                'maxCellIndex': totalNumberOfCells - 1
         };
+        
 // WARNING: setPreferences() SHOULDN'T BE MOVED FROM BETWEEN THESE SETS OF VARS!!!
 function setPreferences() {
         // GRAPHICS
         // log framerate in console
-        drawingSettings.fpsDisplay.displayFps = false;
-        drawingSettings.fpsDisplayInterval = 10000;      // display it this frequently (in ms)
-        drawingSettings.fpsDisplayIntervalLongTerm = 600000;     // and this frequently (for a short-term gist and a long-term average)
+        drawingSettings.fpsDisplay.displayFps = true;
+        drawingSettings.fpsDisplay.fpsDisplayInterval = 3000;      // display it this frequently (in ms)
+        drawingSettings.fpsDisplay.fpsDisplayIntervalLongTerm = 100000;     // and this frequently (for a short-term gist and a long-term average)
         // resolution. Currently, 0-7 are valid values. Smaller is chunkier.
         resolutionFactor = 4; //Leaps in resolution are pretty big for now due to some current constraints on valid widths and heights.
         // add color noise to the screen
-        drawingSettings.noise.addNoise = false;
+        drawingSettings.noise.addNoise = true;
         // log resolution information in the console once at the beginning of running the program
         drawingSettings.displayResolutionInformation = false;
         // set limit on range of lights
@@ -63,19 +88,24 @@ function setPreferences() {
         // health regen per second (max health is 100)
         player.healthRegenerationAmount = 1;
         // how quickly the player gains and dissipates
-        player.temperatureChangeRateScale = 0.007;
+        player.temperatureChangeRateScale = 0.0045;
         // how cold or hot the player has to get before taking damage (0-1);
-        player.heatDamageThreshold = 0.95;
-        player.coldDamageThreshold = 0.4;
+        player.heatDamageThreshold = 0.85;
+        player.coldDamageThreshold = 0.25;
+        // minimum and maximum number of lights on the map at any one time
+        settings.minLights = 8;
+        settings.maxLights = 20;
+        // lights parameter ranges
+        randomLightSettingsDefault.minBrightness = 64;
+        randomLightSettingsDefault.maxBrightness = 800;
+        randomLightSettingsDefault.minRadius = 50;
+        randomLightSettingsDefault.maxRadius = 150;
 }
 
 // WARNING setPrefences NEEDS TO BE CALLED HERE, before the following declarations of vars.
-// WARNING: DON'T REMOVE! setPreferences IS CALLED MULTIPLE TIMES, once in another .js and IT NEEDS TO BE. This is poor organization, but
-//      it needs to be done so that the changes it makes aren't overwritten by other assignment instances.
 setPreferences();
 
-var cells = [],
-        //current coordinate system needs even number of cells in rows and columns. Either update findValidCellsPerRowForCanvas so that an option is to lock it even numbers in both directions (DONE), or update assignCoordinatesToCells. coordinatesToIndex won't work with odd numbers, either
+var //current coordinate system needs even number of cells in rows and columns. Either update findValidCellsPerRowForCanvas so that an option is to lock it even numbers in both directions (DONE), or update assignCoordinatesToCells. coordinatesToIndex won't work with odd numbers, either
         arrayOfValidCellsPerRow = findValidCellsPerRowForCanvas(canvasWidth, canvasHeight, false, true),
         cellsPerRow = arrayOfValidCellsPerRow[resolutionFactor], // Smaller is chunkier.
         //cellsPerRow = cellSizeToCellsPerRow(13),
@@ -89,7 +119,6 @@ var SINE = 'sineWaveShape',
         TRI = 'triangularWaveShape',
         SQUARE = 'squareWaveShape',
         SAW = 'sawWaveShape',
-        GAME_TYPE_ICARUS = 'icarusGameType',
         UP = 'up', // used for moving things around
         DOWN = 'down',
         LEFT = 'left',
@@ -98,31 +127,7 @@ var SINE = 'sineWaveShape',
         DOWN_RIGHT = 'diagonalDownRight',
         UP_LEFT = 'diagonalUpLeft',
         UP_RIGHT = 'diagonalUpRight',
-        deathAphorisms = [],
-        settings = {
-                'oscillators': [],
-                'entities': {
-                        'lights': [],
-                        'shadows': []
-                },
-                'minLights': 4, // min and max number of lights in the level/on the screen (depending on where development goes)
-                'maxLights': 20,
-                'gameType': GAME_TYPE_ICARUS,
-                'gameStartTime': Date.now()
-        },
-        randomLightSettingsDefault = {
-                'minBrightness': 64,
-                'maxBrightness': 2000, // WHY DOESN'T 255 create white here?
-                'minRadius': 30,
-                'maxRadius': 100,
-                'minDiffusion': cells[0].size,
-                'maxDiffusion': cells[0].size * 13,
-                'minDeathChance': 0.01, // chance that the light will be removed when it goes dark. 1 = will certainly die when it goes dark.
-                'maxDeathChance': 0.025,
-                'parentCellsArray': cells,
-                'minCellIndex': 0,
-                'maxCellIndex': totalNumberOfCells - 1
-        };
+        deathAphorisms = [];
 
 settings.oscillators.push(player.damageOscillator);
 makeRandomOscillators(10, 5000, 20000, settings.oscillators);
