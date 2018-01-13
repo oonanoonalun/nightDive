@@ -1,9 +1,83 @@
-var cells = [],
+var resolutionFactor = 4,
         canvasWidth = 800,
         canvasHeight = 600,
+        player = {
+                'temperatureNoiseScale': 0.67, // scales how much the global noise level is affected by player temperature
+                'centerXY': [canvasWidth * 0.5, canvasHeight * 0.5],
+                'logPlayerTemperature': false,  // WRONG should probably just make a logging object with all the logging options in it
+                'oscillator': null, // WRONG I'd rather just define these here, but I don't know how to reference player's properties from within itself (i.e. send a oscillator defined here to a light defined here). 'this.oscillator' didn't seem to work.
+                'light': null,
+                'temperature': 0.5,
+                'intervalBetweenTemperatureUpdates': 200,
+                'health': 100,
+                'maxHealth': 100,
+                'intervalBetweenHealthUpdates': 133, // number of ms between possible health losses
+                'displayHealth': false, // logs in the console
+                'emergencyPushBackCooldown': 10000,
+                'emergencyPushBackDuration': 3500,
+                'damageWarningDuration': 350,
+                'damageOscillator': makeOscillator(150, 0, SINE, 'playerDamageOscillator'),
+                'regenerateHealth': true,
+                'healthRegenerationAmount': 1,  // regenerate this amount of health
+                'healthRegenerationInterval': 1000,      // every this many milliseconds. Don't it too small (i.e. <200ms) because there's a little cooldown (150ms) to make sure you don't accidentally get two health bumps in one iteration. You can always just give more health at longer intervals.
+                // WRONG some of this making cooling more aggressive comes from just cancelling out the effect of the player light.
+                // Some of it is just because, when lights affect the whole screen, rarely is a anyplace really dark, while some places are very bright.
+                'temperatureChangeRateScale': 0.01, // affect how quickly the player gains and loses temperature based on center-screen brightnesspl
+                'coolingScale': 1, // scale the rate at which you heat and cool for balancing purposes (or for special effects)
+                'heatingScale': 1,
+                // WRONG so stupid that I can't just have a 'damageZoneWidth' property and base the cold and heat
+                //      damage thresholds off of it, but "this.etc" doesn't seem to work in objects. : /
+                'coldDamageThreshold': 0.33, // when player temperature falls below this, receive damage
+                'heatDamageThreshold': 0.67 // when player temperature rises above this, receive damage
+        };
+// WARNING: setPreferences() SHOULDN'T BE MOVED FROM BETWEEN THESE SETS OF VARS!!!
+function setPreferences() {
+        // GRAPHICS
+        // log framerate in console
+        drawingSettings.fpsDisplay.displayFps = false;
+        drawingSettings.fpsDisplayInterval = 10000;      // display it this frequently (in ms)
+        drawingSettings.fpsDisplayIntervalLongTerm = 600000;     // and this frequently (for a short-term gist and a long-term average)
+        // resolution. Currently, 0-7 are valid values. Smaller is chunkier.
+        resolutionFactor = 4; //Leaps in resolution are pretty big for now due to some current constraints on valid widths and heights.
+        // add color noise to the screen
+        drawingSettings.noise.addNoise = false;
+        // log resolution information in the console once at the beginning of running the program
+        drawingSettings.displayResolutionInformation = false;
+        // set limit on range of lights
+        drawingSettings.numberOfRadiiBeforeLightsHaveNoEffect = 10000;
+        // show HUD
+        HUDSettings.displayHUD = false;
+        // If 'true', draws the game as shades of grey or rainbow.
+        drawingSettings.greyscaleToSpectrum = false;
+        // draw screen. Turn off to look at errors without the screen being drawn slowing things down
+        drawingSettings.drawScreen = true;
+        
+        // GAMEPLAY INTERFACE (except for HUD)
+        // show health in the console. Useful if HUD is off.
+        player.displayHealth = true; // happens whenever your health changes if your health becomes a multiple of 5
+        // show temperature in console.
+        player.logPlayerTemperature = false;
+        player.intervalBetweenTemperatureUpdates = 500; // ms between logged temperature updates
+        
+        // GAMEPLAY
+        // health regen per second (max health is 100)
+        player.healthRegenerationAmount = 1;
+        // how quickly the player gains and dissipates
+        player.temperatureChangeRateScale = 0.007;
+        // how cold or hot the player has to get before taking damage (0-1);
+        player.heatDamageThreshold = 0.95;
+        player.coldDamageThreshold = 0.4;
+}
+
+// WARNING setPrefences NEEDS TO BE CALLED HERE, before the following declarations of vars.
+// WARNING: DON'T REMOVE! setPreferences IS CALLED MULTIPLE TIMES, once in another .js and IT NEEDS TO BE. This is poor organization, but
+//      it needs to be done so that the changes it makes aren't overwritten by other assignment instances.
+setPreferences();
+
+var cells = [],
         //current coordinate system needs even number of cells in rows and columns. Either update findValidCellsPerRowForCanvas so that an option is to lock it even numbers in both directions (DONE), or update assignCoordinatesToCells. coordinatesToIndex won't work with odd numbers, either
         arrayOfValidCellsPerRow = findValidCellsPerRowForCanvas(canvasWidth, canvasHeight, false, true),
-        cellsPerRow = arrayOfValidCellsPerRow[4], // Smaller is chunkier.
+        cellsPerRow = arrayOfValidCellsPerRow[resolutionFactor], // Smaller is chunkier.
         //cellsPerRow = cellSizeToCellsPerRow(13),
         totalNumberOfCells = cellsPerRow * cellsPerRow * 0.75, // only works for 4:3 ratio
         cellsPerColumn = totalNumberOfCells / cellsPerRow;
@@ -11,7 +85,6 @@ if (drawingSettings.displayResolutionInformation) console.log('The current cells
 if (drawingSettings.displayResolutionInformation) console.log('The curent number of cells per row (long dimension) is: ' + cellsPerRow);
 makeCells(totalNumberOfCells, cellsPerRow, cells);
 assignCoordinatesToCells(cells);
-initializeCenterCells();
 var SINE = 'sineWaveShape',
         TRI = 'triangularWaveShape',
         SQUARE = 'squareWaveShape',
@@ -49,34 +122,12 @@ var SINE = 'sineWaveShape',
                 'parentCellsArray': cells,
                 'minCellIndex': 0,
                 'maxCellIndex': totalNumberOfCells - 1
-        },
-        player = {
-                'temperatureNoiseScale': 0.67,
-                'centerXY': [canvasWidth * 0.5, canvasHeight * 0.5],
-                'logPlayerTemperature': false,  // WRONG should probably just make a logging object with all the logging options in it
-                'oscillator': null, // WRONG I'd rather just define these here, but I don't know how to reference player's properties from within itself (i.e. send a oscillator defined here to a light defined here). 'this.oscillator' didn't seem to work.
-                'light': null,
-                'temperature': 0.5,
-                'intervalBetweenTemperatureUpdates': 200,
-                'temperatureChangeRateScale': 0.0003,
-                'health': 100,
-                'maxHealth': 100,
-                'intervalBetweenHealthUpdates': 133,
-                'displayHealth': false, // logs in the console
-                'emergencyPushBackCooldown': 10000,
-                'emergencyPushBackDuration': 3500,
-                'damageWarningDuration': 350,
-                'damageOscillator': makeOscillator(150, 0, SINE, 'playerDamageOscillator'),
-                'regenerateHealth': true,
-                'healthRegenerationAmount': 1,  // regenerate this amount of health
-                'healthRegenerationInterval': 1000,      // every this many milliseconds. Don't it too small (i.e. <200ms) because there's a little cooldown (150ms) to make sure you don't accidentally get two health bumps in one iteration. You can always just give more health at longer intervals.
-                'brightnessThresholdForTemperatureGainOrLoss': 140, // brightnesses over this will make you hotter; under, colder. Biased toward high end becaue the map tends to get very bright, but rarely very dark
-                'coolingScale': 1.15, // scale the rate at which you heat and cool for balancing purposes (or for special effects)
-                'heatingScale': 1
         };
+
 settings.oscillators.push(player.damageOscillator);
 makeRandomOscillators(10, 5000, 20000, settings.oscillators);
 makeRandomLights(settings.minLights, randomLightSettingsDefault, settings.entities.lights, settings.oscillators);
+initializeCenterCells();
 
 // player light
 // WRONG I'd like to just define these on the player object, but I can't get that to work.
@@ -225,9 +276,15 @@ function coordinatesToIndex(XYArrayOfCoordinates) {
 }
 
 function initializeCenterCells() {
+        // looking at all cells
         for (var i = 0; i < cells.length; i++) {
+                // finding their distance from center screen
                 distanceFromCenter = findDistanceBetweenPoints([canvasWidth * 0.5, canvasHeight * 0.5], cells[i].centerXY);
-                if (distanceFromCenter <= interfaceSettings.centerCellsRadius) interfaceSettings.centerCells.push(cells[i]);
+                // if that distance is inside the radius defined for center cells
+                if (distanceFromCenter <= interfaceSettings.centerCellsRadiusInPixels) {
+                        interfaceSettings.centerCells.push(cells[i]);
+                        cells[i].centerCellParametricLocationOnCenterCellsRadius = distanceFromCenter / interfaceSettings.centerCellsRadiusInPixels;
+                }
         }
 }
 

@@ -106,43 +106,84 @@ function averageBrightness(color) {
 }
 
 function valueToHue (value) {
-        //receives a number between 0 and 1, inclusively and converts it to a hue. Value 0 = red, val 0.25 = yellow, val 0.5 = green, val 0.75 = cyan, val 1 = blue
+        //receives a number between 0 and 1, inclusively and converts it to a hue.
+        // if HIGH_EQUALS_BLUE: Value 0 = red, val 0.25 = yellow, val 0.5 = green, val 0.75 = cyan, val 1 = blue
         var hue;
-        if (value <= 0.25) {                            //anywhere from red to yellow
-                hue = [255, (255 * (value * 4)), 0];
-        }
-        if (value > 0.25 && value <= 0.5) {             //anywhere from yellow to green
-                hue = [Math.abs((255 * (value - 0.5)) * 4), 255, 0];     //the R value should be 0 for input 0.5 and 1 for input 0.25.
-        }
-        if (value > 0.5 && value <= 0.75) {
-                hue = [0, 255, (255 * ((value - 0.5) * 4))];    //anywhere  from green to cyan
-        }
-        if (value > 0.75 && value <= 1) {             //anywhere from yellow to green
-                hue = [0, Math.abs((255 * (value - 1) * 4)), 255];    //the G value should be 0 for input 0.5 and 1 for input 0.25.
+        if (drawingSettings.blueIsHot) {
+                if (value <= 0.25) {                            //anywhere from red to yellow
+                        hue = [255, (255 * (value * 4)), 0];
+                }
+                if (value > 0.25 && value <= 0.5) {             //anywhere from yellow to green
+                        hue = [Math.abs((255 * (value - 0.5)) * 4), 255, 0];     //the R value should be 0 for input 0.5 and 1 for input 0.25.
+                }
+                if (value > 0.5 && value <= 0.75) {
+                        hue = [0, 255, (255 * ((value - 0.5) * 4))];    //anywhere  from green to cyan
+                }
+                if (value > 0.75 && value <= 1) {             //anywhere from yellow to green
+                        hue = [0, Math.abs((255 * (value - 1) * 4)), 255];    //the G value should be 0 for input 0.5 and 1 for input 0.25.
+                }
+        } else {
+                if (value <= 0.25) {                            //anywhere from blue to cyan
+                        hue = [0, (255 * (value * 4)), 255];
+                }
+                if (value > 0.25 && value <= 0.5) {             //anywhere from cyan to green
+                        hue = [0, 255, Math.abs((255 * (value - 0.5)) * 4)];     //the B value should be 0 for input 0.5 and 1 for input 0.25.
+                }
+                if (value > 0.5 && value <= 0.75) {
+                        hue = [(255 * ((value - 0.5) * 4)), 255, 0];    //anywhere from green to yellow
+                }
+                if (value > 0.75 && value <= 1) {             //anywhere from yellow to red
+                        hue = [255, Math.abs((255 * (value - 1) * 4)), 0];    //the G value should be 0 for input 0.5 and 1 for input 0.25.
+                }                
         }
         return hue;
+}
+
+function curveNormalizedValue(value) {
+        var newVal;
+        if (value < 0.5) {
+                newVal = (value / 0.5) * 0.5;
+        }
+        if (value > 0.5) {
+                newVal = (0.5 / value) * 0.5;
+        }
+        return newVal;
 }
 
 function brightnessToSpectrum(darkThreshold, maxBrightness, cell) {  //should send 255 as maxColor to this, probably
         //this function should take a value of 0 through 1, inclusively, and map it to a spectrum of colors from Red to Yellow to Green to Cyan to Blue.
         if (averageBrightness(cell.color) >= darkThreshold) {
                 var newBrightness = averageBrightness(capColorBrightness(cell.color, [255, 255, 255])),
-                brightnessRange,
-                currentColorParametricValueOfRange;
-                brightnessRange = maxBrightness - darkThreshold;
+                        brightnessRange,
+                        currentColorParametricValueOfRange;
+                        brightnessRange = maxBrightness - darkThreshold;
                 currentColorParametricValueOfRange = (newBrightness - darkThreshold) / brightnessRange;  //should generate a number inclusively between 1 and 0.
-                //console.log((newBrightness - darkThreshold), brightnessRange);
-                //console.log(currentColor);
+                // stretching out the midrange to creature some curvature
+                //currentColorParametricValueOfRange = curveNormalizedValue(currentColorParametricValueOfRange);
                 newColor = valueToHue(Math.min(1, currentColorParametricValueOfRange));
                 //newColor = [currentColorParametricValueOfRange * 255, currentColorParametricValueOfRange * 255, currentColorParametricValueOfRange * 255];
+                // WRONG. unnec but shouldn't remove until things are stable
                 setCellColorGroup(currentColorParametricValueOfRange, cell);
-                if (cell == cells[46] && impulses[0] !== null) {
-                        //console.log(cell.color);
-                        //console.log(newBrightness);
-                        //console.log(currentColorParametricValueOfRange.toFixed(2));
-                        //console.log(newColor[0].toFixed(0), newColor[1].toFixed(0), newColor[2].toFixed(0));
-                }
                 //newColor = [64 * currentColorParametricValueOfRange, 64 * currentColorParametricValueOfRange, 64 * currentColorParametricValueOfRange];
                 return newColor;
+        }
+}
+
+function setCellColorGroup(value, cell) {
+        // this function is ONLY USED BY brightnessToSpectrum()
+        if (value <= 0.2) {
+                cell.colorGroup = 0; 
+        }
+        if (value > 0.2 && value <= 0.4) {
+                cell.colorGroup = 1; 
+        }
+        if (value > 0.4 && value <= 0.6) {
+                cell.colorGroup = 2; 
+        }
+        if (value > 0.6 && value <= 0.8) {
+                cell.colorGroup = 3; 
+        }
+        if (value > 0.8 && value <= 1) {
+                cell.colorGroup = 4; 
         }
 }

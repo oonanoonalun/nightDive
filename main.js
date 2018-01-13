@@ -50,7 +50,7 @@ function globalUpdates() {
 }
 
 function logging() {
-    if (player.logPlayerTemperature) logPlayerTemperature(500);
+    if (player.logPlayerTemperature && !player.died) logPlayerTemperature(500);
     if (drawingSettings.fpsDisplay.displayFps) countFps(drawingSettings.fpsDisplay.fpsDisplayInterval, drawingSettings.fpsDisplay.fpsDisplayIntervalLongTerm);    
     if (interfaceSettings.displayCenterCellsAverageBrightness[0]) displayCenterCellsAverageBrightness(interfaceSettings.displayCenterCellsAverageBrightness[1]);
 }

@@ -23,17 +23,17 @@ var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68,
                 'noLeftMoveUntil': Date.now(),
                 'noRightMoveUntil': Date.now(),
                 'cellsPerMove': 2,
-                'moveRepeatDelay': 25,
+                'moveRepeatDelay': 25, // number of ms between moves if framerate allows
                 'controlScheme': NON_CONTINUOUS_MOVEMENT,
                 'showPlayerLight': true,
-                'centerCellsRadius': 35,
+                'centerCellsRadiusInPixels': 35,
                 'showCenterCells': false, // not as efficient as it could be, cpu-wise (?), so only turn on if needed.
                 'centerCells': [],
                 'centerCellsAverageBrightness': null,
                 'displayCenterCellsAverageBrightness': [false, 500] // second item is display interval
         },
         HUDSettings = {
-                'displayHUD': true
+                'displayHUD': false
         };
 
 function moveCameraWithButtons() {
@@ -165,15 +165,32 @@ function moveArrayOfEntities(arrayOfEntities, direction, numberOfCells) {
 }*/
 
 function findAverageBrightnessOfCenterCells(cell) {
-        // WRONG, sort of. This is a sloppy way to do this, and it may not be very efficient to put it where
-        //      it is in drawAllCells, but it's hard to insert it in the right place, while the cells' colors
-        //      still aren't in hex, and when they haven't been wiped by getCellColor.
+        // this resets interfaceSettings.centerCellsAverageBrightness to 0 at the beginng of each pass through all the cells
         if (cells.indexOf(cell) === 0) interfaceSettings.centerCellsAverageBrightness = 0;
+        // if the current cell is one of the center cells
         if (interfaceSettings.centerCells.indexOf(cell) !== -1) {
                 showCenterCells(cell);
-                interfaceSettings.centerCellsAverageBrightness += averageBrightness(cell.color);
+                // if in greyscale mode
+                if (!drawingSettings.greyscaleToSpectrum) interfaceSettings.centerCellsAverageBrightness += averageBrightness(cell.color);
+                // if in spectrum mode
+                else interfaceSettings.centerCellsAverageBrightness += Math.min(cell.color[0], cell.color[0] + 0.5 * cell.color[1]);
+                // draw the center screen representation
+                if (interfaceSettings.showPlayerLight) {
+                        var paraLocation = cell.centerCellParametricLocationOnCenterCellsRadius;
+                        if ((Math.abs(cell.coordinates[0]) === 1 &&  Math.abs(cell.coordinates[1]) === 1) || paraLocation <= 0.33) {
+                                // four center cells are always exactly your temperature, no matter the resolution
+                                // inner portion of center area are also exactly your temperature
+                                for (var i = 0; i <3; i++) {
+                                        cell.color[i] = 255 * player.temperature;//; * paraLocation;
+                                }                              
+                        } else {
+                                for (var j = 0; j <3; j++) {
+                                        cell.color[j] = ((cell.color[j] * paraLocation) + ((255 * player.temperature) * (1 - paraLocation)));
+                                }
+                        }
+                }
         }
-        // average color when done looking at all cells
+        // average color when done looking at all the cells
         if (cells.indexOf(cell) === totalNumberOfCells - 1) {
                 interfaceSettings.centerCellsAverageBrightness /= interfaceSettings.centerCells.length;
         }
@@ -187,32 +204,47 @@ function showCenterCells(cell) {
 
 function updatePlayerTemperature() {
         if (player.noTemperatureChangeUntil <= Date.now() || !player.noTemperatureChangeUntil) {
+                var pBright = player.temperature * 255,
+                        ccBright = interfaceSettings.centerCellsAverageBrightness;
                 // temperature shift pivot point is biased toward higher brightness because the map gets very bright, but never very dark.
                 // Cooling happens a little faster than heating, too.
-                if (interfaceSettings.centerCellsAverageBrightness <= player.brightnessThresholdForTemperatureGainOrLoss) player.temperature -= interfaceSettings.centerCellsAverageBrightness * player.coolingScale * player.temperatureChangeRateScale;
-                else player.temperature += interfaceSettings.centerCellsAverageBrightness * player.heatingScale * player.temperatureChangeRateScale;
+                if (ccBright <= pBright) player.temperature -= ccBright * player.coolingScale * player.temperatureChangeRateScale * ((pBright - ccBright) / 255);
+                else player.temperature += interfaceSettings.centerCellsAverageBrightness * player.heatingScale * player.temperatureChangeRateScale * ((ccBright - pBright) / 255);
                 player.noTemperatureChangeUntil = Date.now() + player.intervalBetweenTemperatureUpdates;
+                // limit temperature to within 0-1
+                player.temperature = Math.min(1, player.temperature);
+                player.temperature = Math.max(0, player.temperature);
+                player.temperatureCircular = Math.abs((player.temperature - 0.5) * 2); // i.e. 0 and 1 = 1, 0.5 = 0;
         }
-        // limit temperature to within 0-1
-        player.temperature = Math.min(1, player.temperature);
-        player.temperature = Math.max(0, player.temperature);
-        player.temperatureCircular = Math.abs((player.temperature - 0.5) * 2); // i.e. 0 and 1 = 1, 0.5 = 0;
 }
 
 function updatePlayerHealth(cell) { // cell is passed because this will go in getCellColor and affect colors being drawn
         // if player is alive
         if (player.health > 0) {
+                // WRONG. There are so many times that whether the player is too hot or too cold is being checked. Should
+                //      lump them under one instance.
                 // extremes negatively impact health
-                if ((player.temperature === 0 || player.temperature === 1) && (player.noHealthUpdateUntil <= Date.now() || !player.noHealthUpdateUntil)) {
+                if ((player.temperature < player.coldDamageThreshold || player.temperature > player.heatDamageThreshold) && (player.noHealthUpdateUntil <= Date.now() || !player.noHealthUpdateUntil)) {
                         player.health--;
                         player.damageWarningUntil = Date.now() + player.damageWarningDuration;
                         player.noHealthUpdateUntil = Date.now() + player.intervalBetweenHealthUpdates;
                 }
-                if (player.temperature === 0) cell.color = addColors(cell.color, [0, 64, 128]);
-                if (player.temperature === 1) cell.color = addColors(cell.color, [128, 32, 0]);
+                // screen color flashes red or blue while taking temperature damage
+                if (!drawingSettings.greyscaleToSpectrum) {
+                        if (player.temperature < player.coldDamageThreshold) cell.color = addColors(cell.color, [0, 64, 128]);
+                        if (player.temperature > player.heatDamageThreshold) cell.color = addColors(cell.color, [128, 32, 0]);
+                } else {
+                        var dimmedColor = [];
+                        for (var i = 0; i < 3; i++) {
+                                dimmedColor[i] = Math.max(cell.color[i] - 128, 0);
+                        }
+                        if (player.temperature < player.coldDamageThreshold) cell.color = dimmedColor;
+                        if (player.temperature > player.heatDamageThreshold) cell.color = addColors(cell.color, [160, 160, 160]);
+                }
+                //displayer health in console
                 if (player.displayHealth) {
                         if (
-                                (player.temperature === 0 || player.temperature === 1) &&
+                                (player.temperature < player.coldDamageThreshold || player.temperature > player.heatDamageThreshold) &&
                                 player.health % 5 === 0 && player.health !== 0 &&
                                 (player.health !== player.lastLoggedHealth || !player.lastLoggedHealth)
                         ) {
@@ -227,8 +259,8 @@ function updatePlayerHealth(cell) { // cell is passed because this will go in ge
                         player.health += player.healthRegenerationAmount;
                         player.noHealthRegenUntil = Date.now() + 150; // just to keep you from getting more than one helath bump in the 50ms window that opens up to make sure you don't miss it altogether.
                 }
-        } else {
-                cell.color = [0, 0, 0]; // player is dead
+        } else { // player is dead
+                cell.color = [0, 0, 0];
                 if (!player.died) {
                         console.log(deathAphorisms[Math.round(Math.random() * (deathAphorisms.length - 1))]);
                         player.died = true;

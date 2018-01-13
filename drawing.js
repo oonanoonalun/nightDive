@@ -12,17 +12,25 @@ var drawingSettings = {
                         'blueNoise': 1,
                         'globalNoiseScale': 0.05,
                         'minMsBetweenNoiseChanges': 1500,
-                        'maxMsBetweenNoiseChanges': 5000
+                        'maxMsBetweenNoiseChanges': 5000,
+                        'noNoiseUnderThisBrightnessThreshold': 0
                 },
+                'baseCellColor': [80, 80, 80],
+                // WRONG these next two things do nothing right now, though there's the beginning of relevant code in showLights()
+                'limitLightEffectRadii': false, // if this is true
+                'maxLightRadiusScale': 3, // lights will have no effect past this many times their radius
                 'normalizeBrightnesses': false, // BROKEN doesn't work anymore. Would be worth fixing before deciding whether to ditch it or not. // requires a second pass over all the cells, necessarily (as it checks their relative brightnesses after all their brightnesses have been assigned), and so slows things down.
-                'displayResolutionInformation': false
+                'displayResolutionInformation': false,
+                'drawScreen': true,
+                'greyscaleToSpectrum': false, // draws the world as rainbow instead of greyscale. Does a little bit of extra cpu work compared to greyscale.
+                'blueIsHot': false // only matters if 'grescaleToSpectrum' is true. If this is true, blue will be hot and red will be cool
 };
 
 function drawAllCells(cellsArray) {
         for (var i = 0; i < cellsArray.length; i++) {
                 var cell = cellsArray[i];
                 getCellColor(cell);
-                findAverageBrightnessOfCenterCells(cell);
+
                 if (!drawingSettings.normalizeBrightnesses) finalizeCellColorAndDrawCell(cell);
         }
         if (drawingSettings.normalizeBrightnesses) normalizeCellsArrayBrightnessRange(cellsArray, 0, 255); // requires a second pass over all the cells, necessarily (as it checks their relative brightnesses after all their brightnesses have been assigned), and so slows things down.
@@ -31,72 +39,93 @@ function drawAllCells(cellsArray) {
 function getCellColor(cell) {
         // draw lights
         showLights(cell);
+        findAverageBrightnessOfCenterCells(cell);
         // draw HUD/UI
         updateHUD(cell);
         // add noise
-        if (drawingSettings.noise.addNoise) {
-                cell.color = addNoiseToColor(
-                        cell.color,
-                        drawingSettings.noise.redNoise,
-                        drawingSettings.noise.greenNoise,
-                        drawingSettings.noise.blueNoise,
-                        drawingSettings.noise.globalNoiseScale,
-                        drawingSettings.noise.minMsBetweenNoiseChanges,
-                        drawingSettings.noise.maxMsBetweenNoiseChanges
-                );
-        }
+        addNoiseToCellColor(cell);
+        //greyscale becomes rainbow if drawingSettings.greyScaleToSpectrum is 'true'
+        drawCellOnSpectrum(cell);
+        // update player health
         updatePlayerHealth(cell); // this needs to be here because it impacts cell colors
-
 }
 
 function showLights(cell) {
-        cell.color = [0, 0, 0];
         var brightness,
-                playerLightDivisor = 0;
+                playerLightDivisor = 0,
+                maxLightRadiusScale = 1,
+                lightOscillatorValue = 1;
+        if (drawingSettings.limitLightEffectRadii) {
+                maxLightRadiusScale = drawingSettings.maxLightRadiusScale; // WRONG does nothing right now
+        }
+        cell.color = [0, 0, 0];//drawingSettings.baseColor;
         if (settings.entities.lights.length > 0) {
                 for (var i = 0; i < settings.entities.lights.length; i++) {
                         var light = settings.entities.lights[i],
-                                distanceFromLight = findDistanceBetweenPoints(cell.centerXY, light.cell.centerXY),
-                                lightOscillatorValue;
+                                distanceFromLight = findDistanceBetweenPoints(cell.centerXY, light.cell.centerXY);
                         if (light.oscillator) lightOscillatorValue = light.oscillator.value;
-                        else lightOscillatorValue = 1;
                         brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * lightOscillatorValue * light.brightness;
                         cell.color = addColors(cell.color, [brightness, brightness, brightness]);
                 }
-                // player light at center of screen
-                if (interfaceSettings.showPlayerLight) {
-                        playerLightDivisor = 1;
-                        var playerLight = player.light,
-                                distanceFromPlayerLight = findDistanceBetweenPoints(cell.centerXY, playerLight.cell.centerXY),
-                                playerLightOscillatorValue;
-                        if (playerLight.oscillator) playerLightOscillatorValue = Math.max(0.67, playerLight.oscillator.value); // player light never goes dark (at least not normally). WRONG: Ideally this would cycle smootly from a min to max value. Maybe add a min and max the oscillator cycles between to the oscillators?
-                        else playerLightOscillatorValue = 1;
-                        brightness = playerLight.radius / Math.max(playerLight.diffusion, distanceFromPlayerLight) * playerLightOscillatorValue * playerLight.brightness;
-                        cell.color = addColors(cell.color, [brightness, brightness, brightness]);
+        }
+        // WRONG this is a bad place to do this. remove when it's impelemented elsewhere
+        // player light at center of screen
+        /*if (interfaceSettings.showPlayerLight) {
+                playerLightDivisor = 1;
+                var playerLight = player.light,
+                        distanceFromPlayerLight = findDistanceBetweenPoints(cell.centerXY, playerLight.cell.centerXY),
+                        playerLightOscillatorValue;
+                if (playerLight.oscillator) playerLightOscillatorValue = Math.max(0.5, playerLight.oscillator.value); // player light never goes dark (at least not normally). WRONG: Ideally this would cycle smootly from a min to max value. Maybe add a min and max the oscillator cycles between to the oscillators?
+                brightness = playerLight.radius / Math.max(playerLight.diffusion, distanceFromPlayerLight) * playerLightOscillatorValue * playerLight.brightness;
+                cell.color = addColors(cell.color, [brightness, brightness, brightness]);
+        }*/
+        cell.color = divideColorByNumber(cell.color, settings.entities.lights.length + 1 + playerLightDivisor);
+}
+
+function drawCellOnSpectrum(cell) {
+        if (drawingSettings.greyscaleToSpectrum) {
+                cell.color = brightnessToSpectrum(0, 255, cell);
+        }
+}
+
+function addNoiseToCellColor(cell) {
+        if (drawingSettings.noise.addNoise) {
+                if (averageBrightness(cell.color) > drawingSettings.noise.noNoiseUnderThisBrightnessThreshold) {
+                        if (drawingSettings.noNoiseChangeUntil <= Date.now() || !drawingSettings.noNoiseChangeUntil) {
+                                cell.color = addNoiseToColor(
+                                        cell.color,
+                                        drawingSettings.noise.redNoise,
+                                        drawingSettings.noise.greenNoise,
+                                        drawingSettings.noise.blueNoise,
+                                        drawingSettings.noise.globalNoiseScale,
+                                        drawingSettings.noise.minMsBetweenNoiseChanges,
+                                        drawingSettings.noise.maxMsBetweenNoiseChanges,
+                                        drawingSettings.noise.noNoiseUnderThisBrightnessThreshold
+                                );
+                        }
                 }
-                cell.color = divideColorByNumber(cell.color, settings.entities.lights.length + 1 + playerLightDivisor);
         }
 }
 
 function finalizeCellColorAndDrawCell(cell) {
         cell.color = toHexColor(capColorBrightness(cell.color, [255, 255, 255]));
-        context.fillStyle = cell.color;
-        context.fillRect(cell.left, cell.top, cell.size, cell.size);
+        if (drawingSettings.drawScreen) {
+                context.fillStyle = cell.color;
+                context.fillRect(cell.left, cell.top, cell.size, cell.size);
+        }
 }
 
 function addNoiseToColor(color, redNoiseAmount, greenNoiseAmount, blueNoiseAmount, globalNoiseScale, minMsBetweenNoiseChanges, maxMsBetweenNoiseChanges) {
-        if (drawingSettings.noNoiseChangeUntil <= Date.now() || !drawingSettings.noNoiseChangeUntil) {
-                var rNoise = 1 - redNoiseAmount * Math.random() * globalNoiseScale,
-                        gNoise = 1 - greenNoiseAmount * Math.random() * globalNoiseScale,
-                        bNoise = 1 -blueNoiseAmount * Math.random() * globalNoiseScale,
-                        noiseColorScale = [rNoise, gNoise, bNoise],
-                        noiseColor = [];
-                for (var i = 0; i < 3; i++) {
-                        noiseColor[i] = color[i] * noiseColorScale[i];
-                }
-                drawingSettings.noNoiseChangeUntil = minMsBetweenNoiseChanges + Math.random() * (maxMsBetweenNoiseChanges - minMsBetweenNoiseChanges);
-                return noiseColor;
+        var rNoise = 1 - redNoiseAmount * Math.random() * globalNoiseScale,
+                gNoise = 1 - greenNoiseAmount * Math.random() * globalNoiseScale,
+                bNoise = 1 -blueNoiseAmount * Math.random() * globalNoiseScale,
+                noiseColorScale = [rNoise, gNoise, bNoise],
+                noiseColor = [];
+        for (var i = 0; i < 3; i++) {
+                noiseColor[i] = color[i] * noiseColorScale[i];
         }
+        drawingSettings.noNoiseChangeUntil = minMsBetweenNoiseChanges + Math.random() * (maxMsBetweenNoiseChanges - minMsBetweenNoiseChanges);
+        return noiseColor;
 }
 
 function makeRandomLights(numberOfLights, randomLightParametersObject, destinationArray, oscillatorsArray) {
