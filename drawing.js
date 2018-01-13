@@ -134,20 +134,36 @@ function makeRandomLights(numberOfLights, randomLightParametersObject, destinati
                 var randomBrightness = randomNumberBetweenNumbers(lightSettings.minBrightness, lightSettings.maxBrightness, true),
                         randomRadius = randomNumberBetweenNumbers(lightSettings.minRadius, lightSettings.maxRadius, true),
                         randomXY = [],
-                        randomOscillator = oscillatorsArray[randomNumberBetweenNumbers(0, (oscillatorsArray.length - 1), true)],
+                        randomOscillator = getRandomNonExcludedOscillator(),
                         randomDiffusion = randomNumberBetweenNumbers(lightSettings.minDiffusion, lightSettings.maxDiffusion, true),
                         randomDeathChance = randomNumberBetweenNumbers(lightSettings.minDeathChance, lightSettings.maxDeathChance, false),
-                        allCellsList = lightSettings.parentCellsArray;
+                        allCellsList = lightSettings.parentCellsArray,
+                        randomMsBetweenMovements = randomNumberBetweenNumbers(lightSettings.minMsBetweenMovements, lightSettings.maxMsBetweenMovements, true),
+                        randomDirection = allDirections[Math.round(Math.random() * (allDirections.length - 1))];
                 if (Math.random() > 0.5) randomXY[0] = randomNumberBetweenNumbers(1, 0.5 * cellsPerRow, true);
                 else randomXY[0] = -randomNumberBetweenNumbers(1, 0.5 * cellsPerRow, true);
                 if (Math.random() > 0.5) randomXY[1] = randomNumberBetweenNumbers(1, 0.5 * cellsPerColumn, true);
                 else randomXY[1] = -randomNumberBetweenNumbers(1, 0.5 * cellsPerColumn, true);
-                destinationArray.push(makeLight(randomBrightness, randomRadius, randomXY, randomOscillator, randomDiffusion, randomDeathChance, allCellsList, destinationArray));
+                destinationArray.push(makeLight(randomBrightness, randomRadius, randomXY, randomOscillator, randomDiffusion, randomMsBetweenMovements, randomDirection, randomDeathChance, allCellsList, destinationArray));
         }
 }
 
+function getRandomNonExcludedOscillator() {
+        var randomOscillator;
+        for (var j = 0; j < 1; j++) {
+                randomOscillator = settings.oscillators[randomNumberBetweenNumbers(0, (settings.oscillators.length - 1), true)];
+                for (var i = 0; i < excludedNamesFromRandomOscillatorSelection.length; i++) {
+                        if (randomOscillator.name === excludedNamesFromRandomOscillatorSelection[i]) {
+                                i = excludedNamesFromRandomOscillatorSelection.length;
+                                j--;
+                        }
+                }
+        }
+        return randomOscillator;
+}
+
 //WRONG the "make" functions should be in initialization.js (I don't want to move them till everything else is stable)
-function makeLight(brightness, radius, coordinates, oscillator, diffusion, deathChance, allCellsList, lightsArray) {
+function makeLight(brightness, radius, coordinates, oscillator, diffusion, msBetweenMovements, movementDirection, deathChance, allCellsList, lightsArray) {
         var light = {
                 'brightness': brightness,
                 'radius': radius,
@@ -157,6 +173,8 @@ function makeLight(brightness, radius, coordinates, oscillator, diffusion, death
                 'parentCellsArray': allCellsList, // large cellsList of which light's cell is a part
                 'lightParentArray': lightsArray, // lights array
                 'coordinates': coordinates,
+                'msBetweenMovements': msBetweenMovements,
+                'movementDirection': movementDirection,
                 'cell': allCellsList[coordinatesToIndex(coordinates)]
         };
         return light;
@@ -168,6 +186,12 @@ function updateLight(light) {
                 var lightsArrayIndex = light.lightParentArray.indexOf(light);
                 light.lightParentArray.splice(lightsArrayIndex, 1);
         }
+        // self-movement
+        if (Date.now() % light.msBetweenMovements < 20 && (light.noMovementUntil <= Date.now() || !light.noMovementUntil)) {
+                moveEntity(light, light.movementDirection, (Math.round(Math.random() * 2)));
+                // lights move faster when the player temperature is at extremes
+                light.noMovementUntil = Date.now() + Math.min(150, player.temperatureCircular * light.msBetweenMovements);
+        }
         // lights move away from center when player is cooler, toward it when warmer
         if (settings.gameType === GAME_TYPE_ICARUS) temperatureMovesLightsIcarus(light);
         // update location
@@ -177,6 +201,7 @@ function updateLight(light) {
 
 function isIcarusLightMovementEnabled() {
         if (player.emergencyPushBackUntil > Date.now()) return false;
+        if (settings.gameType !== GAME_TYPE_ICARUS) return false;
         else return true;
 }
 
@@ -187,24 +212,26 @@ function temperatureMovesLightsIcarus(light) {
         // WRONG should work out a way for things to move toward a given point.
         // WRONG Number of cells moved should scale with resolution, or you should be able to send pixels
         //      to moveEntity and have it translate them to cells at the current resolution.
-        if ((light.noTemperatureMoveUntil <= Date.now() || !light.noTemperatureMoveUntil) && isIcarusLightMovementEnabled()) {
-                if (light.coordinates[1] > 0) { // i.e. cell is in the UPPER HALF
-                        if (player.temperature < 0.5) moveEntity(light, UP, 1); // cool players repel lights
-                        if (player.temperature > 0.5) moveEntity(light, DOWN, 1); // hot players attract lights
+        if (Math.random() < 0.3) {
+                if ((light.noTemperatureMoveUntil <= Date.now() || !light.noTemperatureMoveUntil) && isIcarusLightMovementEnabled()) {
+                        if (light.coordinates[1] > 0) { // i.e. cell is in the UPPER HALF
+                                if (player.temperature < 0.5) moveEntity(light, UP, 1); // cool players repel lights
+                                if (player.temperature > 0.5) moveEntity(light, DOWN, 1); // hot players attract lights
+                        }
+                        if (light.coordinates[1] < 0) { // i.e. cell is in the LOWER HALF
+                                if (player.temperature < 0.5) moveEntity(light, DOWN, 1); // cool players repel lights
+                                if (player.temperature > 0.5) moveEntity(light, UP, 1); // hot players attract lights                        
+                        }
+                        if (light.coordinates[0] < 0) { // i.e. cell is in the LEFT HALF
+                                if (player.temperature < 0.5) moveEntity(light, LEFT, 1); // cool players repel lights
+                                if (player.temperature > 0.5) moveEntity(light, RIGHT, 1); // hot players attract lights                        
+                        }
+                        if (light.coordinates[0] > 0) { // i.e. cell is in the RIGHT HALF
+                                if (player.temperature < 0.5) moveEntity(light, RIGHT, 1); // cool players repel lights
+                                if (player.temperature > 0.5) moveEntity(light, LEFT, 1); // hot players attract lights                        
+                        }
+                        light.noTemperatureMoveUntil = Date.now() + (Math.max(50, (1000 * settings.icarusLightMovementSpeedScale - (player.temperatureCircular * 1000))) * (0.5 + Math.random())); // WRONG MAYBE maybe light brightness and/or diffusion should figure into how fast they move?
                 }
-                if (light.coordinates[1] < 0) { // i.e. cell is in the LOWER HALF
-                        if (player.temperature < 0.5) moveEntity(light, DOWN, 1); // cool players repel lights
-                        if (player.temperature > 0.5) moveEntity(light, UP, 1); // hot players attract lights                        
-                }
-                if (light.coordinates[0] < 0) { // i.e. cell is in the LEFT HALF
-                        if (player.temperature < 0.5) moveEntity(light, LEFT, 1); // cool players repel lights
-                        if (player.temperature > 0.5) moveEntity(light, RIGHT, 1); // hot players attract lights                        
-                }
-                if (light.coordinates[0] > 0) { // i.e. cell is in the RIGHT HALF
-                        if (player.temperature < 0.5) moveEntity(light, RIGHT, 1); // cool players repel lights
-                        if (player.temperature > 0.5) moveEntity(light, LEFT, 1); // hot players attract lights                        
-                }
-                light.noTemperatureMoveUntil = Date.now() + Math.max(50, (250 - (player.temperatureCircular * 500))); // WRONG MAYBE maybe light brightness and/or diffusion should figure into how fast they move?
         }
 }
 

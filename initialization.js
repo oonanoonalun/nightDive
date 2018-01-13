@@ -9,10 +9,11 @@ var cells = [],
                         'lights': [],
                         'shadows': []
                 },
-                'minLights': 4, // min and max number of lights in the level/on the screen (depending on where development goes)
+                'minLights': 8, // min and max number of lights in the level/on the screen (depending on where development goes)
                 'maxLights': 20,
                 'gameType': GAME_TYPE_ICARUS,
-                'gameStartTime': Date.now()
+                'gameStartTime': Date.now(),
+                'icarusLightMovementSpeedScale': 0.25 // smaller is faster, i.e. time between movements is multiplied by this
         },
         player = {
                 'temperatureNoiseScale': 0.67, // scales how much the global noise level is affected by player temperature
@@ -51,8 +52,8 @@ var cells = [],
                 'minDeathChance': 0.01, // chance that the light will be removed when it goes dark. 1 = will certainly die when it goes dark.
                 'maxDeathChance': 0.025,
                 'parentCellsArray': cells,
-                'minCellIndex': 0,
-                'maxCellIndex': totalNumberOfCells - 1
+                'minMsBetweenMovements': 50,
+                'maxMsBetweenMovements': 1500
         };
         
 // WARNING: setPreferences() SHOULDN'T BE MOVED FROM BETWEEN THESE SETS OF VARS!!!
@@ -87,19 +88,24 @@ function setPreferences() {
         // GAMEPLAY
         // health regen per second (max health is 100)
         player.healthRegenerationAmount = 1;
-        // how quickly the player gains and dissipates
+        // how quickly the player gains and dissipates heat
         player.temperatureChangeRateScale = 0.0045;
+        // how quickly the player cools and heats, specifically
+        player.heatingScale = 1;
+        player.coolingScale = 1;
         // how cold or hot the player has to get before taking damage (0-1);
         player.heatDamageThreshold = 0.85;
-        player.coldDamageThreshold = 0.25;
+        player.coldDamageThreshold = 0.43;
         // minimum and maximum number of lights on the map at any one time
-        settings.minLights = 8;
-        settings.maxLights = 20;
+        settings.minLights = 12;
+        settings.maxLights = 25;
         // lights parameter ranges
         randomLightSettingsDefault.minBrightness = 64;
-        randomLightSettingsDefault.maxBrightness = 800;
-        randomLightSettingsDefault.minRadius = 50;
-        randomLightSettingsDefault.maxRadius = 150;
+        randomLightSettingsDefault.maxBrightness = 1200;
+        randomLightSettingsDefault.minRadius = 80;
+        randomLightSettingsDefault.maxRadius = 175;
+        // how fast the lights chase and flee from you in the Icarus game type. Smaller is fast.
+        settings.icarusLightMovementSpeedScale = 0.25;
 }
 
 // WARNING setPrefences NEEDS TO BE CALLED HERE, before the following declarations of vars.
@@ -127,20 +133,17 @@ var SINE = 'sineWaveShape',
         DOWN_RIGHT = 'diagonalDownRight',
         UP_LEFT = 'diagonalUpLeft',
         UP_RIGHT = 'diagonalUpRight',
-        deathAphorisms = [];
-
+        allDirections = [],
+        deathAphorisms = [],
+        excludedNamesFromRandomOscillatorSelection = [
+                'playerDamageOscillator'
+        ];
+        
 settings.oscillators.push(player.damageOscillator);
 makeRandomOscillators(10, 5000, 20000, settings.oscillators);
 makeRandomLights(settings.minLights, randomLightSettingsDefault, settings.entities.lights, settings.oscillators);
 initializeCenterCells();
-
-// player light
-// WRONG I'd like to just define these on the player object, but I can't get that to work.
-// WRONG player light is centered on the upper right of the four center cells. I don't want to make four lights just to make it symmetrical
-player.oscillator = makeOscillator(3000, 0, SINE, 'playerOscillator');
-settings.oscillators.push(player.oscillator);
-player.light = makeLight(1000, 10, [1, 1], player.oscillator, 10, 0, cells);
-
+initializeAllDirections();
 initializeDeathAphorisms();
 
 function initializeDeathAphorisms() {
@@ -154,6 +157,11 @@ function initializeDeathAphorisms() {
                 'Farewell, mortal coil!',
                 'Game over, man!'
         );
+}
+
+
+function initializeAllDirections() {
+        allDirections.push(UP, DOWN, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT);
 }
 
 function makeCells(numberOfCells, cellsPerRow, cellsList) {
