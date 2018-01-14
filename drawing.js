@@ -37,11 +37,46 @@ function drawAllCells(cellsArray) {
 }
 
 function getCellColor(cell) {
+        //////////////////////////////////////////////////////////////////////////////////
+        // start FUNCTION showLights(cell);
+        //////////////////////////////////////////////////////////////////////////////////
         // draw lights
-        showLights(cell);
-        //////////////////////////////////////////////////
+        // FUNCTION showLights(cell) is FUNCTION-FREE!!   |  : D
+        var brightness,
+                lightOscillatorValue = 1;
+        cell.color = [0, 0, 0];//drawingSettings.baseColor;
+        if (settings.entities.lights.length > 0) {
+                for (var i = 0; i < settings.entities.lights.length; i++) {
+                        var light = settings.entities.lights[i],
+                                // FUNCTION
+                                //distanceFromLight = findDistanceBetweenPoints(cell.centerXY, light.cell.centerXY),
+                                distanceFromLight = cell.distanceToIndex[light.cellIndex],
+                                // eliminating need for function call to Math.max
+                                diffusionOrDistanceIsGreater;
+                        if (distanceFromLight > light.diffusion) diffusionOrDistanceIsGreater = distanceFromLight;
+                        else diffusionOrDistanceIsGreater = light.diffusion;
+                        if (light.oscillator) lightOscillatorValue = light.oscillator.value;
+                        // Math.max is a function
+                        //brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * lightOscillatorValue * light.brightness;
+                        brightness = light.radius / diffusionOrDistanceIsGreater * lightOscillatorValue * light.brightness;
+                        // FUNCTION
+                        //cell.color = addColors(cell.color, [brightness, brightness, brightness]);
+                        for (var j = 0; j < 3; j++) {
+                                cell.color[j] += brightness;
+                        }
+                }
+        }
+        // FUNCTION
+        //cell.color = divideColorByNumber(cell.color, settings.entities.lights.length + 1);
+        for (var k = 0; k < 3; k++) {
+                cell.color[k] /= settings.entities.lights.length + 1;
+        }
+        //////////////////////////////////////////////////////////////////////////////////
+        // end FUNCTION showLights(cell);
+        //////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////
         // start FUNCTION findAverageBrightnessOfCenterCells(cell);
-        //////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////
         // FUNCTION-FREE!
         // this resets interfaceSettings.centerCellsAverageBrightness to 0 at the beginng of each pass through all the cells
         // eliminating two calls of FUNCTION .indexOf
@@ -95,9 +130,9 @@ function getCellColor(cell) {
         if (cell.index === totalNumberOfCells - 1) {
                 interfaceSettings.centerCellsAverageBrightness /= interfaceSettings.centerCells.length;
         }
-        //////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////
         // end FUNCTION findAverageBrightnessOfCenterCells(cell);
-        //////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////
         // draw HUD/UI
         //updateHUD(cell);
         // add noise
@@ -108,7 +143,9 @@ function getCellColor(cell) {
         updatePlayerHealth(cell); // this needs to be here because it impacts cell colors
 }
 
-function showLights(cell) {
+
+//OLD. Put in-line in getCellColor();
+/*function showLights(cell) {
         // FUNCTION showLights(cell) is FUNCTION-FREE!!   |  : D
         var brightness,
                 lightOscillatorValue = 1;
@@ -139,7 +176,7 @@ function showLights(cell) {
         for (var k = 0; k < 3; k++) {
                 cell.color[k] /= settings.entities.lights.length + 1;
         }
-}
+}*/
 
 function drawCellOnSpectrum(cell) {
         if (drawingSettings.greyscaleToSpectrum) {
