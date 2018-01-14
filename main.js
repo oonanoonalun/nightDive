@@ -19,12 +19,7 @@ function mainLoop() {
 setInterval(mainLoop, (33.333333333333 * 0.01)); // high framerate is just to see how efficient things are by seeing how fast they can possibly go
 
 function controls() {
-    if (interfaceSettings.controlScheme === NON_CONTINUOUS_MOVEMENT) {
-        moveCameraWithButtons();
-    }
-    if (interfaceSettings.controlScheme === CONTINUOUS_MOVEMENT) {
-        moveCameraWithButtonsContinuous();
-    }
+    moveCameraWithButtons();
     abilityEmergencyPushBack(settings.entities.lights);
     loggingToggles();
 }

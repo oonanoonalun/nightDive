@@ -49,62 +49,6 @@ $('body').on('keyup', event => {
 
 
 function moveCameraWithButtons() {
-        /*$('body').on('keydown', function (event) {
-                if (event.which == KEY_W && keysDown.indexOf(KEY_W) === -1) {
-                        keysDown.push(KEY_W);
-                }
-                if (event.which == KEY_S && keysDown.indexOf(KEY_S) === -1) {
-                        keysDown.push(KEY_S);
-                }
-                if (event.which == KEY_A && keysDown.indexOf(KEY_A) === -1) {
-                        keysDown.push(KEY_A);
-                }
-                if (event.which == KEY_D && keysDown.indexOf(KEY_D) === -1) {
-                        keysDown.push(KEY_D);
-                }
-        });
-        $('body').on('keyup', function (event) {
-                if (event.which == KEY_W) {
-                        var wIndex = keysDown.indexOf(KEY_W);
-                        keysDown.splice(wIndex, 1);
-                }
-                if (event.which == KEY_S) {
-                        var sIndex = keysDown.indexOf(KEY_S);
-                        keysDown.splice(sIndex, 1);
-                }
-                if (event.which == KEY_A) {
-                        var aIndex = keysDown.indexOf(KEY_A);
-                        keysDown.splice(aIndex, 1);
-                }
-                if (event.which == KEY_D) {
-                        var dIndex = keysDown.indexOf(KEY_D);
-                        keysDown.splice(dIndex, 1);
-                }
-        });
-        if (keysDown.indexOf(KEY_W) !== -1) { // move up
-                if (interfaceSettings.noUpMoveUntil <= Date.now()) {
-                        moveArrayOfEntities(settings.entities.lights, DOWN, interfaceSettings.cellsPerMove);
-                        interfaceSettings.noUpMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
-                }
-        }
-        if (keysDown.indexOf(KEY_S) !== -1) { // move down
-                if (interfaceSettings.noDownMoveUntil <= Date.now()) {
-                        moveArrayOfEntities(settings.entities.lights, UP, interfaceSettings.cellsPerMove);
-                        interfaceSettings.noDownMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
-                }
-        }
-        if (keysDown.indexOf(KEY_A) !== -1) { // move left
-                if (interfaceSettings.noLeftMoveUntil <= Date.now()) {
-                        moveArrayOfEntities(settings.entities.lights, RIGHT, interfaceSettings.cellsPerMove);
-                        interfaceSettings.noLeftMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
-                }
-        }
-        if (keysDown.indexOf(KEY_D) !== -1) { // move right
-                if (interfaceSettings.noRightMoveUntil <= Date.now()) {
-                        moveArrayOfEntities(settings.entities.lights, LEFT, interfaceSettings.cellsPerMove);
-                        interfaceSettings.noRightMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
-                }
-        }*/
         if (keysDown[KEY_W]) { // move up
                 if (interfaceSettings.noUpMoveUntil <= Date.now()) {
                         moveArrayOfEntities(settings.entities.lights, DOWN, interfaceSettings.cellsPerMove);

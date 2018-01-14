@@ -68,17 +68,6 @@ function showLights(cell) {
                         cell.color = addColors(cell.color, [brightness, brightness, brightness]);
                 }
         }
-        // WRONG this is a bad place to do this. remove when it's impelemented elsewhere
-        // player light at center of screen
-        /*if (interfaceSettings.showPlayerLight) {
-                playerLightDivisor = 1;
-                var playerLight = player.light,
-                        distanceFromPlayerLight = findDistanceBetweenPoints(cell.centerXY, playerLight.cell.centerXY),
-                        playerLightOscillatorValue;
-                if (playerLight.oscillator) playerLightOscillatorValue = Math.max(0.5, playerLight.oscillator.value); // player light never goes dark (at least not normally). WRONG: Ideally this would cycle smootly from a min to max value. Maybe add a min and max the oscillator cycles between to the oscillators?
-                brightness = playerLight.radius / Math.max(playerLight.diffusion, distanceFromPlayerLight) * playerLightOscillatorValue * playerLight.brightness;
-                cell.color = addColors(cell.color, [brightness, brightness, brightness]);
-        }*/
         cell.color = divideColorByNumber(cell.color, settings.entities.lights.length + 1 + playerLightDivisor);
 }
 

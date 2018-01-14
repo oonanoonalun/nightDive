@@ -124,6 +124,9 @@ if (drawingSettings.displayResolutionInformation) console.log('The current cells
 if (drawingSettings.displayResolutionInformation) console.log('The curent number of cells per row (long dimension) is: ' + cellsPerRow);
 makeCells(totalNumberOfCells, cellsPerRow, cells);
 assignCoordinatesToCells(cells);
+
+// WRONG doesn't work
+//assignDistanceLookupTables();
 var SINE = 'sineWaveShape',
         TRI = 'triangularWaveShape',
         SQUARE = 'squareWaveShape',
@@ -161,6 +164,26 @@ function initializeDeathAphorisms() {
                 'Game over, man!'
         );
 }
+
+function assignDistanceLookupTables() {
+/* WRONG doesn't work
+        for (var i = 0; i < cells.length; i++) {
+                var cell = cells[i],
+                        arrayOfCellsAtJNumberOfCellsDistance = [];
+                cell.cellsAtRadialDistance = [];
+                cell.cellsAtRadialDistance[0] = [cell]; // the cell is at 0 distance from itself. The index equals the distance.
+                for (var j = 1; j < cells.length; j++) {
+                        var distantCell = cells[j],
+                                distanceBetweenCells = findDistanceBetweenPoints(cell.centerXY, distantCell.centerXY);
+                        if (distanceBetweenCells <= 0.5 * cellSize + cellSize * j) {
+                                if (cell.cellsAtRadialDistance.indexOf(distantCell) === -1) arrayOfCellsAtJNumberOfCellsDistance.push(distantCell);
+                        }
+                }
+        }
+*/
+}
+
+console.log(cells[0].cellsAtRadialDistance[1]);
 
 
 function initializeAllDirections() {
