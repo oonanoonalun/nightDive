@@ -148,6 +148,7 @@ var SINE = 'sineWaveShape',
 settings.oscillators.push(player.damageOscillator);
 makeRandomOscillators(10, 5000, 20000, settings.oscillators);
 makeRandomLights(settings.minLights, randomLightSettingsDefault, settings.entities.lights, settings.oscillators);
+assignDistanceLookupTables();
 initializeCenterCells();
 initializeAllDirections();
 initializeDeathAphorisms();
@@ -166,39 +167,32 @@ function initializeDeathAphorisms() {
 }
 
 function assignDistanceLookupTables() {
-/* WRONG doesn't work
         for (var i = 0; i < cells.length; i++) {
-                var cell = cells[i],
-                        arrayOfCellsAtJNumberOfCellsDistance = [];
-                cell.cellsAtRadialDistance = [];
-                cell.cellsAtRadialDistance[0] = [cell]; // the cell is at 0 distance from itself. The index equals the distance.
-                for (var j = 1; j < cells.length; j++) {
-                        var distantCell = cells[j],
-                                distanceBetweenCells = findDistanceBetweenPoints(cell.centerXY, distantCell.centerXY);
-                        if (distanceBetweenCells <= 0.5 * cellSize + cellSize * j) {
-                                if (cell.cellsAtRadialDistance.indexOf(distantCell) === -1) arrayOfCellsAtJNumberOfCellsDistance.push(distantCell);
-                        }
+                var cell = cells[i];
+                cell.distanceToIndex = [];
+                for (var j = 0; j < cells.length; j++) {
+                        distantCell = cells[j];
+                        cell.distanceToIndex[j] = findDistanceBetweenPoints(cell.centerXY, distantCell.centerXY);
                 }
         }
-*/
 }
-
-console.log(cells[0].cellsAtRadialDistance[1]);
-
 
 function initializeAllDirections() {
         allDirections.push(UP, DOWN, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT);
 }
 
 function makeCells(numberOfCells, cellsPerRow, cellsList) {
+        var indexCounter = -1;
         for (var i = 0; i < (numberOfCells / cellsPerRow); i++) {    //this should happen every time a row is complete
                 for (var j = 0; j < cellsPerRow; j++) {     //this should create a single row
+                        indexCounter++;
                         var newCell = {
                                 'color': [0, 0, 0],  //should eventually be hex rgb
                                 'size': 800 / cellsPerRow,              //size
                                 'left': j * (800 / cellsPerRow),        //left edge coordinate
                                 'top': (800 / cellsPerRow) * i,        //should be "size * ...rowCounter" but can't get it to work      //top edge coordinate
-                                'centerXY': []
+                                'centerXY': [],
+                                'index': indexCounter
                         };
                         newCell.centerXY = [newCell.left + 0.5 * newCell.size, newCell.top + 0.5 * newCell.size];
                         cellsList.push(newCell);	//adding this cell to the list of all of the "geographical" cells in the level

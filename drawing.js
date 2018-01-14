@@ -39,9 +39,67 @@ function drawAllCells(cellsArray) {
 function getCellColor(cell) {
         // draw lights
         showLights(cell);
-        findAverageBrightnessOfCenterCells(cell);
+        //////////////////////////////////////////////////
+        // start FUNCTION findAverageBrightnessOfCenterCells(cell);
+        //////////////////////////////////////////////////
+        // FUNCTION-FREE!
+        // this resets interfaceSettings.centerCellsAverageBrightness to 0 at the beginng of each pass through all the cells
+        // eliminating two calls of FUNCTION .indexOf
+        //if (cells.indexOf(cell) === 0) interfaceSettings.centerCellsAverageBrightness = 0;
+        if (cell.index === 0) interfaceSettings.centerCellsAverageBrightness = 0;
+        // if the current cell is one of the center cells
+        var isCellACenterCell = false;
+        for (var k = 0; k < interfaceSettings.centerCells.length; k++) {
+                if (cell.index === interfaceSettings.centerCells[k].index) isCellACenterCell = true;
+        }
+        if (isCellACenterCell) interfaceSettings.centerCellsAverageBrighteness = 0;
+        //if (interfaceSettings.centerCells.indexOf(cell) !== -1) {
+        if (isCellACenterCell) {
+                //showCenterCells(cell);
+                // eliminating showCenterCells() FUNCTION call
+                // eliminating addColors() FUNCTION call
+                if (interfaceSettings.showCenterCells) if (i === 0) cell.color[i] += 64;
+                // if in greyscale mode
+                // eliminating FUNCTION Math.min
+                var smallerOfTheseTwo;
+                if (cell.color[0] < cell.color[0] + 0.5 * cell.color[1]) smallerOfTheseTwo = cell.color[0];
+                else smallerOfTheseTwo  = cell.color[0] + 0.5 * cell.color[1];
+                if (!drawingSettings.greyscaleToSpectrum) interfaceSettings.centerCellsAverageBrightness += averageBrightness(cell.color);
+                // if in spectrum mode
+                // here's that Math.min
+                //else interfaceSettings.centerCellsAverageBrightness += Math.min(cell.color[0], cell.color[0] + 0.5 * cell.color[1]);
+                else interfaceSettings.centerCellsAverageBrightness += smallerOfTheseTwo;
+                // draw the center screen representation
+                if (interfaceSettings.showPlayerLight) {
+                        var paraLocation = cell.centerCellParametricLocationOnCenterCellsRadius,
+                                // elimnation two Math.abs() FUNCTION calls
+                                coord0,
+                                coord1;
+                        if (cell.coordinates[0] === -1) coord0 = 1;
+                        if (cell.coordinates[1] === -1) coord1 = 1;
+                        if ((coord0 === 1 &&  coord1 === 1) || paraLocation <= 0.33) {
+                                // four center cells are always exactly your temperature, no matter the resolution
+                                // inner portion of center area are also exactly your temperature
+                                for (var i = 0; i < 3; i++) {
+                                        cell.color[i] = 255 * player.temperature;
+                                }                              
+                        } else {
+                                for (var j = 0; j <3; j++) {
+                                        cell.color[j] = ((cell.color[j] * paraLocation) + ((255 * player.temperature) * (1 - paraLocation)));
+                                }
+                        }
+                }
+        }
+        // average color when done looking at all the cells
+        // removed an instance of FUNCTION .indexOf
+        if (cell.index === totalNumberOfCells - 1) {
+                interfaceSettings.centerCellsAverageBrightness /= interfaceSettings.centerCells.length;
+        }
+        //////////////////////////////////////////////////
+        // end FUNCTION findAverageBrightnessOfCenterCells(cell);
+        //////////////////////////////////////////////////
         // draw HUD/UI
-        updateHUD(cell);
+        //updateHUD(cell);
         // add noise
         addNoiseToCellColor(cell);
         //greyscale becomes rainbow if drawingSettings.greyScaleToSpectrum is 'true'
@@ -51,24 +109,36 @@ function getCellColor(cell) {
 }
 
 function showLights(cell) {
+        // FUNCTION showLights(cell) is FUNCTION-FREE!!   |  : D
         var brightness,
-                playerLightDivisor = 0,
-                maxLightRadiusScale = 1,
                 lightOscillatorValue = 1;
-        if (drawingSettings.limitLightEffectRadii) {
-                maxLightRadiusScale = drawingSettings.maxLightRadiusScale; // WRONG does nothing right now
-        }
         cell.color = [0, 0, 0];//drawingSettings.baseColor;
         if (settings.entities.lights.length > 0) {
                 for (var i = 0; i < settings.entities.lights.length; i++) {
                         var light = settings.entities.lights[i],
-                                distanceFromLight = findDistanceBetweenPoints(cell.centerXY, light.cell.centerXY);
+                                // FUNCTION
+                                //distanceFromLight = findDistanceBetweenPoints(cell.centerXY, light.cell.centerXY),
+                                distanceFromLight = cell.distanceToIndex[light.cellIndex],
+                                // eliminating need for function call to Math.max
+                                diffusionOrDistanceIsGreater;
+                        if (distanceFromLight > light.diffusion) diffusionOrDistanceIsGreater = distanceFromLight;
+                        else diffusionOrDistanceIsGreater = light.diffusion;
                         if (light.oscillator) lightOscillatorValue = light.oscillator.value;
-                        brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * lightOscillatorValue * light.brightness;
-                        cell.color = addColors(cell.color, [brightness, brightness, brightness]);
+                        // Math.max is a function
+                        //brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * lightOscillatorValue * light.brightness;
+                        brightness = light.radius / diffusionOrDistanceIsGreater * lightOscillatorValue * light.brightness;
+                        // FUNCTION
+                        //cell.color = addColors(cell.color, [brightness, brightness, brightness]);
+                        for (var j = 0; j < 3; j++) {
+                                cell.color[j] += brightness;
+                        }
                 }
         }
-        cell.color = divideColorByNumber(cell.color, settings.entities.lights.length + 1 + playerLightDivisor);
+        // FUNCTION
+        //cell.color = divideColorByNumber(cell.color, settings.entities.lights.length + 1);
+        for (var k = 0; k < 3; k++) {
+                cell.color[k] /= settings.entities.lights.length + 1;
+        }
 }
 
 function drawCellOnSpectrum(cell) {
@@ -164,7 +234,8 @@ function makeLight(brightness, radius, coordinates, oscillator, diffusion, msBet
                 'coordinates': coordinates,
                 'msBetweenMovements': msBetweenMovements,
                 'movementDirection': movementDirection,
-                'cell': allCellsList[coordinatesToIndex(coordinates)]
+                'cell': allCellsList[coordinatesToIndex(coordinates)],
+                'cellIndex': coordinatesToIndex(coordinates)
         };
         return light;
 }
@@ -183,8 +254,10 @@ function updateLight(light) {
         }
         // lights move away from center when player is cooler, toward it when warmer
         if (settings.gameType === GAME_TYPE_ICARUS) temperatureMovesLightsIcarus(light);
-        // update location
-        light.cell = light.parentCellsArray[coordinatesToIndex(light.coordinates)]; // this light's cell become whatever cell has this light's coordinates
+        // update location & index
+        var newIndex = coordinatesToIndex(light.coordinates);
+        light.cell = light.parentCellsArray[newIndex]; // this light's cell become whatever cell has this light's coordinates
+        light.cellIndex = newIndex;
         //light.cell = light.parentCellsArray[light.cellIndex];
 }
 

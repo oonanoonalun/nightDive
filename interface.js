@@ -135,24 +135,48 @@ function moveArrayOfEntities(arrayOfEntities, direction, numberOfCells) {
         }
 }
 
-function findAverageBrightnessOfCenterCells(cell) {
+// OLD. Put in-line to reduce function calls.
+/*function findAverageBrightnessOfCenterCells(cell) {
+        // FUNCTION-FREE!
         // this resets interfaceSettings.centerCellsAverageBrightness to 0 at the beginng of each pass through all the cells
-        if (cells.indexOf(cell) === 0) interfaceSettings.centerCellsAverageBrightness = 0;
+        // eliminating two calls of FUNCTION .indexOf
+        //if (cells.indexOf(cell) === 0) interfaceSettings.centerCellsAverageBrightness = 0;
+        if (cell.index === 0) interfaceSettings.centerCellsAverageBrightness = 0;
         // if the current cell is one of the center cells
-        if (interfaceSettings.centerCells.indexOf(cell) !== -1) {
-                showCenterCells(cell);
+        var isCellACenterCell = false;
+        for (var k = 0; k < interfaceSettings.centerCells.length; k++) {
+                if (cell.index === interfaceSettings.centerCells[k].index) isCellACenterCell = true;
+        }
+        if (isCellACenterCell) interfaceSettings.centerCellsAverageBrighteness = 0;
+        //if (interfaceSettings.centerCells.indexOf(cell) !== -1) {
+        if (isCellACenterCell) {
+                //showCenterCells(cell);
+                // eliminating showCenterCells() FUNCTION call
+                // eliminating addColors() FUNCTION call
+                if (interfaceSettings.showCenterCells) if (i === 0) cell.color[i] += 64;
                 // if in greyscale mode
+                // eliminating FUNCTION Math.min
+                var smallerOfTheseTwo;
+                if (cell.color[0] < cell.color[0] + 0.5 * cell.color[1]) smallerOfTheseTwo = cell.color[0];
+                else smallerOfTheseTwo  = cell.color[0] + 0.5 * cell.color[1];
                 if (!drawingSettings.greyscaleToSpectrum) interfaceSettings.centerCellsAverageBrightness += averageBrightness(cell.color);
                 // if in spectrum mode
-                else interfaceSettings.centerCellsAverageBrightness += Math.min(cell.color[0], cell.color[0] + 0.5 * cell.color[1]);
+                // here's that Math.min
+                //else interfaceSettings.centerCellsAverageBrightness += Math.min(cell.color[0], cell.color[0] + 0.5 * cell.color[1]);
+                else interfaceSettings.centerCellsAverageBrightness += smallerOfTheseTwo;
                 // draw the center screen representation
                 if (interfaceSettings.showPlayerLight) {
-                        var paraLocation = cell.centerCellParametricLocationOnCenterCellsRadius;
-                        if ((Math.abs(cell.coordinates[0]) === 1 &&  Math.abs(cell.coordinates[1]) === 1) || paraLocation <= 0.33) {
+                        var paraLocation = cell.centerCellParametricLocationOnCenterCellsRadius,
+                                // elimnation two Math.abs() FUNCTION calls
+                                coord0,
+                                coord1;
+                        if (cell.coordinates[0] === -1) coord0 = 1;
+                        if (cell.coordinates[1] === -1) coord1 = 1;
+                        if ((coord0 === 1 &&  coord1 === 1) || paraLocation <= 0.33) {
                                 // four center cells are always exactly your temperature, no matter the resolution
                                 // inner portion of center area are also exactly your temperature
-                                for (var i = 0; i <3; i++) {
-                                        cell.color[i] = 255 * player.temperature;//; * paraLocation;
+                                for (var i = 0; i < 3; i++) {
+                                        cell.color[i] = 255 * player.temperature;
                                 }                              
                         } else {
                                 for (var j = 0; j <3; j++) {
@@ -162,11 +186,13 @@ function findAverageBrightnessOfCenterCells(cell) {
                 }
         }
         // average color when done looking at all the cells
-        if (cells.indexOf(cell) === totalNumberOfCells - 1) {
+        // removed an instance of FUNCTION .indexOf
+        if (cell.index === totalNumberOfCells - 1) {
                 interfaceSettings.centerCellsAverageBrightness /= interfaceSettings.centerCells.length;
         }
-}
+}*/
 
+// OLD put in-line to reduce function calls
 function showCenterCells(cell) {
         if (interfaceSettings.showCenterCells) {
                 cell.color = addColors(cell.color, [64, 0, 0]);
