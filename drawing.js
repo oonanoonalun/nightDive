@@ -29,14 +29,128 @@ var drawingSettings = {
 function drawAllCells(cellsArray) {
         for (var i = 0; i < cellsArray.length; i++) {
                 var cell = cellsArray[i];
-                getCellColor(cell);
-
+                //////////////////////////////////////////////////////////////////////////////////
+                // start FUNCTION getCellColor(cell);
+                //////////////////////////////////////////////////////////////////////////////////
+                //////////////////////////////////////////////////////////////////////////////////
+                // start FUNCTION showLights(cell);
+                //////////////////////////////////////////////////////////////////////////////////
+                // draw lights
+                // FUNCTION showLights(cell) is FUNCTION-FREE!!   |  : D
+                var brightness,
+                        lightOscillatorValue = 1;
+                cell.color = [0, 0, 0];//drawingSettings.baseColor;
+                if (settings.entities.lights.length > 0) {
+                        for (var h = 0; h < settings.entities.lights.length; h++) {
+                                var light = settings.entities.lights[h],
+                                        // FUNCTION
+                                        //distanceFromLight = findDistanceBetweenPoints(cell.centerXY, light.cell.centerXY),
+                                        distanceFromLight = cell.distanceToIndex[light.cellIndex],
+                                        // eliminating need for function call to Math.max
+                                        diffusionOrDistanceIsGreater;
+                                if (distanceFromLight > light.diffusion) diffusionOrDistanceIsGreater = distanceFromLight;
+                                else diffusionOrDistanceIsGreater = light.diffusion;
+                                if (light.oscillator) lightOscillatorValue = light.oscillator.value;
+                                // Math.max is a function
+                                //brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * lightOscillatorValue * light.brightness;
+                                brightness = light.radius / diffusionOrDistanceIsGreater * lightOscillatorValue * light.brightness;
+                                // FUNCTION
+                                //cell.color = addColors(cell.color, [brightness, brightness, brightness]);
+                                for (var j = 0; j < 3; j++) {
+                                        cell.color[j] += brightness;
+                                }
+                        }
+                }
+                // FUNCTION
+                //cell.color = divideColorByNumber(cell.color, settings.entities.lights.length + 1);
+                for (var k = 0; k < 3; k++) {
+                        cell.color[k] /= settings.entities.lights.length + 1;
+                }
+                //////////////////////////////////////////////////////////////////////////////////
+                // end FUNCTION showLights(cell);
+                //////////////////////////////////////////////////////////////////////////////////
+                //////////////////////////////////////////////////////////////////////////////////
+                // start FUNCTION findAverageBrightnessOfCenterCells(cell);
+                //////////////////////////////////////////////////////////////////////////////////
+                // FUNCTION-FREE!
+                // this resets interfaceSettings.centerCellsAverageBrightness to 0 at the beginng of each pass through all the cells
+                // eliminating two calls of FUNCTION .indexOf
+                //if (cells.indexOf(cell) === 0) interfaceSettings.centerCellsAverageBrightness = 0;
+                if (cell.index === 0) interfaceSettings.centerCellsAverageBrightness = 0;
+                // if the current cell is one of the center cells
+                var isCellACenterCell = false;
+                for (var m = 0; m < interfaceSettings.centerCells.length; m++) {
+                        if (cell.index === interfaceSettings.centerCells[m].index) isCellACenterCell = true;
+                }
+                if (isCellACenterCell) interfaceSettings.centerCellsAverageBrighteness = 0;
+                //if (interfaceSettings.centerCells.indexOf(cell) !== -1) {
+                if (isCellACenterCell) {
+                        //showCenterCells(cell);
+                        // eliminating showCenterCells() FUNCTION call
+                        // eliminating addColors() FUNCTION call
+                        if (interfaceSettings.showCenterCells) cell.color[0] += 64;
+                        // if in greyscale mode
+                        // eliminating FUNCTION Math.min
+                        var smallerOfTheseTwoCellColor0OrCellColor0OneHalfTimesCellColor1;
+                        if (cell.color[0] < cell.color[0] + 0.5 * cell.color[1]) smallerOfTheseTwoCellColor0OrCellColor0OneHalfTimesCellColor1 = cell.color[0];
+                        else smallerOfTheseTwoCellColor0OrCellColor0OneHalfTimesCellColor1 = cell.color[0] + 0.5 * cell.color[1];
+                        if (!drawingSettings.greyscaleToSpectrum) {
+                                // eliminated FUNCTION averageBrightness(cell.color);
+                                var cellColorAverageBrightnessForCenterCellsUse = 0;
+                                for (var q = 0; q < 3; q++) {
+                                        cellColorAverageBrightnessForCenterCellsUse += cell.color[q]; 
+                                }
+                                cellColorAverageBrightnessForCenterCellsUse /= 3;
+                                interfaceSettings.centerCellsAverageBrightness += cellColorAverageBrightnessForCenterCellsUse;
+                        }
+                        // if in spectrum mode
+                        // here's that Math.min
+                        //else interfaceSettings.centerCellsAverageBrightness += Math.min(cell.color[0], cell.color[0] + 0.5 * cell.color[1]);
+                        else interfaceSettings.centerCellsAverageBrightness += smallerOfTheseTwoCellColor0OrCellColor0OneHalfTimesCellColor1;
+                        // draw the center screen representation
+                        if (interfaceSettings.showPlayerLight) {
+                                var // elimnating two Math.abs() FUNCTION calls
+                                        playerLightPossibleCellAbsValOfCoord0 = 0,
+                                        playerLightPossibleCellAbsValOfCoord1 = 0;
+                                if (cell.coordinates[0] === -1) playerLightPossibleCellAbsValOfCoord0 = 1;
+                                if (cell.coordinates[1] === -1) playerLightPossibleCellAbsValOfCoord1 = 1;
+                                if ((playerLightPossibleCellAbsValOfCoord0 === 1 && playerLightPossibleCellAbsValOfCoord1 === 1) || cell.centerCellParametricLocationOnCenterCellsRadius <= 0.33) {
+                                        // four center cells are always exactly your temperature, no matter the resolution
+                                        // inner portion of center area are also exactly your temperature
+                                        for (var n = 0; n < 3; n++) cell.color[n] = 255 * player.temperature;                            
+                                } else { // non-core portions of center cells are blended with surrounding colors
+                                        for (var o = 0; o < 3; o++) {
+                                                cell.color[o] = ((cell.color[o] * cell.centerCellParametricLocationOnCenterCellsRadius) + ((255 * player.temperature) * (1 - cell.centerCellParametricLocationOnCenterCellsRadius)));
+                                        }
+                                }
+                        }
+                }
+                // average color when done looking at all the cells
+                // removed an instance of FUNCTION .indexOf
+                if (cell.index === totalNumberOfCells - 1) {
+                        interfaceSettings.centerCellsAverageBrightness /= interfaceSettings.centerCells.length;
+                }
+                //////////////////////////////////////////////////////////////////////////////////
+                // end FUNCTION findAverageBrightnessOfCenterCells(cell);
+                //////////////////////////////////////////////////////////////////////////////////
+                // draw HUD/UI
+                //updateHUD(cell);
+                // add noise
+                addNoiseToCellColor(cell);
+                //greyscale becomes rainbow if drawingSettings.greyScaleToSpectrum is 'true'
+                drawCellOnSpectrum(cell);
+                // update player health
+                updatePlayerHealth(cell); // this needs to be here because it impacts cell colors
+                //////////////////////////////////////////////////////////////////////////////////
+                // end FUNCTION getCellColor(cell);
+                //////////////////////////////////////////////////////////////////////////////////
                 if (!drawingSettings.normalizeBrightnesses) finalizeCellColorAndDrawCell(cell);
         }
         if (drawingSettings.normalizeBrightnesses) normalizeCellsArrayBrightnessRange(cellsArray, 0, 255); // requires a second pass over all the cells, necessarily (as it checks their relative brightnesses after all their brightnesses have been assigned), and so slows things down.
 }
 
-function getCellColor(cell) {
+// OLD. Now is in-line in drawAllCells();
+/*function getCellColor(cell) {
         //////////////////////////////////////////////////////////////////////////////////
         // start FUNCTION showLights(cell);
         //////////////////////////////////////////////////////////////////////////////////
@@ -84,8 +198,8 @@ function getCellColor(cell) {
         if (cell.index === 0) interfaceSettings.centerCellsAverageBrightness = 0;
         // if the current cell is one of the center cells
         var isCellACenterCell = false;
-        for (var k = 0; k < interfaceSettings.centerCells.length; k++) {
-                if (cell.index === interfaceSettings.centerCells[k].index) isCellACenterCell = true;
+        for (var m = 0; m < interfaceSettings.centerCells.length; m++) {
+                if (cell.index === interfaceSettings.centerCells[m].index) isCellACenterCell = true;
         }
         if (isCellACenterCell) interfaceSettings.centerCellsAverageBrighteness = 0;
         //if (interfaceSettings.centerCells.indexOf(cell) !== -1) {
@@ -93,34 +207,33 @@ function getCellColor(cell) {
                 //showCenterCells(cell);
                 // eliminating showCenterCells() FUNCTION call
                 // eliminating addColors() FUNCTION call
-                if (interfaceSettings.showCenterCells) if (i === 0) cell.color[i] += 64;
+                if (interfaceSettings.showCenterCells) cell.color[0] += 64;
                 // if in greyscale mode
                 // eliminating FUNCTION Math.min
-                var smallerOfTheseTwo;
-                if (cell.color[0] < cell.color[0] + 0.5 * cell.color[1]) smallerOfTheseTwo = cell.color[0];
-                else smallerOfTheseTwo  = cell.color[0] + 0.5 * cell.color[1];
+                var smallerOfTheseTwoCellColor0OrCellColor0OneHalfTimesCellColor1;
+                if (cell.color[0] < cell.color[0] + 0.5 * cell.color[1]) smallerOfTheseTwoCellColor0OrCellColor0OneHalfTimesCellColor1 = cell.color[0];
+                else smallerOfTheseTwoCellColor0OrCellColor0OneHalfTimesCellColor1  = cell.color[0] + 0.5 * cell.color[1];
                 if (!drawingSettings.greyscaleToSpectrum) interfaceSettings.centerCellsAverageBrightness += averageBrightness(cell.color);
                 // if in spectrum mode
                 // here's that Math.min
                 //else interfaceSettings.centerCellsAverageBrightness += Math.min(cell.color[0], cell.color[0] + 0.5 * cell.color[1]);
-                else interfaceSettings.centerCellsAverageBrightness += smallerOfTheseTwo;
+                else interfaceSettings.centerCellsAverageBrightness += smallerOfTheseTwoCellColor0OrCellColor0OneHalfTimesCellColor1;
                 // draw the center screen representation
                 if (interfaceSettings.showPlayerLight) {
-                        var paraLocation = cell.centerCellParametricLocationOnCenterCellsRadius,
-                                // elimnation two Math.abs() FUNCTION calls
-                                coord0,
-                                coord1;
-                        if (cell.coordinates[0] === -1) coord0 = 1;
-                        if (cell.coordinates[1] === -1) coord1 = 1;
-                        if ((coord0 === 1 &&  coord1 === 1) || paraLocation <= 0.33) {
+                        var // elimnating two Math.abs() FUNCTION calls
+                                playerLightPossibleCellCoord0,
+                                playerLightPossibleCellCoord1;
+                        if (cell.coordinates[0] === -1) playerLightPossibleCellCoord0 = 1;
+                        if (cell.coordinates[1] === -1) playerLightPossibleCellCoord1 = 1;
+                        if ((playerLightPossibleCellCoord0 === 1 &&  playerLightPossibleCellCoord1 === 1) || cell.centerCellParametricLocationOnCenterCellsRadius <= 0.33) {
                                 // four center cells are always exactly your temperature, no matter the resolution
                                 // inner portion of center area are also exactly your temperature
-                                for (var i = 0; i < 3; i++) {
-                                        cell.color[i] = 255 * player.temperature;
+                                for (var n = 0; n < 3; n++) {
+                                        cell.color[n] = 255 * player.temperature;
                                 }                              
                         } else {
-                                for (var j = 0; j <3; j++) {
-                                        cell.color[j] = ((cell.color[j] * paraLocation) + ((255 * player.temperature) * (1 - paraLocation)));
+                                for (var o = 0; o < 3; o++) {
+                                        cell.color[o] = ((cell.color[o] * cell.centerCellParametricLocationOnCenterCellsRadius) + ((255 * player.temperature) * (1 - cell.centerCellParametricLocationOnCenterCellsRadius)));
                                 }
                         }
                 }
@@ -141,10 +254,10 @@ function getCellColor(cell) {
         drawCellOnSpectrum(cell);
         // update player health
         updatePlayerHealth(cell); // this needs to be here because it impacts cell colors
-}
+}*/
 
 
-//OLD. Put in-line in getCellColor();
+//OLD. Now in-line in getCellColor();
 /*function showLights(cell) {
         // FUNCTION showLights(cell) is FUNCTION-FREE!!   |  : D
         var brightness,
