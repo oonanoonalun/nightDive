@@ -40,7 +40,10 @@ var cells = [],
                 // WRONG so stupid that I can't just have a 'damageZoneWidth' property and base the cold and heat
                 //      damage thresholds off of it, but "this.etc" doesn't seem to work in objects. : /
                 'coldDamageThreshold': 0.33, // when player temperature falls below this, receive damage
-                'heatDamageThreshold': 0.67 // when player temperature rises above this, receive damage
+                'heatDamageThreshold': 0.67, // when player temperature rises above this, receive damage
+                'healthBarWidthScale': 1, // how wide the health bar is. At scale 1, it's two cells wide at 800x600
+                'healthBarXPositionPolarity': -1, // -1 is on the left, 1 is on the right
+                'healthBarMaxLength': 0.5 // max health bar length in screen heights
         },
         randomLightSettingsDefault = {
                 'minBrightness': 64,
@@ -71,14 +74,20 @@ function setPreferences() {
         drawingSettings.displayResolutionInformation = false;
         // set limit on range of lights
         drawingSettings.numberOfRadiiBeforeLightsHaveNoEffect = 10000;
-        // show HUD
-        HUDSettings.displayHUD = false;
+
         // If 'true', draws the game as shades of grey or rainbow.
         drawingSettings.greyscaleToSpectrum = false;
         // draw screen. Turn off to look at errors without the screen being drawn slowing things down
         drawingSettings.drawScreen = true;
         
-        // GAMEPLAY INTERFACE (except for HUD)
+        // GAMEPLAY INTERFACE
+        // show HUD
+        HUDSettings.displayHUD = true;
+        // health bar width and height
+        player.healthBarWidthScale = 1; // how wide the health bar is. At scale 1, it's two cells wide at 800x600
+        player.healthBarMaxLength = 0.5; // how big a full health bar is, in screen heights
+        // health bar position
+        player.healthBarXPositionPolarity = -1; // -1 is on the left, 1 is on the right.
         // show health in the console. Useful if HUD is off.
         player.displayHealth = true; // happens whenever your health changes if your health becomes a multiple of 5
         // show temperature in console.

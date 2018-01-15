@@ -27,7 +27,12 @@ var drawingSettings = {
 };
 
 function drawAllCells(cellsArray) {
+	// ARRRGHGHGH INDENTATION ALL FUCKED UP because of KomodoEdit. Other people have similar problems:
+	// https://community.komodoide.com/t/komodo-edit-9-1-0-indentation-problem/1761/20
         context.clearRect(0, 0, 800, 600); // this calls a function, but I don't know how to recreate this function, or where to find its contents
+        //////////////////////////////////////////////////////////////////////////////////
+        // start FUNCTION drawAllCells(cell);
+        //////////////////////////////////////////////////////////////////////////////////
         for (var i = 0; i < cellsArray.length; i++) {
                 var cell = cellsArray[i];
                 //////////////////////////////////////////////////////////////////////////////////
@@ -80,10 +85,10 @@ function drawAllCells(cellsArray) {
                 if (cell.index === 0) interfaceSettings.centerCellsAverageBrightness = 0;
                 // if the current cell is one of the center cells
                 var isCellACenterCell = false;
+                // checking if this cell is a center cell
                 for (var m = 0; m < interfaceSettings.centerCells.length; m++) {
                         if (cell.index === interfaceSettings.centerCells[m].index) isCellACenterCell = true;
                 }
-                if (isCellACenterCell) interfaceSettings.centerCellsAverageBrighteness = 0;
                 //if (interfaceSettings.centerCells.indexOf(cell) !== -1) {
                 if (isCellACenterCell) {
                         //showCenterCells(cell);
@@ -102,6 +107,7 @@ function drawAllCells(cellsArray) {
                                         cellColorAverageBrightnessForCenterCellsUse += cell.color[q]; 
                                 }
                                 cellColorAverageBrightnessForCenterCellsUse /= 3;
+                                // cap the brightness 
                                 interfaceSettings.centerCellsAverageBrightness += cellColorAverageBrightnessForCenterCellsUse;
                         }
                         // if in spectrum mode
@@ -134,8 +140,31 @@ function drawAllCells(cellsArray) {
                 //////////////////////////////////////////////////////////////////////////////////
                 // end FUNCTION findAverageBrightnessOfCenterCells(cell);
                 //////////////////////////////////////////////////////////////////////////////////
+                //////////////////////////////////////////////////////////////////////////////////
+                // start FUNCTION updateHUD(cell);
+                //////////////////////////////////////////////////////////////////////////////////
+                // NOTE! I'm filling in a new HUD function in-line that actually has nothing to do with the original updateHUD() function
                 // draw HUD/UI
-                //updateHUD(cell);
+                if (HUDSettings.displayHUD) {
+                    // health bar
+                    // if cell is on the left edge, 2 cells wide at 800x600
+                    if (
+                        cell.coordinates[0] <=
+                        player.healthBarXPositionPolarity * (cellsPerRow / 2 - (cellsPerRow / 50 * player.healthBarWidthScale)) &&
+                        // and its y coordinate is at or under the y location that corresponds to parametric player.health * parametric screen height
+	        cell.coordinates[1] <= -(cellsPerColumn / 2) + (player.health / player.maxHealth * player.healthBarMaxLength * cellsPerColumn)
+	    ) {
+                        // make the cell scale from red to green based on player health
+                        for (var y = 0; y < 3; y++) {
+                            if (y === 0) cell.color[y] = 1024 * (1 - player.health / player.maxHealth);
+                            if (y === 1) cell.color[y] = 384 * (player.health / player.maxHealth);
+                            if (y === 2) cell.color[y] = 0;
+	        }
+                    }
+                }
+                //////////////////////////////////////////////////////////////////////////////////
+                // end FUNCTION updateHUD(cell);
+                //////////////////////////////////////////////////////////////////////////////////
                 //////////////////////////////////////////////////////////////////////////////////
                 // start FUNCTION addNoiseToCellColor(cell);
                 //////////////////////////////////////////////////////////////////////////////////
@@ -243,8 +272,37 @@ function drawAllCells(cellsArray) {
                 //////////////////////////////////////////////////////////////////////////////////
                 // end FUNCTION updatePlayerHealth(cell);
                 //////////////////////////////////////////////////////////////////////////////////
-                if (!drawingSettings.normalizeBrightnesses) finalizeCellColorAndDrawCell(cell);
+                //////////////////////////////////////////////////////////////////////////////////
+                // start FUNCTION finalizeCellColorAndDrawCell(cell);
+                //////////////////////////////////////////////////////////////////////////////////
+                if (!drawingSettings.normalizeBrightnesses) {
+// !!!!!!!WRONG INDENTATION!!!!!!!!!!! this indentation is wrong and this doc is spazzing but I could only fix it manually with a bunch of spacing so I'm not going to right now
+                                // FUNCTION finalizeCellColorAndDrawCell() is FUNCTION-FREE EXCEPT for the context.fillRect() call, which function I don't know how to reproduce yet
+                                // eliminating toHexColor() and capColorBrightness() calls
+                                // cap color brightness
+                                for (var x = 0; x < 3; x++) if (cell.color[x] > 255) cell.color[x] = 255;
+                                // toHexColor
+                                for (var w = 0; w < 3; w++) {
+                                        // Math.round()
+                                        cell.color[w] -= cell.color[w] % 1;
+                                        cell.color[w] = cell.color[w].toString(16);
+                                        if (cell.color[w].length < 2) {
+                                                cell.color[w] = '0' + cell.color[w];
+                                        }
+                                }
+                                cell.color = '#' + cell.color[0] + cell.color[1] + cell.color[2];
+                                if (drawingSettings.drawScreen) {
+                                        context.fillStyle = cell.color;
+                                        context.fillRect(cell.left, cell.top, cell.size, cell.size);
+                                }
+                }
+                //////////////////////////////////////////////////////////////////////////////////
+                // end FUNCTION finalizeCellColorAndDrawCell(cell);
+                //////////////////////////////////////////////////////////////////////////////////
         }
+        //////////////////////////////////////////////////////////////////////////////////
+        // end FUNCTION drawAllCells(cell);
+        //////////////////////////////////////////////////////////////////////////////////
         if (drawingSettings.normalizeBrightnesses) normalizeCellsArrayBrightnessRange(cellsArray, 0, 255); // requires a second pass over all the cells, necessarily (as it checks their relative brightnesses after all their brightnesses have been assigned), and so slows things down.
         frameCounter++;
 }
@@ -252,14 +310,6 @@ function drawAllCells(cellsArray) {
 function drawCellOnSpectrum(cell) {
         if (drawingSettings.greyscaleToSpectrum) {
                 cell.color = brightnessToSpectrum(0, 255, cell);
-        }
-}
-
-function finalizeCellColorAndDrawCell(cell) {
-        cell.color = toHexColor(capColorBrightness(cell.color, [255, 255, 255]));
-        if (drawingSettings.drawScreen) {
-                context.fillStyle = cell.color;
-                context.fillRect(cell.left, cell.top, cell.size, cell.size);
         }
 }
 
