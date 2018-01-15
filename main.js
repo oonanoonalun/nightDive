@@ -9,38 +9,23 @@ var context = canvas.getContext('2d');
 //MAIN LOOP
 function mainLoop() {
     controls();
-    globalUpdates();
+    updateLights(settings.entities.lights, settings.minLights, settings.maxLights);
     drawAllCells(cells);
     logging();
 }
 
 // Every .033 seconds run the code in function mainLoop. 40(ms) is 25fps, 33.33etc.ms is 30.
-setInterval(mainLoop, (33.333333333333 * 0.01)); // high framerate is just to see how efficient things are by seeing how fast they can possibly go
+setInterval(mainLoop, 33.3333333333); // locking this to 25fps for consistency of gameplay
+//setInterval(mainLoop, (33.333333333333 * 0.01)); // high framerate is just to see how efficient things are by seeing how fast they can possibly go
 
 function controls() {
-    moveCameraWithButtons();
-    abilityEmergencyPushBack(settings.entities.lights);
-    loggingToggles();
-}
-
-function loggingToggles() {
-        $('body').on('keyup', function (event) {
-                if (event.which == KEY_E) drawingSettings.fpsDisplay.displayFps = !drawingSettings.fpsDisplay.displayFps;
-                if (event.which == KEY_Q) hudSettings.displayHUD = !hudSettings.displayHUD;      
-        });
+    abilityEmergencyPushBack();
 }
 
 function displayCenterCellsAverageBrightness(displayInterval) {
     if (interfaceSettings.noCenterCellsAverageBrightnessDisplayUntil <= Date.now() || !interfaceSettings.noCenterCellsAverageBrightnessDisplayUntil) {
         interfaceSettings.noCenterCellsAverageBrightnessDisplayUntil = Date.now() + interfaceSettings.displayCenterCellsAverageBrightness[1];
     }
-}
-
-function globalUpdates() {
-    updateOscillators(settings.oscillators);
-    updatePlayer();
-    updateNoise();
-    updateLights(settings.entities.lights, settings.minLights, settings.maxLights);
 }
 
 function logging() {

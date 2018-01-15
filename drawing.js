@@ -26,10 +26,119 @@ var drawingSettings = {
                 'blueIsHot': false // only matters if 'grescaleToSpectrum' is true. If this is true, blue will be hot and red will be cool
 };
 
+//Chris recommeded this to make controls significantly less CPU-intensive:
+var keysDown = {};
+$('body').on('keydown', event => {
+   keysDown[event.which] = true;
+});
+$('body').on('keyup', event => {
+   keysDown[event.which] = false;
+});
+//In your code anywhere then you can just check keysDown[KEY_W]
+//to see if W is currently pressed.
+
 function drawAllCells(cellsArray) {
 	// ARRRGHGHGH INDENTATION ALL FUCKED UP because of KomodoEdit. Other people have similar problems:
 	// https://community.komodoide.com/t/komodo-edit-9-1-0-indentation-problem/1761/20
         context.clearRect(0, 0, 800, 600); // this calls a function, but I don't know how to recreate this function, or where to find its contents
+        if (randomNumberIndex > arrayOfRandomNumbers.length - 1) {
+            randomNumberIndex = 0;
+            console.log('randomNumberIndex is larger than arrayOfRandomNumbers.length, but it is being reset to 0.');
+        }
+        //////////////////////////////////////////////////////////////////////////////////
+        // start FUNCTION moveCameraWithButtons();
+        //////////////////////////////////////////////////////////////////////////////////
+        // WARNING FUNCTION CALLS IN THIS FUNCTION-AREA
+        for (var f = 0; f < settings.entities.lights.length; f++) {
+                if (keysDown[KEY_W]) { // move up
+                    if (settings.entities.lights[f].coordinates[1] > -(0.5 * cellsPerColumn - interfaceSettings.cellsPerMove)) settings.entities.lights[f].coordinates[1] -= interfaceSettings.cellsPerMove; // if it WON'T CROSS the BOTTOM EDGE next frame
+                    else settings.entities.lights[f].coordinates[1] += cellsPerColumn - interfaceSettings.cellsPerMove - (cellsPerColumn * 0.5 + settings.entities.lights[f].coordinates[1]); 
+                }
+                if (keysDown[KEY_S]) { // move down
+                    if (settings.entities.lights[f].coordinates[1] < 0.5 * cellsPerColumn - interfaceSettings.cellsPerMove) settings.entities.lights[f].coordinates[1] += interfaceSettings.cellsPerMove; // if it WON'T CROSS the TOP EDGE next frame
+                    else settings.entities.lights[f].coordinates[1] -= cellsPerColumn - interfaceSettings.cellsPerMove - (cellsPerColumn * 0.5 - settings.entities.lights[f].coordinates[1]);
+                }
+                if (keysDown[KEY_A]) { // move left
+                    if (settings.entities.lights[f].coordinates[0] < 0.5 * cellsPerRow - interfaceSettings.cellsPerMove) settings.entities.lights[f].coordinates[0] += interfaceSettings.cellsPerMove; // if it WON'T CROSS the RIGHT EDGE next frame
+                    else settings.entities.lights[f].coordinates[0] -= cellsPerRow - interfaceSettings.cellsPerMove - (cellsPerRow * 0.5 - settings.entities.lights[f].coordinates[0]);        
+                }
+                if (keysDown[KEY_D]) { // move right
+                    if (settings.entities.lights[f].coordinates[0] > -(0.5 * cellsPerRow - interfaceSettings.cellsPerMove)) settings.entities.lights[f].coordinates[0] -= interfaceSettings.cellsPerMove; // if it WON'T CROSS the LEFT EDGE next frame
+                    else settings.entities.lights[f].coordinates[0] += cellsPerRow - interfaceSettings.cellsPerMove - (cellsPerRow * 0.5 + settings.entities.lights[f].coordinates[0]);
+                }
+        }
+        //////////////////////////////////////////////////////////////////////////////////
+        // end FUNCTION moveCameraWithButtons();
+        //////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////
+        // start FUNCTION abilityEmergencyPushBack();
+        //////////////////////////////////////////////////////////////////////////////////
+        
+        //////////////////////////////////////////////////////////////////////////////////
+        // end FUNCTION abilityEmergencyPushBack();
+        //////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////
+        // start FUNCTION updateOscillators(arrayOfOscillators);
+        //////////////////////////////////////////////////////////////////////////////////
+        for (var c = 0; c < settings.oscillators.length; c++) {
+        // WRONG missing decreasing saw wave?
+        var osc = settings.oscillators[c];
+        if (osc.waveShape !== SAW || SQUARE) {
+                if ((frameCounter + osc.phaseShift) % osc.period < osc.halfPeriod) osc.value = ((frameCounter + osc.phaseShift) % osc.halfPeriod) / osc.halfPeriod;
+                else osc.value = 1 - (((frameCounter + osc.phaseShift) % osc.halfPeriod) / osc.halfPeriod);
+        }
+        if (osc.waveShape === SAW) osc.value = ((frameCounter+ osc.phaseShift) % osc.period) / osc.period;
+        if (osc.waveShape === SINE) osc.value = Math.sin(osc.value);
+        if (osc.waveShape === SQUARE) {
+                if (frameCounter + osc.phaseShift % osc.period < osc.halfPeriod) osc.value = 0;
+                else osc.value = 1;
+        }
+        // if osc.waveShape === TRI, do nothing
+        }
+        //////////////////////////////////////////////////////////////////////////////////
+        // end FUNCTION updateOscillators(arrayOfOscillators);
+        //////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////
+        // start FUNCTION updatePlayerTemperature();
+        //////////////////////////////////////////////////////////////////////////////////
+        if (player.noTemperatureChangeUntil <= frameCounter || !player.noTemperatureChangeUntil) {
+                player.brightness = player.temperature * 255;
+                var heatGainRate = interfaceSettings.centerCellsAverageBrightness * player.heatingScale * player.temperatureChangeRateScale * ((interfaceSettings.centerCellsAverageBrightness - player.brightness) / 255),
+                        heatLossRate = interfaceSettings.centerCellsAverageBrightness * player.coolingScale * player.temperatureChangeRateScale * ((player.brightness - interfaceSettings.centerCellsAverageBrightness) / 255);
+                if (heatGainRate > player.maxHeatGainRate) heatGainRate = player.maxHeatGainRate;
+                if (heatLossRate > player.maxHeatLossRate) heatLossRate = player.maxHeatLossRate;
+                // if the center cells are cooler than the player
+                if (interfaceSettings.centerCellsAverageBrightness <= player.brightness) {
+                    player.temperature -= heatLossRate;
+                    player.currentTemperatureChangeRate = -heatLossRate;
+                }
+                // if the center cells are warmer than the player
+                else {
+                    player.temperature += heatGainRate;
+                    player.currentTemperatureChangeRate = heatGainRate;
+                }
+                player.noTemperatureChangeUntil = frameCounter + player.intervalBetweenTemperatureUpdates;
+                // limit temperature to within 0-1
+                if (player.temperature > 1) player.temperature = 1;
+                if (player.temperature < 0) player.temperature = 0;
+                // eliminating Math.abs function call
+                if ((player.temperature - 0.5) * 2 < 0) player.temperatureCircular = -(player.temperature - 0.5) * 2;
+                else player.temperatureCircular = (player.temperature - 0.5) * 2;
+                //player.temperatureCircular = Math.abs((player.temperature - 0.5) * 2); // i.e. 0 and 1 = 1, 0.5 = 0;
+        }
+        //////////////////////////////////////////////////////////////////////////////////
+        // end FUNCTION updatePlayerTemperature();
+        //////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////
+        // start FUNCTION updateNoise(); // updating the screen noise
+        //////////////////////////////////////////////////////////////////////////////////
+        drawingSettings.noise.globalNoiseScale = player.temperatureCircular * player.temperatureNoiseScale;
+        drawingSettings.noise.redNoise = 1 - player.temperature;
+        drawingSettings.noise.greenNoise = player.temperatureCircular * 0.5;
+        drawingSettings.noise.blueNoise = player.temperature;
+        //////////////////////////////////////////////////////////////////////////////////
+        // end FUNCTION updateNoise(); // updating the screen noise
+        //////////////////////////////////////////////////////////////////////////////////
         //////////////////////////////////////////////////////////////////////////////////
         // start FUNCTION drawAllCells(cell);
         //////////////////////////////////////////////////////////////////////////////////
@@ -394,13 +503,13 @@ function makeRandomLights(numberOfLights, randomLightParametersObject, destinati
                         randomDiffusion = randomNumberBetweenNumbers(lightSettings.minDiffusion, lightSettings.maxDiffusion, true),
                         randomDeathChance = randomNumberBetweenNumbers(lightSettings.minDeathChance, lightSettings.maxDeathChance, false),
                         allCellsList = lightSettings.parentCellsArray,
-                        randomMsBetweenMovements = randomNumberBetweenNumbers(lightSettings.minMsBetweenMovements, lightSettings.maxMsBetweenMovements, true),
+                        randomFramesBetweenMovements = randomNumberBetweenNumbers(lightSettings.minFramesBetweenMovements, lightSettings.maxFramesBetweenMovements, true),
                         randomDirection = allDirections[Math.round(Math.random() * (allDirections.length - 1))];
                 if (Math.random() > 0.5) randomXY[0] = randomNumberBetweenNumbers(1, 0.5 * cellsPerRow, true);
                 else randomXY[0] = -randomNumberBetweenNumbers(1, 0.5 * cellsPerRow, true);
                 if (Math.random() > 0.5) randomXY[1] = randomNumberBetweenNumbers(1, 0.5 * cellsPerColumn, true);
                 else randomXY[1] = -randomNumberBetweenNumbers(1, 0.5 * cellsPerColumn, true);
-                destinationArray.push(makeLight(randomBrightness, randomRadius, randomXY, randomOscillator, randomDiffusion, randomMsBetweenMovements, randomDirection, randomDeathChance, allCellsList, destinationArray));
+                destinationArray.push(makeLight(randomBrightness, randomRadius, randomXY, randomOscillator, randomDiffusion, randomFramesBetweenMovements, randomDirection, randomDeathChance, allCellsList, destinationArray));
         }
 }
 
@@ -419,7 +528,7 @@ function getRandomNonExcludedOscillator() {
 }
 
 //WRONG the "make" functions should be in initialization.js (I don't want to move them till everything else is stable)
-function makeLight(brightness, radius, coordinates, oscillator, diffusion, msBetweenMovements, movementDirection, deathChance, allCellsList, lightsArray) {
+function makeLight(brightness, radius, coordinates, oscillator, diffusion, framesBetweenMovements, movementDirection, deathChance, allCellsList, lightsArray) {
         var light = {
                 'brightness': brightness,
                 'radius': radius,
@@ -429,7 +538,7 @@ function makeLight(brightness, radius, coordinates, oscillator, diffusion, msBet
                 'parentCellsArray': allCellsList, // large cellsList of which light's cell is a part
                 'lightParentArray': lightsArray, // lights array
                 'coordinates': coordinates,
-                'msBetweenMovements': msBetweenMovements,
+                'framesBetweenMovements': framesBetweenMovements,
                 'movementDirection': movementDirection,
                 'cell': allCellsList[coordinatesToIndex(coordinates)],
                 'cellIndex': coordinatesToIndex(coordinates)
@@ -438,28 +547,40 @@ function makeLight(brightness, radius, coordinates, oscillator, diffusion, msBet
 }
 
 function updateLight(light) {
+        var lightForUpdateLight = light;
         // possible death
-        if (Math.random() <= light.deathChance && light.oscillator.value < 0.1) {
+        if (randomNumberIndex + 2 > arrayOfRandomNumbers.length - 1) randomNumberIndex = 0;
+        else randomNumberIndex++;
+        if (arrayOfRandomNumbers[randomNumberIndex] <= light.deathChance && light.oscillator.value < 0.1) {
                 var lightsArrayIndex = light.lightParentArray.indexOf(light);
                 light.lightParentArray.splice(lightsArrayIndex, 1);
         }
         // self-movement
-        if (Date.now() % light.msBetweenMovements < 20 && (light.noMovementUntil <= Date.now() || !light.noMovementUntil)) {
-                moveEntity(light, light.movementDirection, (Math.round(Math.random() * 2)));
+        if (frameCounter % light.framesBetweenMovements === 0 && (light.noMovementUntil <= frameCounter || !light.noMovementUntil)) {
+                // eliminating a Math.round() and Math.random() function call
+                var updateLightRandomMovementAmount = arrayOfRandomNumbers[randomNumberIndex] * 3 - ((arrayOfRandomNumbers[randomNumberIndex] * 3) % 1);
+                randomNumberIndex++;
+                moveEntity(light, light.movementDirection, updateLightRandomMovementAmount);
                 // lights move faster when the player temperature is at extremes
-                light.noMovementUntil = Date.now() + Math.min(150, player.temperatureCircular * light.msBetweenMovements);
+                light.noMovementUntil = frameCounter + Math.min(5, player.temperatureCircular * light.framesBetweenMovements);
         }
         // lights move away from center when player is cooler, toward it when warmer
         if (settings.gameType === GAME_TYPE_ICARUS) temperatureMovesLightsIcarus(light);
         // update location & index
-        var newIndex = coordinatesToIndex(light.coordinates);
-        light.cell = light.parentCellsArray[newIndex]; // this light's cell become whatever cell has this light's coordinates
-        light.cellIndex = newIndex;
+        // eliminating coordinatesToIndex function call
+        var lightUpdateNewIndex;
+        if (lightForUpdateLight.coordinates[0] > 0) lightUpdateNewIndex = lightForUpdateLight.coordinates[0] + cellsPerRow * 0.5 - 1;
+        else lightUpdateNewIndex = lightForUpdateLight.coordinates[0] + cellsPerRow * 0.5;
+        if (lightForUpdateLight.coordinates[1] > 0) lightUpdateNewIndex += cellsPerRow * (cellsPerColumn * 0.5 - lightForUpdateLight.coordinates[1]);
+        else lightUpdateNewIndex += cellsPerRow * (cellsPerColumn * 0.5 - lightForUpdateLight.coordinates[1] - 1);
+        //lightUpdateNewIndex = coordinatesToIndex(light.coordinates);
+        light.cell = light.parentCellsArray[lightUpdateNewIndex]; // this light's cell become whatever cell has this light's coordinates
+        light.cellIndex = lightUpdateNewIndex;
         //light.cell = light.parentCellsArray[light.cellIndex];
 }
 
 function isIcarusLightMovementEnabled() {
-        if (player.emergencyPushBackUntil > Date.now()) return false;
+        if (player.emergencyPushBackUntil > frameCounter) return false;
         if (settings.gameType !== GAME_TYPE_ICARUS) return false;
         else return true;
 }
@@ -471,8 +592,12 @@ function temperatureMovesLightsIcarus(light) {
         // WRONG should work out a way for things to move toward a given point.
         // WRONG Number of cells moved should scale with resolution, or you should be able to send pixels
         //      to moveEntity and have it translate them to cells at the current resolution.
-        if (Math.random() < 0.3) {
-                if ((light.noTemperatureMoveUntil <= Date.now() || !light.noTemperatureMoveUntil) && isIcarusLightMovementEnabled()) {
+        if (randomNumberIndex + 2 < arrayOfRandomNumbers.length - 1) randomNumberIndex++;
+        else randomNumberIndex = 0;
+        randomNumberIndex++;
+        if (arrayOfRandomNumbers[randomNumberIndex] < 0.3) {
+                randomNumberIndex++;
+                if ((light.noTemperatureMoveUntil <= frameCounter || !light.noTemperatureMoveUntil) && isIcarusLightMovementEnabled()) {
                         if (light.coordinates[1] > 0) { // i.e. cell is in the UPPER HALF
                                 if (player.temperature < 0.5) moveEntity(light, UP, 1); // cool players repel lights
                                 if (player.temperature > 0.5) moveEntity(light, DOWN, 1); // hot players attract lights
@@ -489,35 +614,46 @@ function temperatureMovesLightsIcarus(light) {
                                 if (player.temperature < 0.5) moveEntity(light, RIGHT, 1); // cool players repel lights
                                 if (player.temperature > 0.5) moveEntity(light, LEFT, 1); // hot players attract lights                        
                         }
-                        light.noTemperatureMoveUntil = Date.now() + (Math.max(50, (1000 * settings.icarusLightMovementSpeedScale - (player.temperatureCircular * 1000))) * (0.5 + Math.random())); // WRONG MAYBE maybe light brightness and/or diffusion should figure into how fast they move?
+                        var lightsMoveTowardPlayerFramesBetweenMoves = 2;
+                        // minimum number of frames between moves when lights move toward player
+                            randomNumberIndex++;
+                        if (lightsMoveTowardPlayerFramesBetweenMoves > 30 * settings.icarusLightMovementSpeedScale - (player.temperatureCircular * 30) * (0.5 + arrayOfRandomNumbers[randomNumberIndex])) {
+                            randomNumberIndex++;
+                            lightsMoveTowardPlayerFramesBetweenMoves = 30 * settings.icarusLightMovementSpeedScale - (player.temperatureCircular * 30) * (0.5 + arrayOfRandomNumbers[randomNumberIndex]);
+                        }
+                        light.noTemperatureMoveUntil = frameCounter + lightsMoveTowardPlayerFramesBetweenMoves; // WRONG MAYBE maybe light brightness and/or diffusion should figure into how fast they move?
                 }
         }
 }
 
 function emergencyPushBackMovesLights(arrayOfLights) {
-        for (var i = 0; i < arrayOfLights.length; i++) {
-                var light = arrayOfLights[i];
+        for (var d = 0; d < settings.entities.lights.length; d++) {
+                var lightForPushBack = settings.entities.lights[d];
                 // WRONG Delay between light movements and how they scale off the player's temperature
                 //      should be light properties. Maybe based on their brightness and/or diffusion?
                 //      Could make the number of cells moved in the moveEntity calls below scale off of something.
                 // WRONG should work out a way for things to move toward a given point.
                 // WRONG Number of cells moved should scale with resolution, or you should be able to send pixels
                 //      to moveEntity and have it translate them to cells at the current resolution.
-                if (light.noEmergencyPushBackMoveUntil <= Date.now() || !light.noEmergencyPushBackMoveUntil) {
-                        var remainingPushBackDuration = player.emergencyPushBackUntil - Date.now();
-                        if (light.coordinates[1] > 0) { // i.e. cell is in the UPPER HALF
-                                moveEntity(light, UP, 1 * Math.min(3, Math.round((remainingPushBackDuration * 2) / player.emergencyPushBackDuration)));
+                if (lightForPushBack.noEmergencyPushBackMoveUntil <= frameCounter || !lightForPushBack.noEmergencyPushBackMoveUntil) {
+                        var pushBackMovementScale = 3,
+                            roundedPushBackMovementScale = ((player.remainingPushBackDuration * 2) / player.emergencyPushBackDuration) - (((player.remainingPushBackDuration * 2) / player.emergencyPushBackDuration) % 1);
+                        if (roundedPushBackMovementScale < pushBackMovementScale) pushBackMovementScale = roundedPushBackMovementScale;
+                        player.remainingPushBackDuration = player.emergencyPushBackUntil - frameCounter;
+                        if (lightForPushBack.coordinates[1] > 0) { // i.e. cell is in the UPPER HALF
+                                // eliminating Math.min()s and Math.round()s
+                                moveEntity(lightForPushBack, UP, 1 * pushBackMovementScale);
                         }
-                        if (light.coordinates[1] < 0) { // i.e. cell is in the LOWER HALF
-                                moveEntity(light, DOWN, 1 * Math.min(3, Math.round((remainingPushBackDuration * 2) / player.emergencyPushBackDuration)));
+                        if (lightForPushBack.coordinates[1] < 0) { // i.e. cell is in the LOWER HALF
+                                moveEntity(lightForPushBack, DOWN, 1 * pushBackMovementScale);
                         }
-                        if (light.coordinates[0] < 0) { // i.e. cell is in the LEFT HALF
-                                moveEntity(light, LEFT, 1 * Math.min(3, Math.round((remainingPushBackDuration * 2) / player.emergencyPushBackDuration)));
+                        if (lightForPushBack.coordinates[0] < 0) { // i.e. cell is in the LEFT HALF
+                                moveEntity(lightForPushBack, LEFT, 1 * pushBackMovementScale);
                         }
-                        if (light.coordinates[0] > 0) { // i.e. cell is in the RIGHT HALF
-                                moveEntity(light, RIGHT, 1 * Math.min(3, Math.round((remainingPushBackDuration * 2) / player.emergencyPushBackDuration)));
+                        if (lightForPushBack.coordinates[0] > 0) { // i.e. cell is in the RIGHT HALF
+                                moveEntity(lightForPushBack, RIGHT, 1 * pushBackMovementScale);
                         }
-                        light.noEmergencyPushBackMoveUntil = Date.now() + ((player.emergencyPushBackDuration * 1.01) - remainingPushBackDuration);
+                        lightForPushBack.noEmergencyPushBackMoveUntil = frameCounter + (player.emergencyPushBackDuration - player.remainingPushBackDuration);
                 }
         }
 }
@@ -552,37 +688,6 @@ function makeRandomOscillators(numberOfOscillators, minPeriod, maxPeriod, destin
                         newOsc = makeOscillator(randomPeriod, Math.random(), SINE, 'randomOscillator');
                 destinationArray.push(newOsc);
         }
-}
-
-function updateOscillator(oscillator) {
-        // WRONG missing decreasing square wave?
-        var osc = oscillator;
-        if (osc.waveShape !== SAW || SQUARE) {
-                if ((Date.now() + osc.phaseShift) % osc.period < osc.halfPeriod) osc.value = ((Date.now() + osc.phaseShift) % osc.halfPeriod) / osc.halfPeriod;
-                else osc.value = 1 - (((Date.now() + osc.phaseShift) % osc.halfPeriod) / osc.halfPeriod);
-        }
-        if (osc.waveShape === SAW) osc.value = ((Date.now() + osc.phaseShift) % osc.period) / osc.period;
-        if (osc.waveShape === SINE) osc.value = Math.sin(osc.value);
-        if (osc.waveShape === SQUARE) {
-                if (Date.now() + osc.phaseShift % osc.period < osc.halfPeriod) osc.value = 0;
-                else osc.value = 1;
-        }
-        // if osc.waveShape === TRI, do nothing
-}
-
-function updateOscillators(arrayOfOscillators) {
-        for (var i = 0; i < arrayOfOscillators.length; i++) updateOscillator(arrayOfOscillators[i]);
-}
-
-function updateNoise() {
-        drawingSettings.noise.globalNoiseScale = player.temperatureCircular * player.temperatureNoiseScale;
-        drawingSettings.noise.redNoise = 1 - player.temperature;
-        drawingSettings.noise.greenNoise = player.temperatureCircular * 0.5;
-        drawingSettings.noise.blueNoise = player.temperature;
-}
-
-function updatePlayer() {
-        updatePlayerTemperature();
 }
 
 function normalizeCellsArrayBrightnessRange(cellsArray, darkestValue, brightestValue) {

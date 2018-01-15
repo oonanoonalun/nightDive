@@ -27,8 +27,8 @@ var cells = [],
                 'maxHealth': 100,
                 'intervalBetweenHealthUpdates': 5, // number of frames between possible health losses (or gains? no sure how regen is written)
                 'displayHealth': false, // logs in the console
-                'emergencyPushBackCooldown': 10000,
-                'emergencyPushBackDuration': 3500,
+                'emergencyPushBackCooldown': 45,
+                'emergencyPushBackDuration': 105,
                 'damageWarningDuration': 10, // number of frames after damage has occurred while player is still warned about it (i.e. flashing health bar)
                 'damageOscillator': makeOscillator(150, 0, SINE, 'playerDamageOscillator'),
                 'regenerateHealth': true,
@@ -59,8 +59,8 @@ var cells = [],
                 'minDeathChance': 0.01, // chance that the light will be removed when it goes dark. 1 = will certainly die when it goes dark.
                 'maxDeathChance': 0.025,
                 'parentCellsArray': cells,
-                'minMsBetweenMovements': 50,
-                'maxMsBetweenMovements': 1500
+                'minFramesBetweenMovements': 2,
+                'maxFramesBetweenMovements': 45
         };
         
 // WARNING: setPreferences() SHOULDN'T BE MOVED FROM BETWEEN THESE SETS OF VARS!!!
@@ -69,7 +69,7 @@ function setPreferences() {
         // log framerate in console
         drawingSettings.fpsDisplay.displayFps = true;
         drawingSettings.fpsDisplay.fpsDisplayInterval = 3000;      // display it this frequently (in ms)
-        drawingSettings.fpsDisplay.fpsDisplayIntervalLongTerm = 100000;     // and this frequently (for a short-term gist and a long-term average)
+        drawingSettings.fpsDisplay.fpsDisplayIntervalLongTerm = 15000;     // and this frequently (for a short-term gist and a long-term average)
         // resolution. Currently, 0-7 are valid values. Smaller is chunkier.
         resolutionFactor = 4; //Leaps in resolution are pretty big for now due to some current constraints on valid widths and heights.
         // add color noise to the screen
@@ -113,8 +113,8 @@ function setPreferences() {
         // how fast the player can gain and lose heat
         player.maxHeatGainRate = 0.05;
         player.maxHeatLossRate = 0.05;
-        // how many ms between player movements if you hold a key down and the framerate allows
-        interfaceSettings.moveRepeatDelay = 25; // still relevant, but will phase out, shifting to frames instead of ms
+        // number of cells per player move (one move per frame)
+        interfaceSettings.cellsPerMove = 2;
         // minimum and maximum number of lights on the map at any one time
         settings.minLights = 12;
         settings.maxLights = 25;
@@ -167,7 +167,7 @@ var frameCounter = 0, // using this to avoid Date.now() calls as part of optimiz
         ];
         
 settings.oscillators.push(player.damageOscillator);
-makeRandomOscillators(10, 5000, 20000, settings.oscillators);
+makeRandomOscillators(10, 150, 600, settings.oscillators);
 makeRandomLights(settings.minLights, randomLightSettingsDefault, settings.entities.lights, settings.oscillators);
 assignDistanceLookupTables();
 initializeCenterCells();

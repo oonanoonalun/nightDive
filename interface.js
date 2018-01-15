@@ -14,17 +14,14 @@ var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68,
         X_AXIS = 'xAxis', // for telling straight lines how to draw
         Y_AXIS = 'yAxis',
         POS = 'positive', // for telling straight lines which direction to lengthen and contract in
-        NEG = 'negative', 
-        CONTINUOUS_MOVEMENT = 'continuousMovementControlScheme',
-        NON_CONTINUOUS_MOVEMENT = 'nonContinuousMovementControlScheme',
+        NEG = 'negative',
         interfaceSettings = {
-                'noUpMoveUntil': Date.now(),
-                'noDownMoveUntil': Date.now(),
-                'noLeftMoveUntil': Date.now(),
-                'noRightMoveUntil': Date.now(),
+                'noUpMoveUntil': 0, // WRONG. Not being used.
+                'noDownMoveUntil': 0, // WRONG. Not being used.
+                'noLeftMoveUntil': 0, // WRONG. Not being used.
+                'noRightMoveUntil': 0, // WRONG. Not being used.
                 'cellsPerMove': 2,
-                'moveRepeatDelay': 25, // number of ms between moves if framerate allows
-                'controlScheme': NON_CONTINUOUS_MOVEMENT,
+                'moveRepeatDelay': 1,  // WRONG. Not being used. // number of frames between player moves
                 'showPlayerLight': true,
                 'centerCellsRadiusInPixels': 35,
                 'showCenterCells': false, // not as efficient as it could be, cpu-wise (?), so only turn on if needed.
@@ -35,75 +32,6 @@ var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68,
         hudSettings = {
                 'displayHUD': false
         };
-
-//Chris recommeded this to make controls significantly less CPU-intensive:
-var keysDown = {};
-$('body').on('keydown', event => {
-   keysDown[event.which] = true;
-});
-$('body').on('keyup', event => {
-   keysDown[event.which] = false;
-});
-//In your control code then you can just check keysDown[KEY_W]
-//to see if W is currently pressed.
-
-
-function moveCameraWithButtons() {
-        if (keysDown[KEY_W]) { // move up
-                if (interfaceSettings.noUpMoveUntil <= Date.now()) {
-                        moveArrayOfEntities(settings.entities.lights, DOWN, interfaceSettings.cellsPerMove);
-                        interfaceSettings.noUpMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
-                }
-        }
-        if (keysDown[KEY_S]) { // move down
-                if (interfaceSettings.noDownMoveUntil <= Date.now()) {
-                        moveArrayOfEntities(settings.entities.lights, UP, interfaceSettings.cellsPerMove);
-                        interfaceSettings.noDownMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
-                }
-        }
-        if (keysDown[KEY_A]) { // move left
-                if (interfaceSettings.noLeftMoveUntil <= Date.now()) {
-                        moveArrayOfEntities(settings.entities.lights, RIGHT, interfaceSettings.cellsPerMove);
-                        interfaceSettings.noLeftMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
-                }
-        }
-        if (keysDown[KEY_D]) { // move right
-                if (interfaceSettings.noRightMoveUntil <= Date.now()) {
-                        moveArrayOfEntities(settings.entities.lights, LEFT, interfaceSettings.cellsPerMove);
-                        interfaceSettings.noRightMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
-                }
-        }
-}
-
-function moveCameraWithButtonsContinuous() {
-        $('body').on('keydown', function (event) {
-                interfaceSettings.lastButtonPressed = event.which;
-        });
-        if (interfaceSettings.lastButtonPressed === KEY_W) { // move up
-                if (interfaceSettings.noUpMoveUntil <= Date.now()) {
-                        moveArrayOfEntities(settings.entities.lights, DOWN, interfaceSettings.cellsPerMove);
-                        interfaceSettings.noUpMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
-                }
-        }
-        if (interfaceSettings.lastButtonPressed === KEY_S) { // move down
-                if (interfaceSettings.noDownMoveUntil <= Date.now()) {
-                        moveArrayOfEntities(settings.entities.lights, UP, interfaceSettings.cellsPerMove);
-                        interfaceSettings.noDownMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
-                }
-        }
-        if (interfaceSettings.lastButtonPressed === KEY_A) { // move left
-                if (interfaceSettings.noLeftMoveUntil <= Date.now()) {
-                        moveArrayOfEntities(settings.entities.lights, RIGHT, interfaceSettings.cellsPerMove);
-                        interfaceSettings.noLeftMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
-                }
-        }
-        if (interfaceSettings.lastButtonPressed === KEY_D) { // move right
-                if (interfaceSettings.noRightMoveUntil <= Date.now()) {
-                        moveArrayOfEntities(settings.entities.lights, LEFT, interfaceSettings.cellsPerMove);
-                        interfaceSettings.noRightMoveUntil = Date.now() + interfaceSettings.moveRepeatDelay;
-                }
-        }
-}
 
 function moveEntity(entity, direction, numberOfCellsToMove) {
         if (direction === UP || direction === UP_LEFT || direction === UP_RIGHT) {
@@ -129,53 +57,22 @@ function moveArrayOfEntities(arrayOfEntities, direction, numberOfCells) {
         //      will/would have to push the contents of all the arrays that are properties of 'settings.entities' to a single array,
         //      send each array to this function individually, or learn how to automate grabbing successive properties' values,
         //      which I don't know how to do.
-        for (var i = 0; i < arrayOfEntities.length; i++) {
-                var entity = arrayOfEntities[i];
-                moveEntity(entity, direction, numberOfCells);
+        for (var e = 0; e < settings.entities.lights.length; e++) {
+                moveEntity(settings.entities.lights[e], direction, numberOfCells);
         }
 }
 
-function updatePlayerTemperature() {
-        if (player.noTemperatureChangeUntil <= frameCounter || !player.noTemperatureChangeUntil) {
-                var pBright = player.temperature * 255,
-                        ccBright = interfaceSettings.centerCellsAverageBrightness,
-                        heatGainRate = interfaceSettings.centerCellsAverageBrightness * player.heatingScale * player.temperatureChangeRateScale * ((ccBright - pBright) / 255),
-                        heatLossRate = ccBright * player.coolingScale * player.temperatureChangeRateScale * ((pBright - ccBright) / 255);
-                if (heatGainRate > player.maxHeatGainRate) heatGainRate = player.maxHeatGainRate;
-                if (heatLossRate > player.maxHeatLossRate) heatLossRate = player.maxHeatLossRate;
-                // if the center cells are cooler than the player
-                if (ccBright <= pBright) {
-                    player.temperature -= heatLossRate;
-                    player.currentTemperatureChangeRate = -heatLossRate;
-                }
-                // if the center cells are warmer than the player
-                else {
-                    player.temperature += heatGainRate;
-                    player.currentTemperatureChangeRate = heatGainRate;
-                }
-                player.noTemperatureChangeUntil = frameCounter + player.intervalBetweenTemperatureUpdates;
-                // limit temperature to within 0-1
-                player.temperature = Math.min(1, player.temperature);
-                player.temperature = Math.max(0, player.temperature);
-                // eliminating Math.abs function call
-                if ((player.temperature - 0.5) * 2 < 0) player.temperatureCircular = -(player.temperature - 0.5) * 2;
-                else player.temperatureCircular = (player.temperature - 0.5) * 2;
-                //player.temperatureCircular = Math.abs((player.temperature - 0.5) * 2); // i.e. 0 and 1 = 1, 0.5 = 0;
-        }
-}
 
-function abilityEmergencyPushBack(arrayOfLights) {
-        $('body').on('keydown', function (event) {
-                if (player.noEmergencyPushBackUntil <= Date.now() || !player.noEmergencyPushBackUntil) {                        
-                        if (event.which == KEY_SPACE) {
-                                player.emergencyPushBackUntil = Date.now() + player.emergencyPushBackDuration;
-                                player.noEmergencyPushBackUntil = Date.now() + player.emergencyPushBackCooldown;
-                                player.emergencyPushedBackAt = Date.now();
-                        }
+function abilityEmergencyPushBack() {
+        if (keysDown[KEY_SPACE]) {
+                if (player.noEmergencyPushBackUntil <= frameCounter || !player.noEmergencyPushBackUntil) {                        
+                        player.emergencyPushBackUntil = frameCounter + player.emergencyPushBackDuration;
+                        player.noEmergencyPushBackUntil = frameCounter + player.emergencyPushBackCooldown;
+                        player.emergencyPushedBackAt = frameCounter;
                 }
-        });
-        if (player.emergencyPushBackUntil && player.emergencyPushBackUntil > Date.now()) {
-                emergencyPushBackMovesLights(arrayOfLights);
+        }
+        if (player.emergencyPushBackUntil && player.emergencyPushBackUntil > frameCounter) {
+                emergencyPushBackMovesLights(settings.entities.lights);
         }
 }
 
