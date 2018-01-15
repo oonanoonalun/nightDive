@@ -68,8 +68,8 @@ function setPreferences() {
         // GRAPHICS
         // log framerate in console
         drawingSettings.fpsDisplay.displayFps = true;
-        drawingSettings.fpsDisplay.fpsDisplayInterval = 3000;      // display it this frequently (in ms)
-        drawingSettings.fpsDisplay.fpsDisplayIntervalLongTerm = 15000;     // and this frequently (for a short-term gist and a long-term average)
+        drawingSettings.fpsDisplay.fpsDisplayInterval = 5000;      // display it this frequently (in ms)
+        drawingSettings.fpsDisplay.fpsDisplayIntervalLongTerm = 30000;     // and this frequently (for a short-term gist and a long-term average)
         // resolution. Currently, 0-7 are valid values. Smaller is chunkier.
         resolutionFactor = 4; //Leaps in resolution are pretty big for now due to some current constraints on valid widths and heights.
         // add color noise to the screen
@@ -93,7 +93,7 @@ function setPreferences() {
         // health bar position
         player.healthBarXPositionPolarity = -1; // -1 is on the left, 1 is on the right.
         // show health in the console. Useful if HUD is off.
-        player.displayHealth = true; // happens whenever your health changes if your health becomes a multiple of 5
+        player.displayHealth = false; // happens whenever your health changes if your health becomes a multiple of 5
         // show temperature in console.
         player.logPlayerTemperature = false;
         player.logPlayerTemperatureChangeRate = false;
