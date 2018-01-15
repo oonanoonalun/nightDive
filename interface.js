@@ -52,17 +52,6 @@ function moveEntity(entity, direction, numberOfCellsToMove) {
         }
 }
 
-function moveArrayOfEntities(arrayOfEntities, direction, numberOfCells) {
-        // NOTE: the setting.entities property is an OBJECT. To move everything in it using this function as it is now, you
-        //      will/would have to push the contents of all the arrays that are properties of 'settings.entities' to a single array,
-        //      send each array to this function individually, or learn how to automate grabbing successive properties' values,
-        //      which I don't know how to do.
-        for (var e = 0; e < settings.entities.lights.length; e++) {
-                moveEntity(settings.entities.lights[e], direction, numberOfCells);
-        }
-}
-
-
 function abilityEmergencyPushBack() {
         if (keysDown[KEY_SPACE]) {
                 if (player.noEmergencyPushBackUntil <= frameCounter || !player.noEmergencyPushBackUntil) {                        

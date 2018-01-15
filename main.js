@@ -8,8 +8,8 @@ var context = canvas.getContext('2d');
 
 //MAIN LOOP
 function mainLoop() {
-    controls();
-    updateLights(settings.entities.lights, settings.minLights, settings.maxLights);
+    abilityEmergencyPushBack();
+    //updateLights(settings.entities.lights, settings.minLights, settings.maxLights);
     drawAllCells(cells);
     logging();
 }
@@ -18,9 +18,6 @@ function mainLoop() {
 setInterval(mainLoop, 33.3333333333); // locking this to 25fps for consistency of gameplay
 //setInterval(mainLoop, (33.333333333333 * 0.01)); // high framerate is just to see how efficient things are by seeing how fast they can possibly go
 
-function controls() {
-    abilityEmergencyPushBack();
-}
 
 function displayCenterCellsAverageBrightness(displayInterval) {
     if (interfaceSettings.noCenterCellsAverageBrightnessDisplayUntil <= Date.now() || !interfaceSettings.noCenterCellsAverageBrightnessDisplayUntil) {

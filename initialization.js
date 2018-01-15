@@ -174,7 +174,6 @@ initializeCenterCells();
 initializeAllDirections();
 initializeArrayOfRandomNumbers(arrayOfRandomNumbersLength);
 initializeDeathAphorisms();
-
 function initializeArrayOfRandomNumbers(length) {
         // wow. A million random number and it doesn't take that long to run.
         for (var i = 0; i < length; i++) {
