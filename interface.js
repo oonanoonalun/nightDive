@@ -139,7 +139,9 @@ function updatePlayerTemperature() {
         if (player.noTemperatureChangeUntil <= Date.now() || !player.noTemperatureChangeUntil) {
                 var pBright = player.temperature * 255,
                         ccBright = interfaceSettings.centerCellsAverageBrightness;
-                // temperature shift pivot point is biased toward higher brightness because the map gets very bright, but never very dark.
+                // preventing huge, supra-255 numbers from impacting player temperature
+                if (ccBright > 255) ccBright = 255;
+                // temperature shift pivot point is (might be?) biased toward higher brightness because the map gets very bright, but never very dark.
                 // Cooling happens a little faster than heating, too.
                 if (ccBright <= pBright) player.temperature -= ccBright * player.coolingScale * player.temperatureChangeRateScale * ((pBright - ccBright) / 255);
                 else player.temperature += interfaceSettings.centerCellsAverageBrightness * player.heatingScale * player.temperatureChangeRateScale * ((ccBright - pBright) / 255);

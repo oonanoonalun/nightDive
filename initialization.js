@@ -43,7 +43,9 @@ var cells = [],
                 'heatDamageThreshold': 0.67, // when player temperature rises above this, receive damage
                 'healthBarWidthScale': 1, // how wide the health bar is. At scale 1, it's two cells wide at 800x600
                 'healthBarXPositionPolarity': -1, // -1 is on the left, 1 is on the right
-                'healthBarMaxLength': 0.5 // max health bar length in screen heights
+                'healthBarMaxLength': 0.5, // max health bar length in screen heights
+                'temperatureBarWidthScale': 1,
+                'temperatureBarMaxLength': 1
         },
         randomLightSettingsDefault = {
                 'minBrightness': 64,
@@ -106,7 +108,7 @@ function setPreferences() {
         player.heatDamageThreshold = 0.85;
         player.coldDamageThreshold = 0.43;
         // how many ms between player movements if you hold a key down and the framerate allows
-        interfaceSettings.moveRepeatDelay = 25;
+        interfaceSettings.moveRepeatDelay = 25; // still relevant, but will phase out, shifting to frames instead of ms
         // minimum and maximum number of lights on the map at any one time
         settings.minLights = 12;
         settings.maxLights = 25;

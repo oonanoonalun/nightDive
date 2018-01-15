@@ -107,7 +107,6 @@ function drawAllCells(cellsArray) {
                                         cellColorAverageBrightnessForCenterCellsUse += cell.color[q]; 
                                 }
                                 cellColorAverageBrightnessForCenterCellsUse /= 3;
-                                // cap the brightness 
                                 interfaceSettings.centerCellsAverageBrightness += cellColorAverageBrightnessForCenterCellsUse;
                         }
                         // if in spectrum mode
@@ -150,17 +149,71 @@ function drawAllCells(cellsArray) {
                     // if cell is on the left edge, 2 cells wide at 800x600
                     if (
                         cell.coordinates[0] <=
-                        player.healthBarXPositionPolarity * (cellsPerRow / 2 - (cellsPerRow / 50 * player.healthBarWidthScale)) &&
+                        player.healthBarXPositionPolarity * (cellsPerRow / 2 - (canvas.width * 0.024 / cellSize) * player.healthBarWidthScale) &&
                         // and its y coordinate is at or under the y location that corresponds to parametric player.health * parametric screen height
 	        cell.coordinates[1] <= -(cellsPerColumn / 2) + (player.health / player.maxHealth * player.healthBarMaxLength * cellsPerColumn)
 	    ) {
+                        if (!drawingSettings.greyscaleToSpectrum) {
+                        // if in greyScale
                         // make the cell scale from red to green based on player health
-                        for (var y = 0; y < 3; y++) {
-                            if (y === 0) cell.color[y] = 1024 * (1 - player.health / player.maxHealth);
-                            if (y === 1) cell.color[y] = 384 * (player.health / player.maxHealth);
-                            if (y === 2) cell.color[y] = 0;
-	        }
+                                for (var y = 0; y < 3; y++) {
+                                    if (y === 0) cell.color[y] = 1024 * (1 - player.health / player.maxHealth);
+                                    if (y === 1) cell.color[y] = 384 * (player.health / player.maxHealth);
+                                    if (y === 2) cell.color[y] = 0;
+                                }
+                        } else {
+                            // if in spectrum mode
+                        }
                     }
+                    // temperature bar
+                    // hot bar: if the player's hot, temp bar goes to the right of mid-screen
+                    if (player.temperature >= 0.5) {
+                        if (
+                            // WARNING 0.018 and 0.024 are only good for 4:3 ratios
+                            cell.coordinates[1] <=
+                            -(cellsPerColumn / 2) + (canvas.height * 0.018 / cellSize) * player.temperatureBarWidthScale &&
+                            cell.coordinates[0] < ((player.temperature - 0.5) * 2) * player.temperatureBarMaxLength * (cellsPerRow / 2) &&
+                            cell.coordinates[0] > 0
+                        ) {
+                            if (!drawingSettings.greyscaleToSpectrum) {
+                                for (var z = 0; z < 3; z++) {
+                                    if (z === 0) cell.color[z] = 1024 * (player.temperature - 0.5);
+                                    if (z === 1) cell.color[z] = 1024 * (1 - (player.temperature));
+                                    if (z === 2) cell.color[z] = 0;
+                                }
+                            } else {
+                                // if in spectrum mode
+                            }
+                        }
+                    }
+                    // cold bar
+                    if (player.temperature < 0.5) {
+                        if (
+                            // WARNING 0.018 and 0.024 are only good for 4:3 ratios
+                            cell.coordinates[1] <=
+                            -(cellsPerColumn / 2) + (canvas.height * 0.018 / cellSize) * player.temperatureBarWidthScale &&
+                            cell.coordinates[0] > -(player.temperatureBarMaxLength * (cellsPerRow / 2)) + (cellsPerRow * player.temperature) &&
+                            cell.coordinates[0] < 0
+                        ) {
+                            if (!drawingSettings.greyscaleToSpectrum) {
+                                //cell.color = [0, 0, 255];
+                                for (var a = 0; a < 3; a++) {
+                                    if (a === 0) cell.color[a] = 0;
+                                    if (a === 1) cell.color[a] = 256 * (player.temperature);
+                                    if (a === 2) cell.color[a] = 1024 * (1 - player.temperature);
+                                }
+                            } else {
+                                // if in spectrum mode
+                            }
+                        }
+                    }
+                    // temperature midpoint display
+                    if (
+                        cell.coordinates[0] <= canvas.width * 0.024 / cellSize && cell.coordinates[0] >= -(canvas.width * 0.024 / cellSize) &&
+                        //cell.coordinates[0] < 2 && cell.coordinates[0] > -2 &&
+                        //cell.coordinates[1] <= -((cellsPerColumn / 2) - cellsPerColumn / (0.5 * cellsPerColumn))
+                        cell.coordinates[1] > -29 && cell.coordinates[1] < -26
+                    ) cell.color = [0, 255, 0];
                 }
                 //////////////////////////////////////////////////////////////////////////////////
                 // end FUNCTION updateHUD(cell);
