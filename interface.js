@@ -215,59 +215,6 @@ function updatePlayerTemperature() {
         }
 }
 
-function updatePlayerHealth(cell) { // cell is passed because this will go in getCellColor and affect colors being drawn
-        // if player is alive
-        if (player.health > 0) {
-                // WRONG. There are so many times that whether the player is too hot or too cold is being checked. Should
-                //      lump them under one instance.
-                // extremes negatively impact health
-                if ((player.temperature < player.coldDamageThreshold || player.temperature > player.heatDamageThreshold) && (player.noHealthUpdateUntil <= Date.now() || !player.noHealthUpdateUntil)) {
-                        player.health--;
-                        player.damageWarningUntil = Date.now() + player.damageWarningDuration;
-                        player.noHealthUpdateUntil = Date.now() + player.intervalBetweenHealthUpdates;
-                }
-                // screen color flashes red or blue while taking temperature damage
-                if (!drawingSettings.greyscaleToSpectrum) {
-                        if (player.temperature < player.coldDamageThreshold) cell.color = addColors(cell.color, [0, 64, 128]);
-                        if (player.temperature > player.heatDamageThreshold) cell.color = addColors(cell.color, [128, 32, 0]);
-                } else {
-                        var dimmedColor = [];
-                        for (var i = 0; i < 3; i++) {
-                                dimmedColor[i] = Math.max(cell.color[i] - 128, 0);
-                        }
-                        if (player.temperature < player.coldDamageThreshold) cell.color = dimmedColor;
-                        if (player.temperature > player.heatDamageThreshold) cell.color = addColors(cell.color, [160, 160, 160]);
-                }
-                //displayer health in console
-                if (player.displayHealth) {
-                        if (
-                                (player.temperature < player.coldDamageThreshold || player.temperature > player.heatDamageThreshold) &&
-                                player.health % 5 === 0 && player.health !== 0 &&
-                                (player.health !== player.lastLoggedHealth || !player.lastLoggedHealth)
-                        ) {
-                                console.log('Health: ' + player.health);
-                                player.lastLoggedHealth = player.health;
-                        }
-                }
-                // health regeneration
-                if (player.regenerateHealth && Date.now() - settings.gameStartTime % player.healthRegenerationAmount < 50 &&
-                    (player.noHealthRegenUntil <= Date.now() || !player.noHealthRegenUntil)
-                ) {
-                        player.health += player.healthRegenerationAmount;
-                        player.noHealthRegenUntil = Date.now() + 150; // just to keep you from getting more than one helath bump in the 50ms window that opens up to make sure you don't miss it altogether.
-                }
-        } else { // player is dead
-                cell.color = [0, 0, 0];
-                if (!player.died) {
-                        console.log(deathAphorisms[Math.round(Math.random() * (deathAphorisms.length - 1))]);
-                        player.died = true;
-                        console.log('Play time was ' + ((Date.now() - settings.gameStartTime) / 1000).toFixed(2) + ' seconds.');
-                }
-        }
-}
-
-
-
 function abilityEmergencyPushBack(arrayOfLights) {
         $('body').on('keydown', function (event) {
                 if (player.noEmergencyPushBackUntil <= Date.now() || !player.noEmergencyPushBackUntil) {                        

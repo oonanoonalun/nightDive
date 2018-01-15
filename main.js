@@ -8,7 +8,6 @@ var context = canvas.getContext('2d');
 
 //MAIN LOOP
 function mainLoop() {
-    context.clearRect(0, 0, 800, 600);
     controls();
     globalUpdates();
     drawAllCells(cells);

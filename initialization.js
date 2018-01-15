@@ -25,15 +25,15 @@ var cells = [],
                 'intervalBetweenTemperatureUpdates': 200,
                 'health': 100,
                 'maxHealth': 100,
-                'intervalBetweenHealthUpdates': 133, // number of ms between possible health losses
+                'intervalBetweenHealthUpdates': 5, // number of frames between possible health losses (or gains? no sure how regen is written)
                 'displayHealth': false, // logs in the console
                 'emergencyPushBackCooldown': 10000,
                 'emergencyPushBackDuration': 3500,
-                'damageWarningDuration': 350,
+                'damageWarningDuration': 10, // number of frames after damage has occurred while player is still warned about it (i.e. flashing health bar)
                 'damageOscillator': makeOscillator(150, 0, SINE, 'playerDamageOscillator'),
                 'regenerateHealth': true,
                 'healthRegenerationAmount': 1,  // regenerate this amount of health
-                'healthRegenerationInterval': 1000,      // every this many milliseconds. Don't it too small (i.e. <200ms) because there's a little cooldown (150ms) to make sure you don't accidentally get two health bumps in one iteration. You can always just give more health at longer intervals.
+                'healthRegenerationInterval': 30,      // every this many frames, player health increases by player.healthRegenerationAmount
                 'temperatureChangeRateScale': 0.01, // affect how quickly the player gains and loses temperature based on center-screen brightnesspl
                 'coolingScale': 1, // scale the rate at which you heat and cool for balancing purposes (or for special effects)
                 'heatingScale': 1,
@@ -127,7 +127,8 @@ assignCoordinatesToCells(cells);
 
 // WRONG doesn't work
 //assignDistanceLookupTables();
-var SINE = 'sineWaveShape',
+var frameCounter = 0, // using this to avoid Date.now() calls as part of optimizing via function call elimination (except during initialization)
+        SINE = 'sineWaveShape',
         TRI = 'triangularWaveShape',
         SQUARE = 'squareWaveShape',
         SAW = 'sawWaveShape',
@@ -141,6 +142,9 @@ var SINE = 'sineWaveShape',
         UP_RIGHT = 'diagonalUpRight',
         allDirections = [],
         deathAphorisms = [],
+        arrayOfRandomNumbers = [], // this is to avoid having to call the Math.radnom() function, as part of optimization.
+        randomNumberIndex = 0, // this will be incremeented each time an random number from arrayOfRandomNumbers is accessed so that we're always getting new random numbers.
+        arrayOfRandomNumbersLength = 1000000, // one million
         excludedNamesFromRandomOscillatorSelection = [
                 'playerDamageOscillator'
         ];
@@ -151,7 +155,15 @@ makeRandomLights(settings.minLights, randomLightSettingsDefault, settings.entiti
 assignDistanceLookupTables();
 initializeCenterCells();
 initializeAllDirections();
+initializeArrayOfRandomNumbers(arrayOfRandomNumbersLength);
 initializeDeathAphorisms();
+
+function initializeArrayOfRandomNumbers(length) {
+        // wow. A million random number and it doesn't take that long to run.
+        for (var i = 0; i < length; i++) {
+                arrayOfRandomNumbers.push(Math.random());
+        }
+}
 
 function initializeDeathAphorisms() {
         deathAphorisms.push(

@@ -11,8 +11,8 @@ var drawingSettings = {
                         'greenNoise': 1,//0.6,
                         'blueNoise': 1,
                         'globalNoiseScale': 0.05,
-                        'minMsBetweenNoiseChanges': 1500,
-                        'maxMsBetweenNoiseChanges': 5000,
+                        'minFramesBetweenNoiseChanges': 45,
+                        'maxFramesBetweenNoiseChanges': 150,
                         'noNoiseUnderThisBrightnessThreshold': 0
                 },
                 'baseCellColor': [80, 80, 80],
@@ -27,6 +27,7 @@ var drawingSettings = {
 };
 
 function drawAllCells(cellsArray) {
+        context.clearRect(0, 0, 800, 600); // this calls a function, but I don't know how to recreate this function, or where to find its contents
         for (var i = 0; i < cellsArray.length; i++) {
                 var cell = cellsArray[i];
                 //////////////////////////////////////////////////////////////////////////////////
@@ -135,184 +136,122 @@ function drawAllCells(cellsArray) {
                 //////////////////////////////////////////////////////////////////////////////////
                 // draw HUD/UI
                 //updateHUD(cell);
-                // add noise
-                addNoiseToCellColor(cell);
+                //////////////////////////////////////////////////////////////////////////////////
+                // start FUNCTION addNoiseToCellColor(cell);
+                //////////////////////////////////////////////////////////////////////////////////
+                if (drawingSettings.noise.addNoise) {
+                        if (averageBrightness(cell.color) > drawingSettings.noise.noNoiseUnderThisBrightnessThreshold) {
+                                if (drawingSettings.noNoiseChangeUntil <= frameCounter || !drawingSettings.noNoiseChangeUntil) {
+                                        // addNoiseToColor() is FUNCTION-FREE!    |  : D
+                                        // avoiding function calls to Math.random for optimization purposes
+                                        if (randomNumberIndex >= arrayOfRandomNumbers.length - 1 - 4) randomNumberIndex = 0; // making sure we don't ask for an invalid index based on how many times we're going to call this var + some before acutally updating it
+                                        var rNoiseForAddingScreenNoise = 1 - drawingSettings.noise.redNoise * arrayOfRandomNumbers[randomNumberIndex] * drawingSettings.noise.globalNoiseScale,
+                                                gNoiseForAddingScreenNoise = 1 - drawingSettings.noise.greenNoise * arrayOfRandomNumbers[randomNumberIndex + 1] * drawingSettings.noise.globalNoiseScale,
+                                                bNoiseForAddingScreenNoise = 1 -drawingSettings.noise.blueNoise * arrayOfRandomNumbers[randomNumberIndex + 2] * drawingSettings.noise.globalNoiseScale,
+                                                noiseColorScaleForAddingScreenNoise = [rNoiseForAddingScreenNoise, gNoiseForAddingScreenNoise, bNoiseForAddingScreenNoise],
+                                                noiseColorForAddingScreenNoise = [];
+                                        for (var r = 0; r < 3; r++) {
+                                                noiseColorForAddingScreenNoise[r] = cell.color[r] * noiseColorScaleForAddingScreenNoise[r];
+                                        }
+                                        drawingSettings.noNoiseChangeUntil = drawingSettings.noise.minFramesBetweenNoiseChanges + arrayOfRandomNumbers[randomNumberIndex + 3] * (drawingSettings.noise.maxFramesBetweenNoiseChanges - drawingSettings.noise.minFramesBetweenNoiseChanges);
+                                        randomNumberIndex += 4; // incrementing the randomNumberIndex however many times we used it (plus some) since last actually updating it
+                                        cell.color = noiseColorForAddingScreenNoise;
+                                }
+                        }
+                }
+                //////////////////////////////////////////////////////////////////////////////////
+                // end FUNCTION addNoiseToCellColor(cell);
+                //////////////////////////////////////////////////////////////////////////////////
                 //greyscale becomes rainbow if drawingSettings.greyScaleToSpectrum is 'true'
                 drawCellOnSpectrum(cell);
-                // update player health
-                updatePlayerHealth(cell); // this needs to be here because it impacts cell colors
                 //////////////////////////////////////////////////////////////////////////////////
-                // end FUNCTION getCellColor(cell);
+                // start FUNCTION updatePlayerHealth(cell);
+                //////////////////////////////////////////////////////////////////////////////////
+                // this needs to be here because it impacts cell colors
+                // updatePlayerHealth() is FUNCTION FREE! except for on Date.now() call that only happens once, at the moment of death
+                // if player is alive
+                if (player.health > 0) {
+                        // WRONG. There are so many times that whether the player is too hot or too cold is being checked. Should
+                        //      lump them under one instance.
+                        // extremes negatively impact health
+                        // eliminating Date.now() calls
+                        if ((player.temperature < player.coldDamageThreshold || player.temperature > player.heatDamageThreshold) && (player.noHealthUpdateUntil <= frameCounter || !player.noHealthUpdateUntil)) {
+                                player.health--;
+                                player.damageWarningUntil = frameCounter + player.damageWarningDuration;
+                                player.noHealthUpdateUntil = frameCounter + player.intervalBetweenHealthUpdates;
+                        }
+                        // screen color flashes red or blue while taking temperature damage
+                        if (!drawingSettings.greyscaleToSpectrum) {
+                                // eliminated addColor() function calls
+                                if (player.temperature < player.coldDamageThreshold) {
+                                        for (var s = 0; s < 3; s++) {
+                                                if (s === 1) cell.color[s] += 64;
+                                                if (s === 2) cell.color[s] += 128;
+                                        }
+                                }
+                                if (player.temperature > player.heatDamageThreshold) {
+                                        for (var t = 0; t < 3; t++) {
+                                                if (t === 0) cell.color[t] += 128;
+                                                if (t === 1) cell.color[t] += 32;
+                                        }
+                                }
+                        } else {
+                                var dimmedColor = [];
+                                for (var v = 0; v < 3; v++) {
+                                        dimmedColor[v] = Math.max(cell.color[v] - 128, 0);
+                                }
+                                if (player.temperature < player.coldDamageThreshold) cell.color = dimmedColor;
+                                if (player.temperature > player.heatDamageThreshold) {
+                                        // eliminating an addColors() function call
+                                        for (var u = 0; u < 3; u++) {
+                                                cell.color[u] += 160;
+                                        }
+                                }
+                        }
+                        //displayer health in console
+                        if (player.displayHealth) {
+                                if (
+                                        (player.temperature < player.coldDamageThreshold || player.temperature > player.heatDamageThreshold) &&
+                                        player.health % 5 === 0 && player.health > 0 && player.health < 100 &&
+                                        (player.health !== player.lastLoggedHealth || !player.lastLoggedHealth)
+                                ) {
+                                        console.log('Health: ' + player.health);
+                                        player.lastLoggedHealth = player.health;
+                                }
+                        }
+                        // health regeneration
+                        if (player.regenerateHealth && frameCounter % player.healthRegenerationInterval === 0 &&
+                            (player.noHealthRegenUntil <= frameCounter || !player.noHealthRegenUntil)
+                        ) {
+                                player.health += player.healthRegenerationAmount;
+                                player.noHealthRegenUntil = frameCounter + player.healthRegenerationInterval; // just to keep you from getting more than one helath bump in the 50ms window that opens up to make sure you don't miss it altogether.
+                        }
+                } else { // player is dead
+                        cell.color = [0, 0, 0];
+                        if (!player.died) {
+                                // eliminating Math.round() and Math.random()
+                                var roundedDeathAphorismIndex = arrayOfRandomNumbers[randomNumberIndex] * (deathAphorisms.length - 1); // unrounded, initially
+                                roundedDeathAphorismIndex -= roundedDeathAphorismIndex % 1; // rounding
+                                console.log(deathAphorisms[roundedDeathAphorismIndex]);
+                                if (randomNumberIndex < arrayOfRandomNumbers.length - 1) randomNumberIndex++;
+                                else randomNumberIndex = 0;
+                                player.died = true;
+                                // FUNCTION call here, but it runs very rarely, at a time when framerate doesn't matter. I can't do this with frames because framerate will vary.
+                                console.log('Play time was ' + ((Date.now() - settings.gameStartTime) / 1000).toFixed(2) + ' seconds.');
+                        }
+                }
+                //////////////////////////////////////////////////////////////////////////////////
+                // end FUNCTION updatePlayerHealth(cell);
                 //////////////////////////////////////////////////////////////////////////////////
                 if (!drawingSettings.normalizeBrightnesses) finalizeCellColorAndDrawCell(cell);
         }
         if (drawingSettings.normalizeBrightnesses) normalizeCellsArrayBrightnessRange(cellsArray, 0, 255); // requires a second pass over all the cells, necessarily (as it checks their relative brightnesses after all their brightnesses have been assigned), and so slows things down.
+        frameCounter++;
 }
-
-// OLD. Now is in-line in drawAllCells();
-/*function getCellColor(cell) {
-        //////////////////////////////////////////////////////////////////////////////////
-        // start FUNCTION showLights(cell);
-        //////////////////////////////////////////////////////////////////////////////////
-        // draw lights
-        // FUNCTION showLights(cell) is FUNCTION-FREE!!   |  : D
-        var brightness,
-                lightOscillatorValue = 1;
-        cell.color = [0, 0, 0];//drawingSettings.baseColor;
-        if (settings.entities.lights.length > 0) {
-                for (var i = 0; i < settings.entities.lights.length; i++) {
-                        var light = settings.entities.lights[i],
-                                // FUNCTION
-                                //distanceFromLight = findDistanceBetweenPoints(cell.centerXY, light.cell.centerXY),
-                                distanceFromLight = cell.distanceToIndex[light.cellIndex],
-                                // eliminating need for function call to Math.max
-                                diffusionOrDistanceIsGreater;
-                        if (distanceFromLight > light.diffusion) diffusionOrDistanceIsGreater = distanceFromLight;
-                        else diffusionOrDistanceIsGreater = light.diffusion;
-                        if (light.oscillator) lightOscillatorValue = light.oscillator.value;
-                        // Math.max is a function
-                        //brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * lightOscillatorValue * light.brightness;
-                        brightness = light.radius / diffusionOrDistanceIsGreater * lightOscillatorValue * light.brightness;
-                        // FUNCTION
-                        //cell.color = addColors(cell.color, [brightness, brightness, brightness]);
-                        for (var j = 0; j < 3; j++) {
-                                cell.color[j] += brightness;
-                        }
-                }
-        }
-        // FUNCTION
-        //cell.color = divideColorByNumber(cell.color, settings.entities.lights.length + 1);
-        for (var k = 0; k < 3; k++) {
-                cell.color[k] /= settings.entities.lights.length + 1;
-        }
-        //////////////////////////////////////////////////////////////////////////////////
-        // end FUNCTION showLights(cell);
-        //////////////////////////////////////////////////////////////////////////////////
-        //////////////////////////////////////////////////////////////////////////////////
-        // start FUNCTION findAverageBrightnessOfCenterCells(cell);
-        //////////////////////////////////////////////////////////////////////////////////
-        // FUNCTION-FREE!
-        // this resets interfaceSettings.centerCellsAverageBrightness to 0 at the beginng of each pass through all the cells
-        // eliminating two calls of FUNCTION .indexOf
-        //if (cells.indexOf(cell) === 0) interfaceSettings.centerCellsAverageBrightness = 0;
-        if (cell.index === 0) interfaceSettings.centerCellsAverageBrightness = 0;
-        // if the current cell is one of the center cells
-        var isCellACenterCell = false;
-        for (var m = 0; m < interfaceSettings.centerCells.length; m++) {
-                if (cell.index === interfaceSettings.centerCells[m].index) isCellACenterCell = true;
-        }
-        if (isCellACenterCell) interfaceSettings.centerCellsAverageBrighteness = 0;
-        //if (interfaceSettings.centerCells.indexOf(cell) !== -1) {
-        if (isCellACenterCell) {
-                //showCenterCells(cell);
-                // eliminating showCenterCells() FUNCTION call
-                // eliminating addColors() FUNCTION call
-                if (interfaceSettings.showCenterCells) cell.color[0] += 64;
-                // if in greyscale mode
-                // eliminating FUNCTION Math.min
-                var smallerOfTheseTwoCellColor0OrCellColor0OneHalfTimesCellColor1;
-                if (cell.color[0] < cell.color[0] + 0.5 * cell.color[1]) smallerOfTheseTwoCellColor0OrCellColor0OneHalfTimesCellColor1 = cell.color[0];
-                else smallerOfTheseTwoCellColor0OrCellColor0OneHalfTimesCellColor1  = cell.color[0] + 0.5 * cell.color[1];
-                if (!drawingSettings.greyscaleToSpectrum) interfaceSettings.centerCellsAverageBrightness += averageBrightness(cell.color);
-                // if in spectrum mode
-                // here's that Math.min
-                //else interfaceSettings.centerCellsAverageBrightness += Math.min(cell.color[0], cell.color[0] + 0.5 * cell.color[1]);
-                else interfaceSettings.centerCellsAverageBrightness += smallerOfTheseTwoCellColor0OrCellColor0OneHalfTimesCellColor1;
-                // draw the center screen representation
-                if (interfaceSettings.showPlayerLight) {
-                        var // elimnating two Math.abs() FUNCTION calls
-                                playerLightPossibleCellCoord0,
-                                playerLightPossibleCellCoord1;
-                        if (cell.coordinates[0] === -1) playerLightPossibleCellCoord0 = 1;
-                        if (cell.coordinates[1] === -1) playerLightPossibleCellCoord1 = 1;
-                        if ((playerLightPossibleCellCoord0 === 1 &&  playerLightPossibleCellCoord1 === 1) || cell.centerCellParametricLocationOnCenterCellsRadius <= 0.33) {
-                                // four center cells are always exactly your temperature, no matter the resolution
-                                // inner portion of center area are also exactly your temperature
-                                for (var n = 0; n < 3; n++) {
-                                        cell.color[n] = 255 * player.temperature;
-                                }                              
-                        } else {
-                                for (var o = 0; o < 3; o++) {
-                                        cell.color[o] = ((cell.color[o] * cell.centerCellParametricLocationOnCenterCellsRadius) + ((255 * player.temperature) * (1 - cell.centerCellParametricLocationOnCenterCellsRadius)));
-                                }
-                        }
-                }
-        }
-        // average color when done looking at all the cells
-        // removed an instance of FUNCTION .indexOf
-        if (cell.index === totalNumberOfCells - 1) {
-                interfaceSettings.centerCellsAverageBrightness /= interfaceSettings.centerCells.length;
-        }
-        //////////////////////////////////////////////////////////////////////////////////
-        // end FUNCTION findAverageBrightnessOfCenterCells(cell);
-        //////////////////////////////////////////////////////////////////////////////////
-        // draw HUD/UI
-        //updateHUD(cell);
-        // add noise
-        addNoiseToCellColor(cell);
-        //greyscale becomes rainbow if drawingSettings.greyScaleToSpectrum is 'true'
-        drawCellOnSpectrum(cell);
-        // update player health
-        updatePlayerHealth(cell); // this needs to be here because it impacts cell colors
-}*/
-
-
-//OLD. Now in-line in getCellColor();
-/*function showLights(cell) {
-        // FUNCTION showLights(cell) is FUNCTION-FREE!!   |  : D
-        var brightness,
-                lightOscillatorValue = 1;
-        cell.color = [0, 0, 0];//drawingSettings.baseColor;
-        if (settings.entities.lights.length > 0) {
-                for (var i = 0; i < settings.entities.lights.length; i++) {
-                        var light = settings.entities.lights[i],
-                                // FUNCTION
-                                //distanceFromLight = findDistanceBetweenPoints(cell.centerXY, light.cell.centerXY),
-                                distanceFromLight = cell.distanceToIndex[light.cellIndex],
-                                // eliminating need for function call to Math.max
-                                diffusionOrDistanceIsGreater;
-                        if (distanceFromLight > light.diffusion) diffusionOrDistanceIsGreater = distanceFromLight;
-                        else diffusionOrDistanceIsGreater = light.diffusion;
-                        if (light.oscillator) lightOscillatorValue = light.oscillator.value;
-                        // Math.max is a function
-                        //brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * lightOscillatorValue * light.brightness;
-                        brightness = light.radius / diffusionOrDistanceIsGreater * lightOscillatorValue * light.brightness;
-                        // FUNCTION
-                        //cell.color = addColors(cell.color, [brightness, brightness, brightness]);
-                        for (var j = 0; j < 3; j++) {
-                                cell.color[j] += brightness;
-                        }
-                }
-        }
-        // FUNCTION
-        //cell.color = divideColorByNumber(cell.color, settings.entities.lights.length + 1);
-        for (var k = 0; k < 3; k++) {
-                cell.color[k] /= settings.entities.lights.length + 1;
-        }
-}*/
 
 function drawCellOnSpectrum(cell) {
         if (drawingSettings.greyscaleToSpectrum) {
                 cell.color = brightnessToSpectrum(0, 255, cell);
-        }
-}
-
-function addNoiseToCellColor(cell) {
-        if (drawingSettings.noise.addNoise) {
-                if (averageBrightness(cell.color) > drawingSettings.noise.noNoiseUnderThisBrightnessThreshold) {
-                        if (drawingSettings.noNoiseChangeUntil <= Date.now() || !drawingSettings.noNoiseChangeUntil) {
-                                cell.color = addNoiseToColor(
-                                        cell.color,
-                                        drawingSettings.noise.redNoise,
-                                        drawingSettings.noise.greenNoise,
-                                        drawingSettings.noise.blueNoise,
-                                        drawingSettings.noise.globalNoiseScale,
-                                        drawingSettings.noise.minMsBetweenNoiseChanges,
-                                        drawingSettings.noise.maxMsBetweenNoiseChanges,
-                                        drawingSettings.noise.noNoiseUnderThisBrightnessThreshold
-                                );
-                        }
-                }
         }
 }
 
@@ -322,19 +261,6 @@ function finalizeCellColorAndDrawCell(cell) {
                 context.fillStyle = cell.color;
                 context.fillRect(cell.left, cell.top, cell.size, cell.size);
         }
-}
-
-function addNoiseToColor(color, redNoiseAmount, greenNoiseAmount, blueNoiseAmount, globalNoiseScale, minMsBetweenNoiseChanges, maxMsBetweenNoiseChanges) {
-        var rNoise = 1 - redNoiseAmount * Math.random() * globalNoiseScale,
-                gNoise = 1 - greenNoiseAmount * Math.random() * globalNoiseScale,
-                bNoise = 1 -blueNoiseAmount * Math.random() * globalNoiseScale,
-                noiseColorScale = [rNoise, gNoise, bNoise],
-                noiseColor = [];
-        for (var i = 0; i < 3; i++) {
-                noiseColor[i] = color[i] * noiseColorScale[i];
-        }
-        drawingSettings.noNoiseChangeUntil = minMsBetweenNoiseChanges + Math.random() * (maxMsBetweenNoiseChanges - minMsBetweenNoiseChanges);
-        return noiseColor;
 }
 
 function makeRandomLights(numberOfLights, randomLightParametersObject, destinationArray, oscillatorsArray) {
