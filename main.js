@@ -26,7 +26,7 @@ function controls() {
 function loggingToggles() {
         $('body').on('keyup', function (event) {
                 if (event.which == KEY_E) drawingSettings.fpsDisplay.displayFps = !drawingSettings.fpsDisplay.displayFps;
-                if (event.which == KEY_Q) HUDSettings.displayHUD = !HUDSettings.displayHUD;      
+                if (event.which == KEY_Q) hudSettings.displayHUD = !hudSettings.displayHUD;      
         });
 }
 
@@ -44,7 +44,7 @@ function globalUpdates() {
 }
 
 function logging() {
-    if (player.logPlayerTemperature && !player.died) logPlayerTemperature(500);
+    if ((player.logPlayerTemperature || player.logPlayerTemperatureChangeRate) && !player.died) logPlayerTemperature(500);
     if (drawingSettings.fpsDisplay.displayFps) countFps(drawingSettings.fpsDisplay.fpsDisplayInterval, drawingSettings.fpsDisplay.fpsDisplayIntervalLongTerm);    
     if (interfaceSettings.displayCenterCellsAverageBrightness[0]) displayCenterCellsAverageBrightness(interfaceSettings.displayCenterCellsAverageBrightness[1]);
 }
@@ -75,7 +75,8 @@ function countFps(displayInterval, displayIntervalLongTerm) {
 
 function logPlayerTemperature(displayInterval) {
         if (Date.now() % displayInterval < 50 && (player.noTemperatureLoggingUntil <= Date.now() || !player.noTemperatureLoggingUntil)) {
-                console.log('Temperature: ' + player.temperature.toFixed(2));
+                if (player.logPlayerTemperature) console.log('Temperature: ' + player.temperature.toFixed(2));
+                if (player.logPlayerTemperatureChangeRate) console.log('Temperature change rate: ' + player.currentTemperatureChangeRate.toFixed(4));
                 player.noTemperatureLoggingUntil = Date.now() + 100; // just keeps it from logging a few times during the necessarily non-tiny window.
         }
 }

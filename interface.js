@@ -32,7 +32,7 @@ var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68,
                 'centerCellsAverageBrightness': null,
                 'displayCenterCellsAverageBrightness': [false, 500] // second item is display interval
         },
-        HUDSettings = {
+        hudSettings = {
                 'displayHUD': false
         };
 
@@ -136,20 +136,31 @@ function moveArrayOfEntities(arrayOfEntities, direction, numberOfCells) {
 }
 
 function updatePlayerTemperature() {
-        if (player.noTemperatureChangeUntil <= Date.now() || !player.noTemperatureChangeUntil) {
+        if (player.noTemperatureChangeUntil <= frameCounter || !player.noTemperatureChangeUntil) {
                 var pBright = player.temperature * 255,
-                        ccBright = interfaceSettings.centerCellsAverageBrightness;
-                // preventing huge, supra-255 numbers from impacting player temperature
-                if (ccBright > 255) ccBright = 255;
-                // temperature shift pivot point is (might be?) biased toward higher brightness because the map gets very bright, but never very dark.
-                // Cooling happens a little faster than heating, too.
-                if (ccBright <= pBright) player.temperature -= ccBright * player.coolingScale * player.temperatureChangeRateScale * ((pBright - ccBright) / 255);
-                else player.temperature += interfaceSettings.centerCellsAverageBrightness * player.heatingScale * player.temperatureChangeRateScale * ((ccBright - pBright) / 255);
-                player.noTemperatureChangeUntil = Date.now() + player.intervalBetweenTemperatureUpdates;
+                        ccBright = interfaceSettings.centerCellsAverageBrightness,
+                        heatGainRate = interfaceSettings.centerCellsAverageBrightness * player.heatingScale * player.temperatureChangeRateScale * ((ccBright - pBright) / 255),
+                        heatLossRate = ccBright * player.coolingScale * player.temperatureChangeRateScale * ((pBright - ccBright) / 255);
+                if (heatGainRate > player.maxHeatGainRate) heatGainRate = player.maxHeatGainRate;
+                if (heatLossRate > player.maxHeatLossRate) heatLossRate = player.maxHeatLossRate;
+                // if the center cells are cooler than the player
+                if (ccBright <= pBright) {
+                    player.temperature -= heatLossRate;
+                    player.currentTemperatureChangeRate = -heatLossRate;
+                }
+                // if the center cells are warmer than the player
+                else {
+                    player.temperature += heatGainRate;
+                    player.currentTemperatureChangeRate = heatGainRate;
+                }
+                player.noTemperatureChangeUntil = frameCounter + 6;//player.intervalBetweenTemperatureUpdates;
                 // limit temperature to within 0-1
                 player.temperature = Math.min(1, player.temperature);
                 player.temperature = Math.max(0, player.temperature);
-                player.temperatureCircular = Math.abs((player.temperature - 0.5) * 2); // i.e. 0 and 1 = 1, 0.5 = 0;
+                // eliminating Math.abs function call
+                if ((player.temperature - 0.5) * 2 < 0) player.temperatureCircular = -(player.temperature - 0.5) * 2;
+                else player.temperatureCircular = (player.temperature - 0.5) * 2;
+                //player.temperatureCircular = Math.abs((player.temperature - 0.5) * 2); // i.e. 0 and 1 = 1, 0.5 = 0;
         }
 }
 
@@ -345,7 +356,7 @@ function createLine(startCoords, endCoords, destinationArray) {
 }
 
 function updateHUD(cell) {
-        if (HUDSettings.displayHUD && !player.died) {
+        if (hudSettings.displayHUD && !player.died) {
                 updateHealthIndicator(cell);
                 updateEnergyIndicator(cell);
                 updateTemperatureIndicators(cell);

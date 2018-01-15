@@ -144,7 +144,7 @@ function drawAllCells(cellsArray) {
                 //////////////////////////////////////////////////////////////////////////////////
                 // NOTE! I'm filling in a new HUD function in-line that actually has nothing to do with the original updateHUD() function
                 // draw HUD/UI
-                if (HUDSettings.displayHUD) {
+                if (hudSettings.displayHUD) {
                     // health bar
                     // if cell is on the left edge, 2 cells wide at 800x600
                     if (
@@ -156,17 +156,21 @@ function drawAllCells(cellsArray) {
                         if (!drawingSettings.greyscaleToSpectrum) {
                         // if in greyScale
                         // make the cell scale from red to green based on player health
-                                for (var y = 0; y < 3; y++) {
-                                    if (y === 0) cell.color[y] = 1024 * (1 - player.health / player.maxHealth);
-                                    if (y === 1) cell.color[y] = 384 * (player.health / player.maxHealth);
-                                    if (y === 2) cell.color[y] = 0;
-                                }
+                                if (player.damageWarningUntil > frameCounter) {
+                                    for (var b = 0; b < 3; b++) cell.color[b] = 767 * player.damageOscillator.value;
+                                } else {
+                                    for (var y = 0; y < 3; y++) {
+                                        if (y === 0) cell.color[y] = 1024 * (1 - player.health / player.maxHealth);
+                                        if (y === 1) cell.color[y] = 384 * (player.health / player.maxHealth);
+                                        if (y === 2) cell.color[y] = 0;
+                                    }
+                               }
                         } else {
                             // if in spectrum mode
                         }
                     }
                     // temperature bar
-                    // hot bar: if the player's hot, temp bar goes to the right of mid-screen
+                    // heat bar: if the player's hot, temp bar goes to the right of mid-screen
                     if (player.temperature >= 0.5) {
                         if (
                             // WARNING 0.018 and 0.024 are only good for 4:3 ratios
@@ -215,6 +219,17 @@ function drawAllCells(cellsArray) {
                             }
                         }
                     }
+                    // temperature damage threshold indicators
+                    // heat damage threshold indicator
+                    if (
+                        cell.coordinates[0] >= (canvas.width * player.heatDamageThreshold / 2) / cellSize && cell.coordinates[0] <= (canvas.width * player.heatDamageThreshold / 2) / cellSize + canvas.width * 0.024 / cellSize &&
+                        cell.coordinates[1] <= -((cellsPerColumn / 2) - (0.036 * canvasHeight / cellSize))
+                    ) cell.color = [255, 0, 0];
+                    // cold damage threshold indicator
+                    if (
+                        cell.coordinates[0] <= -(canvas.width * (0.5 - player.coldDamageThreshold) / cellSize) && cell.coordinates[0] >= -(canvas.width * (0.5 - player.coldDamageThreshold) / cellSize) - (canvas.width * 0.024 / cellSize) &&
+                        cell.coordinates[1] <= -((cellsPerColumn / 2) - (0.036 * canvasHeight / cellSize))
+                    ) cell.color = [0, 0, 255];
                 }
                 //////////////////////////////////////////////////////////////////////////////////
                 // end FUNCTION updateHUD(cell);
@@ -264,6 +279,7 @@ function drawAllCells(cellsArray) {
                                 player.noHealthUpdateUntil = frameCounter + player.intervalBetweenHealthUpdates;
                         }
                         // screen color flashes red or blue while taking temperature damage
+                        // if in greyscale mode
                         if (!drawingSettings.greyscaleToSpectrum) {
                                 // eliminated addColor() function calls
                                 if (player.temperature < player.coldDamageThreshold) {
@@ -279,6 +295,7 @@ function drawAllCells(cellsArray) {
                                         }
                                 }
                         } else {
+                        // if in spectrum mode
                                 var dimmedColor = [];
                                 for (var v = 0; v < 3; v++) {
                                         dimmedColor[v] = Math.max(cell.color[v] - 128, 0);
@@ -291,7 +308,7 @@ function drawAllCells(cellsArray) {
                                         }
                                 }
                         }
-                        //displayer health in console
+                        // logging health in the console
                         if (player.displayHealth) {
                                 if (
                                         (player.temperature < player.coldDamageThreshold || player.temperature > player.heatDamageThreshold) &&

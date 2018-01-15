@@ -22,7 +22,7 @@ var cells = [],
                 'oscillator': null, // WRONG I'd rather just define these here, but I don't know how to reference player's properties from within itself (i.e. send a oscillator defined here to a light defined here). 'this.oscillator' didn't seem to work.
                 'light': null,
                 'temperature': 0.5,
-                'intervalBetweenTemperatureUpdates': 200,
+                'intervalBetweenTemperatureUpdates': 6, // frames
                 'health': 100,
                 'maxHealth': 100,
                 'intervalBetweenHealthUpdates': 5, // number of frames between possible health losses (or gains? no sure how regen is written)
@@ -34,13 +34,15 @@ var cells = [],
                 'regenerateHealth': true,
                 'healthRegenerationAmount': 1,  // regenerate this amount of health
                 'healthRegenerationInterval': 30,      // every this many frames, player health increases by player.healthRegenerationAmount
-                'temperatureChangeRateScale': 0.01, // affect how quickly the player gains and loses temperature based on center-screen brightnesspl
+                'temperatureChangeRateScale': 0.0005, // affect how quickly the player gains and loses temperature based on center-screen brightnesspl
                 'coolingScale': 1, // scale the rate at which you heat and cool for balancing purposes (or for special effects)
                 'heatingScale': 1,
                 // WRONG so stupid that I can't just have a 'damageZoneWidth' property and base the cold and heat
                 //      damage thresholds off of it, but "this.etc" doesn't seem to work in objects. : /
                 'coldDamageThreshold': 0.33, // when player temperature falls below this, receive damage
                 'heatDamageThreshold': 0.67, // when player temperature rises above this, receive damage
+                'maxHeatGainRate': 0.05, // max rate at which heat will be gained
+                'maxHeatLossRate': 0.05, // "" ... lost
                 'healthBarWidthScale': 1, // how wide the health bar is. At scale 1, it's two cells wide at 800x600
                 'healthBarXPositionPolarity': -1, // -1 is on the left, 1 is on the right
                 'healthBarMaxLength': 0.5, // max health bar length in screen heights
@@ -84,7 +86,7 @@ function setPreferences() {
         
         // GAMEPLAY INTERFACE
         // show HUD
-        HUDSettings.displayHUD = true;
+        hudSettings.displayHUD = true;
         // health bar width and height
         player.healthBarWidthScale = 1; // how wide the health bar is. At scale 1, it's two cells wide at 800x600
         player.healthBarMaxLength = 0.5; // how big a full health bar is, in screen heights
@@ -94,19 +96,23 @@ function setPreferences() {
         player.displayHealth = true; // happens whenever your health changes if your health becomes a multiple of 5
         // show temperature in console.
         player.logPlayerTemperature = false;
+        player.logPlayerTemperatureChangeRate = true;
         player.intervalBetweenTemperatureUpdates = 500; // ms between logged temperature updates
         
         // GAMEPLAY
         // health regen per second (max health is 100)
         player.healthRegenerationAmount = 1;
         // how quickly the player gains and dissipates heat
-        player.temperatureChangeRateScale = 0.0045;
+        player.temperatureChangeRateScale = 0.0005;
         // how quickly the player cools and heats, specifically
         player.heatingScale = 1;
         player.coolingScale = 1;
         // how cold or hot the player has to get before taking damage (0-1);
         player.heatDamageThreshold = 0.85;
         player.coldDamageThreshold = 0.43;
+        // how fast the player can gain and lose heat
+        player.maxHeatGainRate = 0.05;
+        player.maxHeatLossRate = 0.05;
         // how many ms between player movements if you hold a key down and the framerate allows
         interfaceSettings.moveRepeatDelay = 25; // still relevant, but will phase out, shifting to frames instead of ms
         // minimum and maximum number of lights on the map at any one time
