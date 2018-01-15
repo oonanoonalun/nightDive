@@ -170,10 +170,14 @@ function drawAllCells(cellsArray) {
                     if (player.temperature >= 0.5) {
                         if (
                             // WARNING 0.018 and 0.024 are only good for 4:3 ratios
-                            cell.coordinates[1] <=
+                            // main bar
+                            (cell.coordinates[1] <=
                             -(cellsPerColumn / 2) + (canvas.height * 0.018 / cellSize) * player.temperatureBarWidthScale &&
                             cell.coordinates[0] < ((player.temperature - 0.5) * 2) * player.temperatureBarMaxLength * (cellsPerRow / 2) &&
-                            cell.coordinates[0] > 0
+                            cell.coordinates[0] > 0) ||
+                            // midpoint indicator
+                            (cell.coordinates[0] <= canvas.width * 0.024 / cellSize && cell.coordinates[0] >= -(canvas.width * 0.024 / cellSize) &&
+                            cell.coordinates[1] <= -((cellsPerColumn / 2) - (0.036 * canvasHeight / cellSize)))
                         ) {
                             if (!drawingSettings.greyscaleToSpectrum) {
                                 for (var z = 0; z < 3; z++) {
@@ -190,10 +194,14 @@ function drawAllCells(cellsArray) {
                     if (player.temperature < 0.5) {
                         if (
                             // WARNING 0.018 and 0.024 are only good for 4:3 ratios
-                            cell.coordinates[1] <=
+                            // main bar
+                            (cell.coordinates[1] <=
                             -(cellsPerColumn / 2) + (canvas.height * 0.018 / cellSize) * player.temperatureBarWidthScale &&
                             cell.coordinates[0] > -(player.temperatureBarMaxLength * (cellsPerRow / 2)) + (cellsPerRow * player.temperature) &&
-                            cell.coordinates[0] < 0
+                            cell.coordinates[0] < 0) ||
+                            // midpoint indicator
+                            (cell.coordinates[0] <= canvas.width * 0.024 / cellSize && cell.coordinates[0] >= -(canvas.width * 0.024 / cellSize) &&
+                            cell.coordinates[1] <= -((cellsPerColumn / 2) - (0.036 * canvasHeight / cellSize)))
                         ) {
                             if (!drawingSettings.greyscaleToSpectrum) {
                                 //cell.color = [0, 0, 255];
@@ -207,13 +215,6 @@ function drawAllCells(cellsArray) {
                             }
                         }
                     }
-                    // temperature midpoint display
-                    if (
-                        cell.coordinates[0] <= canvas.width * 0.024 / cellSize && cell.coordinates[0] >= -(canvas.width * 0.024 / cellSize) &&
-                        //cell.coordinates[0] < 2 && cell.coordinates[0] > -2 &&
-                        //cell.coordinates[1] <= -((cellsPerColumn / 2) - cellsPerColumn / (0.5 * cellsPerColumn))
-                        cell.coordinates[1] > -29 && cell.coordinates[1] < -26
-                    ) cell.color = [0, 255, 0];
                 }
                 //////////////////////////////////////////////////////////////////////////////////
                 // end FUNCTION updateHUD(cell);
