@@ -153,7 +153,7 @@ function updatePlayerTemperature() {
                     player.temperature += heatGainRate;
                     player.currentTemperatureChangeRate = heatGainRate;
                 }
-                player.noTemperatureChangeUntil = frameCounter + 6;//player.intervalBetweenTemperatureUpdates;
+                player.noTemperatureChangeUntil = frameCounter + player.intervalBetweenTemperatureUpdates;
                 // limit temperature to within 0-1
                 player.temperature = Math.min(1, player.temperature);
                 player.temperature = Math.max(0, player.temperature);

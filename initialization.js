@@ -96,8 +96,8 @@ function setPreferences() {
         player.displayHealth = true; // happens whenever your health changes if your health becomes a multiple of 5
         // show temperature in console.
         player.logPlayerTemperature = false;
-        player.logPlayerTemperatureChangeRate = true;
-        player.intervalBetweenTemperatureUpdates = 500; // ms between logged temperature updates
+        player.logPlayerTemperatureChangeRate = false;
+        player.intervalBetweenTemperatureUpdates = 6; // ms between logged temperature updates
         
         // GAMEPLAY
         // health regen per second (max health is 100)
