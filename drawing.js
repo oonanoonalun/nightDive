@@ -74,6 +74,7 @@ function drawAllCells(cellsArray) {
                     // eliminating a Math.round() and Math.random() function call
                     updateLightRandomMovementAmount = arrayOfRandomNumbers[randomNumberIndex] * 3 - ((arrayOfRandomNumbers[randomNumberIndex] * 3) % 1);
                     randomNumberIndex++;
+                    // MOVEMENT KEY: 0 is up, then clockwise
                     // WRONG I have no freaking idea why the allDirections array isn't working in makeRandomLights()
                     // makeRandomLights() should be picking a random item from allDirections (that's code's replaced now with just picking numbers) and we should check for UP... DOWN_LEFT etc. here.
                     if (
@@ -260,7 +261,28 @@ function drawAllCells(cellsArray) {
                 //////////////////////////////////////////////////////////////////////////////////
                 // start FUNCTION showShadows(cell);
                 //////////////////////////////////////////////////////////////////////////////////
-
+                // showShadows(cell)
+                /*var darkness;
+                if (settings.entities.shadows.length > 0) {
+                    for (var g = 0; g < settings.entities.shadows.length; g++) {
+                        var shadow = settings.entities.shadows[g];
+                        if (cell.coordinates[0] < shadow.coordinates[0]) {
+                            var xDistanceFromShadow = cell.coordinates[0] - shadow.coordinates [0];
+                            if (xDistanceFromShadow < 0) xDistanceFromShadow = -xDistanceFromShadow;
+                            // Math.max is a function
+                            //brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * lightOscillatorValue * light.brightness;
+                            darkness = xDistanceFromShadow * 10;
+                            if (darkness < 0) darkness = 0;
+                            for (var aa = 0; aa < 3; aa++) {
+                                cell.color[aa] -= darkness;
+                                if (cell.color[aa] < 0) cell.color[aa] = 0;
+                            }
+                        }
+                    }
+                }
+                for (var ab = 0; ab < 3; ab++) {
+                        cell.color[ab] /= settings.entities.shadows.length + 1;
+                }*/
                 //////////////////////////////////////////////////////////////////////////////////
                 // end FUNCTION showShadows(cell);
                 //////////////////////////////////////////////////////////////////////////////////                
@@ -413,12 +435,12 @@ function drawAllCells(cellsArray) {
                     if (
                         cell.coordinates[0] >= (canvas.width * player.heatDamageThreshold / 2) / cellSize && cell.coordinates[0] <= (canvas.width * player.heatDamageThreshold / 2) / cellSize + canvas.width * 0.024 / cellSize &&
                         cell.coordinates[1] <= -((cellsPerColumn / 2) - (0.036 * canvasHeight / cellSize))
-                    ) cell.color = [255, 0, 0];
+                    ) cell.color = [255, 64, 24];
                     // cold damage threshold indicator
                     if (
                         cell.coordinates[0] <= -(canvas.width * (0.5 - player.coldDamageThreshold) / cellSize) && cell.coordinates[0] >= -(canvas.width * (0.5 - player.coldDamageThreshold) / cellSize) - (canvas.width * 0.024 / cellSize) &&
                         cell.coordinates[1] <= -((cellsPerColumn / 2) - (0.036 * canvasHeight / cellSize))
-                    ) cell.color = [0, 0, 255];
+                    ) cell.color = [0, 128, 255];
                 }
                 //////////////////////////////////////////////////////////////////////////////////
                 // end FUNCTION updateHUD(cell);
@@ -625,7 +647,9 @@ function makeLight(brightness, radius, coordinates, oscillator, diffusion, frame
                 'movementDirection': movementDirection, // 0-7 because it got weirdly broken to try to use the allDirecitons array
                 'directionChangeChance': directionChangeChance,
                 'cell': allCellsList[coordinatesToIndex(coordinates)],
-                'cellIndex': coordinatesToIndex(coordinates)
+                'cellIndex': coordinatesToIndex(coordinates),
+                'personality': {
+                }
         };
         return light;
 }

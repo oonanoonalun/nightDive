@@ -7,7 +7,7 @@ var cells = [],
                 'oscillators': [],
                 'entities': {
                         'lights': [],
-                        'rectangles': []
+                        'shadows': []
                 },
                 'minLights': 8, // min and max number of lights in the level/on the screen (depending on where development goes)
                 'maxLights': 20,
@@ -164,7 +164,7 @@ var frameCounter = 0, // using this to avoid Date.now() calls as part of optimiz
         arrayOfRandomNumbersLength = 1000000, // one million
         excludedNamesFromRandomOscillatorSelection = [
                 'playerDamageOscillator'
-        ];
+];
         
 settings.oscillators.push(player.damageOscillator);
 makeRandomOscillators(10, 150, 600, settings.oscillators);
@@ -180,6 +180,14 @@ function initializeArrayOfRandomNumbers(length) {
                 arrayOfRandomNumbers.push(Math.random());
         }
 }
+var shadow = {
+                'coordinates': [-15, 1],
+                'darkness': 0.5,
+                'range': 250,
+                'cellIndex': coordinatesToIndex([-15, 1]),
+                'cell': cells[coordinatesToIndex([-15, 1])]
+};
+settings.entities.shadows.push(shadow);
 
 function initializeDeathAphorisms() {
         deathAphorisms.push(
