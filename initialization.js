@@ -81,7 +81,7 @@ function setPreferences() {
         drawingSettings.numberOfRadiiBeforeLightsHaveNoEffect = 10000;
 
         // If 'true', draws the game as shades of grey or rainbow.
-        drawingSettings.greyscaleToSpectrum = false;
+        drawingSettings.greyscaleToSpectrum = true;
         // draw screen. Turn off to look at errors without the screen being drawn slowing things down
         drawingSettings.drawScreen = true;
         

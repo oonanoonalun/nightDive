@@ -387,9 +387,48 @@ function drawAllCells(cellsArray) {
                 //////////////////////////////////////////////////////////////////////////////////
                 // end FUNCTION findAverageBrightnessOfCenterCells(cell);
                 //////////////////////////////////////////////////////////////////////////////////
+                //////////////////////////////////////////////////////////////////////////////////
+                // start FUNCTION brightnessToSpectrum(cell);
+                //////////////////////////////////////////////////////////////////////////////////
                 //greyscale becomes rainbow if drawingSettings.greyScaleToSpectrum is 'true'
-                // WRONG !!!!FUNCTION CALL WITH FUNCTION CALLS INSIDE OF IT!!!!!
-                drawCellOnSpectrum(cell);
+                //receives a number between 0 and 1, inclusively and converts it to a hue.
+                // if HIGH_EQUALS_BLUE: Value 0 = red, val 0.25 = yellow, val 0.5 = green, val 0.75 = cyan, val 1 = blue
+                if (drawingSettings.greyscaleToSpectrum) {
+                                var cellAverageBrightnessForGreyScaleToSpectrum = cell.color[0]; // because everything's grey right now, this is the cell's average brightness
+                                if (cellAverageBrightnessForGreyScaleToSpectrum > 255) cellAverageBrightnessForGreyScaleToSpectrum = 255;
+                                cellAverageBrightnessForGreyScaleToSpectrum /= 255; // normalize the value
+                                // FUNCTION WARNING Math.abs()
+                                if (drawingSettings.blueIsHot) {
+                                        if (cellAverageBrightnessForGreyScaleToSpectrum <= 0.25) {                            //anywhere from red to yellow
+                                                cell.color = [255, (255 * (cellAverageBrightnessForGreyScaleToSpectrum * 4)), 0];
+                                        }
+                                        if (cellAverageBrightnessForGreyScaleToSpectrum > 0.25 && cellAverageBrightnessForGreyScaleToSpectrum <= 0.5) {             //anywhere from yellow to green
+                                                cell.color = [Math.abs((255 * (cellAverageBrightnessForGreyScaleToSpectrum - 0.5)) * 4), 255, 0];     //the R cellAverageBrightnessForGreyScaleToSpectrum should be 0 for input 0.5 and 1 for input 0.25.
+                                        }
+                                        if (cellAverageBrightnessForGreyScaleToSpectrum > 0.5 && cellAverageBrightnessForGreyScaleToSpectrum <= 0.75) {
+                                                cell.color = [0, 255, (255 * ((cellAverageBrightnessForGreyScaleToSpectrum - 0.5) * 4))];    //anywhere  from green to cyan
+                                        }
+                                        if (cellAverageBrightnessForGreyScaleToSpectrum > 0.75 && cellAverageBrightnessForGreyScaleToSpectrum <= 1) {             //anywhere from yellow to green
+                                                cell.color = [0, Math.abs((255 * (cellAverageBrightnessForGreyScaleToSpectrum - 1) * 4)), 255];    //the G cellAverageBrightnessForGreyScaleToSpectrum should be 0 for input 0.5 and 1 for input 0.25.
+                                        }
+                                } else {
+                                        if (cellAverageBrightnessForGreyScaleToSpectrum <= 0.25) {                            //anywhere from blue to cyan
+                                                cell.color = [0, (255 * (cellAverageBrightnessForGreyScaleToSpectrum * 4)), 255];
+                                        }
+                                        if (cellAverageBrightnessForGreyScaleToSpectrum > 0.25 && cellAverageBrightnessForGreyScaleToSpectrum <= 0.5) {             //anywhere from cyan to green
+                                                cell.color = [0, 255, Math.abs((255 * (cellAverageBrightnessForGreyScaleToSpectrum - 0.5)) * 4)];     //the B cellAverageBrightnessForGreyScaleToSpectrum should be 0 for input 0.5 and 1 for input 0.25.
+                                        }
+                                        if (cellAverageBrightnessForGreyScaleToSpectrum > 0.5 && cellAverageBrightnessForGreyScaleToSpectrum <= 0.75) {
+                                                cell.color = [(255 * ((cellAverageBrightnessForGreyScaleToSpectrum - 0.5) * 4)), 255, 0];    //anywhere from green to yellow
+                                        }
+                                        if (cellAverageBrightnessForGreyScaleToSpectrum > 0.75 && cellAverageBrightnessForGreyScaleToSpectrum <= 1) {             //anywhere from yellow to red
+                                                cell.color = [255, Math.abs((255 * (cellAverageBrightnessForGreyScaleToSpectrum - 1) * 4)), 0];    //the G cellAverageBrightnessForGreyScaleToSpectrum should be 0 for input 0.5 and 1 for input 0.25.
+                                        }                
+                                }
+                }
+                //////////////////////////////////////////////////////////////////////////////////
+                // end FUNCTION brightnessToSpectrum(cell);
+                //////////////////////////////////////////////////////////////////////////////////
                 //////////////////////////////////////////////////////////////////////////////////
                 // start FUNCTION updateHUD(cell);
                 //////////////////////////////////////////////////////////////////////////////////
@@ -502,7 +541,6 @@ function drawAllCells(cellsArray) {
                 // start FUNCTION addNoiseToCellColor(cell);
                 //////////////////////////////////////////////////////////////////////////////////
                 if (drawingSettings.noise.addNoise) {
-                        if (averageBrightness(cell.color) > drawingSettings.noise.noNoiseUnderThisBrightnessThreshold) {
                                 if (drawingSettings.noNoiseChangeUntil <= frameCounter || !drawingSettings.noNoiseChangeUntil) {
                                         // addNoiseToColor() is FUNCTION-FREE!    |  : D
                                         // avoiding function calls to Math.random for optimization purposes
@@ -519,7 +557,6 @@ function drawAllCells(cellsArray) {
                                         randomNumberIndex += 4; // incrementing the randomNumberIndex however many times we used it (plus some) since last actually updating it
                                         cell.color = noiseColorForAddingScreenNoise;
                                 }
-                        }
                 }
                 //////////////////////////////////////////////////////////////////////////////////
                 // end FUNCTION addNoiseToCellColor(cell);
