@@ -36,6 +36,7 @@ var cells = [],
                 'healthRegenerationAmount': 1,  // regenerate this amount of health
                 'healthRegenerationInterval': 30,      // every this many frames, player health increases by player.healthRegenerationAmount
                 'temperatureChangeRateScale': 0.0005, // affect how quickly the player gains and loses temperature based on center-screen brightnesspl
+                'temperatureChangeRateFrameCounterScale': 0.000001, // this is how much the frame counter value affects the speed at which the player gains and loses heat
                 'coolingScale': 1, // scale the rate at which you heat and cool for balancing purposes (or for special effects)
                 'heatingScale': 1,
                 // WRONG so stupid that I can't just have a 'damageZoneWidth' property and base the cold and heat
@@ -55,10 +56,10 @@ var cells = [],
                 'maxBrightness': 1, // WHY DOESN'T 255 create white here?
                 'minRadius': 150,
                 'maxRadius': 800,
-                'minDiffusion': 5, // in pixels
-                'maxDiffusion': 15,
-                'minFalloffFactor': 1, // lower values make a more-diffuse light, with a less-distinct and -bright core
-                'maxFalloffFactor': 18,
+                'minCoreRadius': 5, // in pixels
+                'maxCoreRadius': 15,
+                'minDiffusion': 1, // lower values make a more-diffuse light, with a less-distinct and -bright core
+                'maxDiffusion': 18,
                 'minDeathChance': 0.01, // chance that the light will be removed when it goes dark. 1 = will certainly die when it goes dark.
                 'maxDeathChance': 0.025,
                 'parentCellsArray': cells,
@@ -83,7 +84,7 @@ function setPreferences() {
         drawingSettings.numberOfRadiiBeforeLightsHaveNoEffect = 10000;
         // if true, the brightest cell on the screen will be always be white, and the darkest one black
         drawingSettings.normalizeBrightnesses = false;
-        drawingSettings.darkStretchScale = 0.5; // affects normalizeBrightness. Values < 1 and >= 0 are valid. Higher values lower contrast and reduce blacks create greys.
+        drawingSettings.darkStretchScale = 0.7; // affects normalizeBrightness. Values < 1 and >= 0 are valid. Higher values lower contrast and reduce blacks create greys.
         // If 'true', draws the game as rainbow. False is greyscale
         drawingSettings.greyscaleToSpectrum = false;
         // draw screen. Turn off to look at errors without the screen being drawn slowing things down
@@ -109,15 +110,17 @@ function setPreferences() {
         player.healthRegenerationAmount = 1;
         // how quickly the player gains and dissipates heat
         player.temperatureChangeRateScale = 0.0005;
+        // how much time passed since the start of the game increases the rate at which heat is gained and lost
+        player.temperatureChangeRateFrameCounterScale = 0.0000002;
         // how quickly the player cools and heats, specifically
         player.heatingScale = 1;
-        player.coolingScale = 1;
+        player.coolingScale = 5;
         // how cold or hot the player has to get before taking damage (0-1);
-        player.heatDamageThreshold = 1; // max 1
-        player.coldDamageThreshold = 0; // min 0
+        player.heatDamageThreshold = 0.75; // max 1
+        player.coldDamageThreshold = 0.25; // min 0
         // how fast the player can gain and lose heat
-        player.maxHeatGainRate = 0.05;
-        player.maxHeatLossRate = 0.05;
+        player.maxHeatGainRate = 0.15;
+        player.maxHeatLossRate = 0.15;
         // number of cells per player move (one move per frame)
         interfaceSettings.cellsPerMove = 2;
         // minimum and maximum number of lights on the map at any one time
@@ -125,13 +128,13 @@ function setPreferences() {
         settings.maxLights = 25;
         // lights parameter ranges
         randomLightSettingsDefault.minBrightness = 0.125;
-        randomLightSettingsDefault.maxBrightness = 1.5;
+        randomLightSettingsDefault.maxBrightness = 2;
         randomLightSettingsDefault.minRadius = canvasWidth / 6;
         randomLightSettingsDefault.maxRadius = canvasWidth;
-        randomLightSettingsDefault.minDiffusion = 10;
-        randomLightSettingsDefault.maxDiffusion = 15;
-        randomLightSettingsDefault.minFalloffFactor = 1; // lower values make a more-diffuse light, with a less-distinct and -bright core
-        randomLightSettingsDefault.maxFalloffFactor = 18;
+        randomLightSettingsDefault.minCoreRadius = 10;
+        randomLightSettingsDefault.maxCoreRadius = 15;
+        randomLightSettingsDefault.minDiffusion = 1; // lower values make a more-diffuse light, with a less-distinct and -bright core
+        randomLightSettingsDefault.maxDiffusion = 18;
         // how fast the lights chase and flee from you in the Icarus game type. Smaller is fast.
         settings.icarusLightMovementSpeedScale = 0.25;
 }
@@ -176,13 +179,13 @@ var frameCounter = 0, // using this to avoid Date.now() calls as part of optimiz
 ];
         
 settings.oscillators.push(player.damageOscillator);
+initializeLightPersonalities(10000);
 makeRandomOscillators(10, 150, 600, settings.oscillators);
 makeRandomLights(settings.minLights, randomLightSettingsDefault, settings.entities.lights, settings.oscillators);
 assignDistanceLookupTables();
 initializeCenterCells();
 initializeAllDirections();
 initializeArrayOfRandomNumbers(arrayOfRandomNumbersLength);
-initializeLightPersonalities(10000);
 initializeDeathAphorisms();
 function initializeArrayOfRandomNumbers(length) {
         // wow. A million random number and it doesn't take that long to run.
@@ -231,8 +234,9 @@ function initializeLightPersonalities(numberOfPersonalities) {
         'dieChance': Math.random() * 0.03, // should only die when oscillator value is very small
         'wanderChance': Math.random() * 0.3,
         'flockChance': Math.random() * 0, // will chase changing targets selected from nearby lights?
-        'sprintChance': Math.random() *0.3,
+        'sprintChance': Math.random() * 0.3,
         'orbitChance': 0,
+        'directionChangeChance': 0.05,
         'expressGlobalPersonalityChance': 0.3,
         'targetCoords': null, // target could be a non-entity, non-player cell. If target is 'player', might treat player coords as 0, 0
         'targetIndex': null

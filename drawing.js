@@ -64,98 +64,109 @@ function drawAllCells(cellsArray) {
                 // possible death
                 if (randomNumberIndex + 5 > arrayOfRandomNumbers.length - 1) randomNumberIndex = 0;
                 else randomNumberIndex++;
-                if (arrayOfRandomNumbers[randomNumberIndex] <= entity.deathChance && entity.oscillator.value < 0.1) {
-                //WRONG .splice FUNCTION call here
-                    entity.entityParentArray.splice(entity.cellIndex, 1);
+                if (arrayOfRandomNumbers[randomNumberIndex] <= entity.personality.dieChance && (!entity.oscillator || entity.oscillator.value < 0.1)) {
+                     // remove from its array. .splice() is a function (which I'm trying not to use), and I don't know how to get the entity's index in its array without using yet more functions.
+                     //console.log('light would have died if that were implemented right now');
                 }
                 // self-movement
                 // FIGURING OUT HOW MUCH TO MOVE AND IN WHAT DIRECTION
                 var updateEntityRandomMovementAmount = 0;
                 randomNumberIndex++;
-                //if (frameCounter % entity.framesBetweenMovements === 0 && (entity.noMovementUntil <= frameCounter || !entity.noMovementUntil)) {
-                if (frameCounter % 1 === 0) { // kludge just 'cause this was all in a big 'if' brackets and I didn't want to change that.
-                    // change direction sometimes by one compass point
-                    if (arrayOfRandomNumbers[randomNumberIndex] < entity.directionChangeChance) {
-                        randomNumberIndex++;
-                        if (arrayOfRandomNumbers[randomNumberIndex] < 0.5) {
-                                entity.movementDirection++;
-                        } else entity.movementDirection--;
-                        // directions wrap around (only works for up to one extra time around the circle)
-                        if (entity.movementDirection < 0) entity.movementDirection += 8;
-                        if (entity.movementDirection > 7) entity.movementDirection -= 8;
-                    }
-                    // eliminating a Math.round() and Math.random() function call
-                    updateEntityRandomMovementAmount = arrayOfRandomNumbers[randomNumberIndex] * 2 - ((arrayOfRandomNumbers[randomNumberIndex] * 2) % 1);
+                // change direction sometimes by one compass point
+                if (arrayOfRandomNumbers[randomNumberIndex] < entity.personality.directionChangeChance) {
                     randomNumberIndex++;
-                    // MOVEMENT KEY: 0 is up, then clockwise
-                    // up = 0, up-right = 1... down = 4... up-left = 7
-                    // WRONG I have no freaking idea why the allDirections array isn't working in makeRandomLights()
-                    // BUT MAYBE RIGHT Having them be numbers lets me increment and decrement them pretty easily.
-                    // makeRandomLights() should be picking a random item from allDirections (that's code's replaced now with just picking numbers) and we should check for UP... DOWN_LEFT etc. here.
-                    var entityXCellsMoveNextFrame = 0,
-                        entityYCellsMoveNextFrame = 0;
-                    if (keysDown[KEY_W]) entityYCellsMoveNextFrame -= interfaceSettings.cellsPerMove;
-                    if (keysDown[KEY_S]) entityYCellsMoveNextFrame += interfaceSettings.cellsPerMove;
-                    if (keysDown[KEY_D]) entityXCellsMoveNextFrame -= interfaceSettings.cellsPerMove;
-                    if (keysDown[KEY_A]) entityXCellsMoveNextFrame += interfaceSettings.cellsPerMove;
-                    if ( // if self movement direction is DOWN
-                        entity.movementDirection === 4 ||
-                        entity.movementDirection === 5 ||
-                        entity.movementDirection === 3
-                    ) { // DOWN || DOWN_LEFT || DOWN_RIGHT // move down
-                        entityYCellsMoveNextFrame -= updateEntityRandomMovementAmount;
-                    }
-                    if ( // if self movement direction is UP
-                        entity.movementDirection === 0 ||
-                        entity.movementDirection === 7 ||
-                        entity.movementDirection === 1
-                    ) { // UP || UP_LEFT || UP_RIGHT // move up
-                        entityYCellsMoveNextFrame += updateEntityRandomMovementAmount;
-                    }
-                    if ( // if self movement direction is RIGHT
-                        entity.movementDirection === 2 ||
-                        entity.movementDirection === 1 ||
-                        entity.movementDirection === 3
-                    ) { // RIGHT || UP_RIGHT || DOWN_RIGHT // move right
-                        entityXCellsMoveNextFrame += updateEntityRandomMovementAmount;
-                    }
-                    if ( // if self movement direction is LEFT
-                        entity.movementDirection === 6 ||
-                        entity.movementDirection === 7 ||
-                        entity.movementDirection === 5
-                    ) { // LEFT || UP_LEFT || DOWN_LEFT // move left
-                        entityXCellsMoveNextFrame -= updateEntityRandomMovementAmount;
-                    }
-                    // rounding down just before adding to light coordinates
-                    // WRONG MAYBE could make this round, not round down, with some more code
-                    if (entityYCellsMoveNextFrame > 0) entityYCellsMoveNextFrame = entityYCellsMoveNextFrame - entityYCellsMoveNextFrame % 1;
-                    else entityYCellsMoveNextFrame = -(-entityYCellsMoveNextFrame - (-entityYCellsMoveNextFrame % 1));
-                    if (entityXCellsMoveNextFrame > 0) entityXCellsMoveNextFrame = entityXCellsMoveNextFrame - entityXCellsMoveNextFrame % 1;
-                    else entityXCellsMoveNextFrame = -(-entityXCellsMoveNextFrame - (-entityXCellsMoveNextFrame % 1));
-                    // TIME TO ACTUALLY CHANGE COORDINATES
-                    // MOVE DOWN
-                    if (entityYCellsMoveNextFrame < 0) {
-                        if (entity.coordinates[1] > -(0.5 * cellsPerColumn + entityYCellsMoveNextFrame)) entity.coordinates[1] += entityYCellsMoveNextFrame; // if it WON'T CROSS the BOTTOM EDGE next frame
-                        else entity.coordinates[1] += cellsPerColumn + entityYCellsMoveNextFrame - (cellsPerColumn * 0.5 + entity.coordinates[1]); 
-                    }
-                    // MOVE UP
-                    if (entityYCellsMoveNextFrame > 0) {
-                        if (entity.coordinates[1] < 0.5 * cellsPerColumn - entityYCellsMoveNextFrame) entity.coordinates[1] += entityYCellsMoveNextFrame; // if it WON'T CROSS the TOP EDGE next frame
-                        else entity.coordinates[1] -= cellsPerColumn - entityYCellsMoveNextFrame - (cellsPerColumn * 0.5 - entity.coordinates[1]);
-                    }
-                    // MOVE RIGHT
-                    if (entityXCellsMoveNextFrame > 0) {
-                        if (entity.coordinates[0] < 0.5 * cellsPerRow - entityXCellsMoveNextFrame) entity.coordinates[0] += entityXCellsMoveNextFrame; // if it WON'T CROSS the RIGHT EDGE next frame
-                        else entity.coordinates[0] -= cellsPerRow - entityXCellsMoveNextFrame - (cellsPerRow * 0.5 - entity.coordinates[0]);        
-                    }
-                    // MOVE LEFT
-                    if (entityXCellsMoveNextFrame < 0) {
-                        if (entity.coordinates[0] > -(0.5 * cellsPerRow + entityXCellsMoveNextFrame)) entity.coordinates[0] += entityXCellsMoveNextFrame; // if it WON'T CROSS the LEFT EDGE next frame
-                        else entity.coordinates[0] += cellsPerRow + entityXCellsMoveNextFrame - (cellsPerRow * 0.5 + entity.coordinates[0]);
-                    }
-                    // lights move faster when the player temperature is at extremes
-                    //entity.noMovementUntil = frameCounter + player.temperatureCircular * entity.framesBetweenMovements;
+                    if (arrayOfRandomNumbers[randomNumberIndex] < 0.5) {
+                            entity.movementDirection++;
+                    } else entity.movementDirection--;
+                    // directions wrap around (only works for up to one extra time around the circle)
+                    if (entity.movementDirection < 0) entity.movementDirection += 8;
+                    if (entity.movementDirection > 7) entity.movementDirection -= 8;
                 }
+                updateEntityRandomMovementAmount = arrayOfRandomNumbers[randomNumberIndex] * 2 - ((arrayOfRandomNumbers[randomNumberIndex] * 2) % 1);
+                randomNumberIndex++;
+                // MOVEMENT KEY: 0 is up, then clockwise
+                // up = 0, up-right = 1... down = 4... up-left = 7
+                // WRONG I have no freaking idea why the allDirections array isn't working in makeRandomLights()
+                // BUT MAYBE RIGHT Having them be numbers lets me increment and decrement them pretty easily.
+                // makeRandomLights() should be picking a random item from allDirections (that's code's replaced now with just picking numbers) and we should check for UP... DOWN_LEFT etc. here.
+                var entityXCellsMoveNextFrame = 0,
+                    entityYCellsMoveNextFrame = 0;
+                // camera movement
+                if (keysDown[KEY_W]) entityYCellsMoveNextFrame -= interfaceSettings.cellsPerMove;
+                if (keysDown[KEY_S]) entityYCellsMoveNextFrame += interfaceSettings.cellsPerMove;
+                if (keysDown[KEY_D]) entityXCellsMoveNextFrame -= interfaceSettings.cellsPerMove;
+                if (keysDown[KEY_A]) entityXCellsMoveNextFrame += interfaceSettings.cellsPerMove;
+                // self-movement
+                if ( // if self movement direction is DOWN
+                    entity.movementDirection === 4 ||
+                    entity.movementDirection === 5 ||
+                    entity.movementDirection === 3
+                ) { // DOWN || DOWN_LEFT || DOWN_RIGHT // move down
+                    entityYCellsMoveNextFrame -= updateEntityRandomMovementAmount;
+                }
+                if ( // if self movement direction is UP
+                    entity.movementDirection === 0 ||
+                    entity.movementDirection === 7 ||
+                    entity.movementDirection === 1
+                ) { // UP || UP_LEFT || UP_RIGHT // move up
+                    entityYCellsMoveNextFrame += updateEntityRandomMovementAmount;
+                }
+                if ( // if self movement direction is RIGHT
+                    entity.movementDirection === 2 ||
+                    entity.movementDirection === 1 ||
+                    entity.movementDirection === 3
+                ) { // RIGHT || UP_RIGHT || DOWN_RIGHT // move right
+                    entityXCellsMoveNextFrame += updateEntityRandomMovementAmount;
+                }
+                if ( // if self movement direction is LEFT
+                    entity.movementDirection === 6 ||
+                    entity.movementDirection === 7 ||
+                    entity.movementDirection === 5
+                ) { // LEFT || UP_LEFT || DOWN_LEFT // move left
+                    entityXCellsMoveNextFrame -= updateEntityRandomMovementAmount;
+                }
+                // movement toward hot players and away from cool players.
+                if (player.temperature >= 0.5) {// && frameCounter % (player.temperature * 3 - player.temperature *3 % 1) === 0) {
+                                if (entity.coordinates[0] < 0) entityXCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
+                                else entityXCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
+                                if (entity.coordinates[1] < 0) entityYCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
+                                else entityYCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
+                }
+                if (player.temperature < 0.5) {// && frameCounter % (player.temperature * 3 - player.temperature * 3 % 1) === 0) {
+                                if (entity.coordinates[0] < 0) entityXCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
+                                else entityXCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
+                                if (entity.coordinates[1] < 0) entityYCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
+                                else entityYCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
+                }
+                // rounding down just before adding to light coordinates
+                // WRONG MAYBE could make this round, not round down, with some more code
+                if (entityYCellsMoveNextFrame > 0) entityYCellsMoveNextFrame = entityYCellsMoveNextFrame - entityYCellsMoveNextFrame % 1;
+                else entityYCellsMoveNextFrame = -(-entityYCellsMoveNextFrame - (-entityYCellsMoveNextFrame % 1));
+                if (entityXCellsMoveNextFrame > 0) entityXCellsMoveNextFrame = entityXCellsMoveNextFrame - entityXCellsMoveNextFrame % 1;
+                else entityXCellsMoveNextFrame = -(-entityXCellsMoveNextFrame - (-entityXCellsMoveNextFrame % 1));
+                // TIME TO ACTUALLY CHANGE COORDINATES
+                // MOVE DOWN
+                if (entityYCellsMoveNextFrame < 0) {
+                    if (entity.coordinates[1] > -(0.5 * cellsPerColumn + entityYCellsMoveNextFrame)) entity.coordinates[1] += entityYCellsMoveNextFrame; // if it WON'T CROSS the BOTTOM EDGE next frame
+                    else entity.coordinates[1] += cellsPerColumn + entityYCellsMoveNextFrame - (cellsPerColumn * 0.5 + entity.coordinates[1]); 
+                }
+                // MOVE UP
+                if (entityYCellsMoveNextFrame > 0) {
+                    if (entity.coordinates[1] < 0.5 * cellsPerColumn - entityYCellsMoveNextFrame) entity.coordinates[1] += entityYCellsMoveNextFrame; // if it WON'T CROSS the TOP EDGE next frame
+                    else entity.coordinates[1] -= cellsPerColumn - entityYCellsMoveNextFrame - (cellsPerColumn * 0.5 - entity.coordinates[1]);
+                }
+                // MOVE RIGHT
+                if (entityXCellsMoveNextFrame > 0) {
+                    if (entity.coordinates[0] < 0.5 * cellsPerRow - entityXCellsMoveNextFrame) entity.coordinates[0] += entityXCellsMoveNextFrame; // if it WON'T CROSS the RIGHT EDGE next frame
+                    else entity.coordinates[0] -= cellsPerRow - entityXCellsMoveNextFrame - (cellsPerRow * 0.5 - entity.coordinates[0]);        
+                }
+                // MOVE LEFT
+                if (entityXCellsMoveNextFrame < 0) {
+                    if (entity.coordinates[0] > -(0.5 * cellsPerRow + entityXCellsMoveNextFrame)) entity.coordinates[0] += entityXCellsMoveNextFrame; // if it WON'T CROSS the LEFT EDGE next frame
+                    else entity.coordinates[0] += cellsPerRow + entityXCellsMoveNextFrame - (cellsPerRow * 0.5 + entity.coordinates[0]);
+                }
+                // lights move faster when the player temperature is at extremes
+                //entity.noMovementUntil = frameCounter + player.temperatureCircular * entity.framesBetweenMovements;
                 var entityUpdateNewIndex;
                 // TIME TO ACTUALLY MOVE TO A DIFFERENT CELL
                 // update cell association based on any coordinate changes
@@ -221,10 +232,10 @@ function drawAllCells(cellsArray) {
                 // limit temperature to within 0-1
                 if (player.temperature > 1) player.temperature = 1;
                 if (player.temperature < 0) player.temperature = 0;
-                // eliminating Math.abs function call
-                if ((player.temperature - 0.5) * 2 < 0) player.temperatureCircular = -(player.temperature - 0.5) * 2;
-                else player.temperatureCircular = (player.temperature - 0.5) * 2;
-                //player.temperatureCircular = Math.abs((player.temperature - 0.5) * 2); // i.e. 0 and 1 = 1, 0.5 = 0;
+                // "circular temperature" is: 0 and 1 = 1, 0.5 = 0, i.e. extremes are 1, middle is 0
+                if ((player.temperature - 0.5) * 2 < 0) player.temperatureCircular = -(player.temperature - 0.5) * 2; // i.e. 0 and 1 = 1, 0.5 = 0;
+                else player.temperatureCircular = (player.temperature - 0.5) * 2; // i.e. 0 and 1 = 1, 0.5 = 0;
+                player.temperatureChangeRateScale += frameCounter * player.temperatureChangeRateFrameCounterScale;
         }
         //////////////////////////////////////////////////////////////////////////////////
         // end FUNCTION updatePlayerTemperature();
@@ -269,13 +280,13 @@ function drawAllCells(cellsArray) {
                                 if (xDistanceFromLight < 0) xDistanceFromLight = -xDistanceFromLight;
                                 if (yDistanceFromLight < 0) yDistanceFromLight = -yDistanceFromLight;
                                 if (yDistanceFromLight > xDistanceFromLight) xOrYDistanceIsGreater = yDistanceFromLight;
-                                if (distanceFromLight > light.diffusion) diffusionOrDistanceIsGreater = distanceFromLight;
-                                else diffusionOrDistanceIsGreater = light.diffusion;
+                                if (distanceFromLight > light.coreRadius) diffusionOrDistanceIsGreater = distanceFromLight;
+                                else diffusionOrDistanceIsGreater = light.coreRadius;
                                 if (diffusionOrDistanceIsGreater < 0) diffusionOrDistanceIsGreater = 1;
                                 if (light.oscillator) lightOscillatorValue = light.oscillator.value;
                                 // Math.max is a function
-                                //brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * lightOscillatorValue * light.brightness;
-                                brightness = light.radius / (diffusionOrDistanceIsGreater + light.radius / light.falloffFactor) * lightOscillatorValue * 255 * light.brightness;
+                                //brightness = light.radius / Math.max(light.coreRadius, distanceFromLight) * lightOscillatorValue * light.brightness;
+                                brightness = light.radius / (diffusionOrDistanceIsGreater + light.radius / light.diffusion) * lightOscillatorValue * 255 * light.brightness;
                                 // FUNCTION
                                 //cell.color = addColors(cell.color, [brightness, brightness, brightness]);
                                 for (var j = 0; j < 3; j++) {
@@ -303,7 +314,7 @@ function drawAllCells(cellsArray) {
                             var xDistanceFromShadow = cell.coordinates[0] - shadow.coordinates [0];
                             if (xDistanceFromShadow < 0) xDistanceFromShadow = -xDistanceFromShadow;
                             // Math.max is a function
-                            //brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * lightOscillatorValue * light.brightness;
+                            //brightness = light.radius / Math.max(light.coreRadius, distanceFromLight) * lightOscillatorValue * light.brightness;
                             darkness = xDistanceFromShadow * 10;
                             if (darkness < 0) darkness = 0;
                             for (var aa = 0; aa < 3; aa++) {
@@ -315,7 +326,7 @@ function drawAllCells(cellsArray) {
                             var yDistanceFromShadow = cell.coordinates[1] - shadow.coordinates [1];
                             if (yDistanceFromShadow < 0) yDistanceFromShadow = -yDistanceFromShadow;
                             // Math.max is a function
-                            //brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * lightOscillatorValue * light.brightness;
+                            //brightness = light.radius / Math.max(light.coreRadius, distanceFromLight) * lightOscillatorValue * light.brightness;
                             darkness = yDistanceFromShadow * 10;
                             if (darkness < 0) darkness = 0;
                             for (var ab = 0; ab < 3; ab++) {
@@ -561,7 +572,7 @@ function drawAllCells(cellsArray) {
                     // temperature damage threshold indicators
                     // heat damage threshold indicator
                     if (
-                        cell.coordinates[0] >= (canvas.width * player.heatDamageThreshold / 2) / cellSize && cell.coordinates[0] <= (canvas.width * player.heatDamageThreshold / 2) / cellSize + canvas.width * 0.024 / cellSize &&
+                        cell.coordinates[0] >= (canvas.width * (player.heatDamageThreshold - 0.5)) / cellSize && cell.coordinates[0] <= (canvas.width * (player.heatDamageThreshold - 0.5)) / cellSize + canvas.width * 0.024 / cellSize &&
                         cell.coordinates[1] <= -((cellsPerColumn / 2) - (0.036 * canvasHeight / cellSize))
                     ) {
                         if (!drawingSettings.greyscaleToSpectrum) {
@@ -737,8 +748,8 @@ function makeRandomLights(numberOfLights, randomLightParametersObject, destinati
                         randomXY = [],
                         randomDirectionChangeChance = randomNumberBetweenNumbers(0.05, 0.3, false),
                         randomOscillator = getRandomNonExcludedOscillator(),
-                        randomDiffusion = randomNumberBetweenNumbers(lightSettings.minDiffusion, lightSettings.maxDiffusion, true),
-                        randomFalloffFactor = randomNumberBetweenNumbers(lightSettings.minFalloffFactor, lightSettings.maxFalloffFactor, false),
+                        randomCoreRadius = randomNumberBetweenNumbers(lightSettings.minCoreRadius, lightSettings.maxCoreRadius, true),
+                        randomDiffusion = randomNumberBetweenNumbers(lightSettings.minDiffusion, lightSettings.maxDiffusion, false),
                         randomDeathChance = randomNumberBetweenNumbers(lightSettings.minDeathChance, lightSettings.maxDeathChance, false),
                         allCellsList = lightSettings.parentCellsArray,
                         randomFramesBetweenMovements = randomNumberBetweenNumbers(lightSettings.minFramesBetweenMovements, lightSettings.maxFramesBetweenMovements, true),
@@ -748,17 +759,17 @@ function makeRandomLights(numberOfLights, randomLightParametersObject, destinati
                 else randomXY[0] = -randomNumberBetweenNumbers(1, 0.5 * cellsPerRow, true);
                 if (Math.random() > 0.5) randomXY[1] = randomNumberBetweenNumbers(1, 0.5 * cellsPerColumn, true);
                 else randomXY[1] = -randomNumberBetweenNumbers(1, 0.5 * cellsPerColumn, true);
-                destinationArray.push(makeLight(randomBrightness, randomRadius, randomXY, randomOscillator, randomDiffusion, randomFalloffFactor, randomFramesBetweenMovements, randomDirectionNumber, randomDirectionChangeChance, randomDeathChance, allCellsList, destinationArray));
+                destinationArray.push(makeLight(randomBrightness, randomRadius, randomXY, randomOscillator, randomCoreRadius, randomDiffusion, randomFramesBetweenMovements, randomDirectionNumber, randomDirectionChangeChance, randomDeathChance, allCellsList, destinationArray));
         }
 }
 
 //WRONG the "make" functions should be in initialization.js (I don't want to move them till everything else is stable)
-function makeLight(brightness, radius, coordinates, oscillator, diffusion, falloffFactor, framesBetweenMovements, movementDirection, directionChangeChance, deathChance, allCellsList, lightsArray) {
+function makeLight(brightness, radius, coordinates, oscillator, coreRadius, diffusion, framesBetweenMovements, movementDirection, directionChangeChance, deathChance, allCellsList, lightsArray) {
         var light = {
                 'brightness': brightness,
                 'radius': radius,
+                'coreRadius': coreRadius,
                 'diffusion': diffusion,
-                'falloffFactor': falloffFactor,
                 'oscillator': oscillator,
                 'deathChance': deathChance,
                 'parentCellsArray': allCellsList, // large cellsList of which light's cell is a part
@@ -770,7 +781,10 @@ function makeLight(brightness, radius, coordinates, oscillator, diffusion, fallo
                 'cell': allCellsList[coordinatesToIndex(coordinates)],
                 'cellIndex': coordinatesToIndex(coordinates),
                 'entityType': 'light',
-                'personality': settings.lightPersonalities[arrayOfRandomNumbers[randomNumberIndex]]
+                'personality': settings.lightPersonalities[5]/*
+                    (arrayOfRandomNumbers[randomNumberIndex] * (settings.lightPersonalities.length - 1)) -
+                    (arrayOfRandomNumbers[randomNumberIndex] * (settings.lightPersonalities.length - 1)) % 1
+                ]*/
         };
         if (randomNumberIndex < arrayOfRandomNumbers.length) randomNumberIndex++;
         else randomNumberIndex = 0;
