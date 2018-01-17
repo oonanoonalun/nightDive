@@ -46,7 +46,7 @@ function drawAllCells(cellsArray) {
             console.log('randomNumberIndex is larger than arrayOfRandomNumbers.length, but it is being reset to 0.');
         }
         ///////////////////////////////////////////////////////////////////////////////////////////////////
-        // start FUNCTION updateLights(); and FUNCTION moveCameraWithButtons(); !!SHARING A 'FOR' LOOP!!
+        // start FUNCTION updateLights(); (includes camera movement)
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         // WARNING FUNCTION CALLS IN THIS FUNCTION-AREA
         for (var f = 0; f < settings.entities.lights.length; f++) {
@@ -59,63 +59,100 @@ function drawAllCells(cellsArray) {
                     settings.entities.lights[f].lightParentArray.splice(settings.entities.lights[f].cellIndex, 1);
                 }
                 // self-movement
+                // FIGURING OUT HOW MUCH TO MOVE AND IN WHAT DIRECTION
                 var updateLightRandomMovementAmount = 0;
                 randomNumberIndex++;
-                if (frameCounter % settings.entities.lights[f].framesBetweenMovements === 0 && (settings.entities.lights[f].noMovementUntil <= frameCounter || !settings.entities.lights[f].noMovementUntil)) {
+                //if (frameCounter % settings.entities.lights[f].framesBetweenMovements === 0 && (settings.entities.lights[f].noMovementUntil <= frameCounter || !settings.entities.lights[f].noMovementUntil)) {
+                if (frameCounter % 1 === 0) { // kludge just 'cause this was all in a big 'if' brackets and I didn't want to change that.
                     // change direction sometimes by one compass point
                     if (arrayOfRandomNumbers[randomNumberIndex] < settings.entities.lights[f].directionChangeChance) {
                         randomNumberIndex++;
                         if (arrayOfRandomNumbers[randomNumberIndex] < 0.5) {
                                 settings.entities.lights[f].movementDirection++;
                         } else settings.entities.lights[f].movementDirection--;
-                        if (settings.entities.lights[f].movementDirection < 0) settings.entities.lights[f].movementDirection = 7;
-                        if (settings.entities.lights[f].movementDirection > 7) settings.entities.lights[f].movementDirection = 0;
+                        // directions wrap around (only works for up to one extra time around the circle)
+                        if (settings.entities.lights[f].movementDirection < 0) settings.entities.lights[f].movementDirection += 8;
+                        if (settings.entities.lights[f].movementDirection > 7) settings.entities.lights[f].movementDirection -= 8;
                     }
                     // eliminating a Math.round() and Math.random() function call
-                    updateLightRandomMovementAmount = arrayOfRandomNumbers[randomNumberIndex] * 3 - ((arrayOfRandomNumbers[randomNumberIndex] * 3) % 1);
+                    updateLightRandomMovementAmount = arrayOfRandomNumbers[randomNumberIndex] * 2 - ((arrayOfRandomNumbers[randomNumberIndex] * 2) % 1);
                     randomNumberIndex++;
                     // MOVEMENT KEY: 0 is up, then clockwise
                     // WRONG I have no freaking idea why the allDirections array isn't working in makeRandomLights()
+                    // BUT MAYBE RIGHT Having them be numbers lets me increment and decrement them pretty easily.
                     // makeRandomLights() should be picking a random item from allDirections (that's code's replaced now with just picking numbers) and we should check for UP... DOWN_LEFT etc. here.
-                    if (
+                    var lightXCellsMoveNextFrame = 0,
+                        lightYCellsMoveNextFrame = 0;
+                    if (keysDown[KEY_W]) lightYCellsMoveNextFrame -= interfaceSettings.cellsPerMove;
+                    if (keysDown[KEY_S]) lightYCellsMoveNextFrame += interfaceSettings.cellsPerMove;
+                    if (keysDown[KEY_D]) lightXCellsMoveNextFrame -= interfaceSettings.cellsPerMove;
+                    if (keysDown[KEY_A]) lightXCellsMoveNextFrame += interfaceSettings.cellsPerMove;
+                    if ( // if self movement direction is DOWN
                         settings.entities.lights[f].movementDirection === 4 ||
                         settings.entities.lights[f].movementDirection === 5 ||
                         settings.entities.lights[f].movementDirection === 3
                     ) { // DOWN || DOWN_LEFT || DOWN_RIGHT // move down
-                        if (settings.entities.lights[f].coordinates[1] > -(0.5 * cellsPerColumn - interfaceSettings.cellsPerMove)) settings.entities.lights[f].coordinates[1] -= updateLightRandomMovementAmount; // if it WON'T CROSS the BOTTOM EDGE next frame
-                        else settings.entities.lights[f].coordinates[1] += cellsPerColumn - updateLightRandomMovementAmount - (cellsPerColumn * 0.5 + settings.entities.lights[f].coordinates[1]); 
+                        lightYCellsMoveNextFrame -= updateLightRandomMovementAmount;
                     }
-                    if (settings.entities.lights[f].movementDirection === 0 ||
+                    if ( // if self movement direction is UP
+                        settings.entities.lights[f].movementDirection === 0 ||
                         settings.entities.lights[f].movementDirection === 7 ||
                         settings.entities.lights[f].movementDirection === 1
                     ) { // UP || UP_LEFT || UP_RIGHT // move up
-                        if (settings.entities.lights[f].coordinates[1] < 0.5 * cellsPerColumn - interfaceSettings.cellsPerMove) settings.entities.lights[f].coordinates[1] += updateLightRandomMovementAmount; // if it WON'T CROSS the TOP EDGE next frame
-                        else settings.entities.lights[f].coordinates[1] -= cellsPerColumn - updateLightRandomMovementAmount - (cellsPerColumn * 0.5 - settings.entities.lights[f].coordinates[1]);
+                        lightYCellsMoveNextFrame += updateLightRandomMovementAmount;
                     }
-                    if (settings.entities.lights[f].movementDirection === 2 ||
+                    if ( // if self movement direction is RIGHT
+                        settings.entities.lights[f].movementDirection === 2 ||
                         settings.entities.lights[f].movementDirection === 1 ||
                         settings.entities.lights[f].movementDirection === 3
                     ) { // RIGHT || UP_RIGHT || DOWN_RIGHT // move right
-                        if (settings.entities.lights[f].coordinates[0] < 0.5 * cellsPerRow - updateLightRandomMovementAmount) settings.entities.lights[f].coordinates[0] += updateLightRandomMovementAmount; // if it WON'T CROSS the RIGHT EDGE next frame
-                        else settings.entities.lights[f].coordinates[0] -= cellsPerRow - updateLightRandomMovementAmount - (cellsPerRow * 0.5 - settings.entities.lights[f].coordinates[0]);        
+                        lightXCellsMoveNextFrame += updateLightRandomMovementAmount;
                     }
-                    if (settings.entities.lights[f].movementDirection === 6 ||
+                    if ( // if self movement direction is LEFT
+                        settings.entities.lights[f].movementDirection === 6 ||
                         settings.entities.lights[f].movementDirection === 7 ||
                         settings.entities.lights[f].movementDirection === 5
                     ) { // LEFT || UP_LEFT || DOWN_LEFT // move left
-                        if (settings.entities.lights[f].coordinates[0] > -(0.5 * cellsPerRow - updateLightRandomMovementAmount)) settings.entities.lights[f].coordinates[0] -= updateLightRandomMovementAmount; // if it WON'T CROSS the LEFT EDGE next frame
-                        else settings.entities.lights[f].coordinates[0] += cellsPerRow - updateLightRandomMovementAmount - (cellsPerRow * 0.5 + settings.entities.lights[f].coordinates[0]);
+                        lightXCellsMoveNextFrame -= updateLightRandomMovementAmount;
+                    }
+                    // rounding just before adding to light coordinates
+                    if (lightYCellsMoveNextFrame > 0) lightYCellsMoveNextFrame = lightYCellsMoveNextFrame - lightYCellsMoveNextFrame % 1;
+                    else lightYCellsMoveNextFrame = -(-lightYCellsMoveNextFrame - (-lightYCellsMoveNextFrame % 1));
+                    if (lightXCellsMoveNextFrame > 0) lightXCellsMoveNextFrame = lightXCellsMoveNextFrame - lightXCellsMoveNextFrame % 1;
+                    else lightXCellsMoveNextFrame = -(-lightXCellsMoveNextFrame - (-lightXCellsMoveNextFrame % 1));
+                    // only move some frames, or maybe need to change large cellsToMove numbers in to shorter delays between moves? Have max speeds?
+                    // PSEUDO CODE: if (Math.random() < light.chanceToMove) {
+                    // TIME TO ACTUALLY CHANGE COORDINATES
+                    // MOVE DOWN
+                    if (lightYCellsMoveNextFrame < 0) {
+                        if (settings.entities.lights[f].coordinates[1] > -(0.5 * cellsPerColumn + lightYCellsMoveNextFrame)) settings.entities.lights[f].coordinates[1] += lightYCellsMoveNextFrame; // if it WON'T CROSS the BOTTOM EDGE next frame
+                        else settings.entities.lights[f].coordinates[1] += cellsPerColumn + lightYCellsMoveNextFrame - (cellsPerColumn * 0.5 + settings.entities.lights[f].coordinates[1]); 
+                    }
+                    // MOVE UP
+                    if (lightYCellsMoveNextFrame > 0) {
+                        if (settings.entities.lights[f].coordinates[1] < 0.5 * cellsPerColumn - lightYCellsMoveNextFrame) settings.entities.lights[f].coordinates[1] += lightYCellsMoveNextFrame; // if it WON'T CROSS the TOP EDGE next frame
+                        else settings.entities.lights[f].coordinates[1] -= cellsPerColumn - lightYCellsMoveNextFrame - (cellsPerColumn * 0.5 - settings.entities.lights[f].coordinates[1]);
+                    }
+                    // MOVE RIGHT
+                    if (lightXCellsMoveNextFrame > 0) {
+                        if (settings.entities.lights[f].coordinates[0] < 0.5 * cellsPerRow - lightXCellsMoveNextFrame) settings.entities.lights[f].coordinates[0] += lightXCellsMoveNextFrame; // if it WON'T CROSS the RIGHT EDGE next frame
+                        else settings.entities.lights[f].coordinates[0] -= cellsPerRow - lightXCellsMoveNextFrame - (cellsPerRow * 0.5 - settings.entities.lights[f].coordinates[0]);        
+                    }
+                    // MOVE LEFT
+                    if (lightXCellsMoveNextFrame < 0) {
+                        if (settings.entities.lights[f].coordinates[0] > -(0.5 * cellsPerRow + lightXCellsMoveNextFrame)) settings.entities.lights[f].coordinates[0] += lightXCellsMoveNextFrame; // if it WON'T CROSS the LEFT EDGE next frame
+                        else settings.entities.lights[f].coordinates[0] += cellsPerRow + lightXCellsMoveNextFrame - (cellsPerRow * 0.5 + settings.entities.lights[f].coordinates[0]);
                     }
                     // lights move faster when the player temperature is at extremes
-                    settings.entities.lights[f].noMovementUntil = frameCounter + player.temperatureCircular * settings.entities.lights[f].framesBetweenMovements;
+                    //settings.entities.lights[f].noMovementUntil = frameCounter + player.temperatureCircular * settings.entities.lights[f].framesBetweenMovements;
                 }
                 // lights move away from center when player is cooler, toward it when warmer
                 // WARNING/WRONG. FUNCTION CALL HERE
-                if (settings.gameType === GAME_TYPE_ICARUS) temperatureMovesLightsIcarus(settings.entities.lights[f]);
+                //if (settings.gameType === GAME_TYPE_ICARUS) temperatureMovesLightsIcarus(settings.entities.lights[f]);
                 // update location & index
                 // eliminating coordinatesToIndex function call
                 var lightUpdateNewIndex;
-                // updating cell location
+                // TIME TO ACTUALLY MOVE TO A DIFFERENT CELL
                 // update cell association based on any coordinate changes
                 if (settings.entities.lights[f].coordinates[0] > 0) lightUpdateNewIndex = settings.entities.lights[f].coordinates[0] + cellsPerRow * 0.5 - 1;
                 else lightUpdateNewIndex = settings.entities.lights[f].coordinates[0] + cellsPerRow * 0.5;
@@ -124,7 +161,7 @@ function drawAllCells(cellsArray) {
                 settings.entities.lights[f].cell = settings.entities.lights[f].parentCellsArray[lightUpdateNewIndex]; // this light's cell become whatever cell has this light's coordinates
                 settings.entities.lights[f].cellIndex = lightUpdateNewIndex;
                 // FUNCTION moveCamerWithButtons(); WARNING: Sharing a 'for' loop with updateLights, so don't mess with it's position.
-                if (keysDown[KEY_W]) { // move up
+                /*if (keysDown[KEY_W]) { // move up
                     if (settings.entities.lights[f].coordinates[1] > -(0.5 * cellsPerColumn - interfaceSettings.cellsPerMove)) settings.entities.lights[f].coordinates[1] -= interfaceSettings.cellsPerMove; // if it WON'T CROSS the BOTTOM EDGE next frame
                     else settings.entities.lights[f].coordinates[1] += cellsPerColumn - interfaceSettings.cellsPerMove - (cellsPerColumn * 0.5 + settings.entities.lights[f].coordinates[1]); 
                 }
@@ -139,7 +176,7 @@ function drawAllCells(cellsArray) {
                 if (keysDown[KEY_D]) { // move right
                     if (settings.entities.lights[f].coordinates[0] > -(0.5 * cellsPerRow - interfaceSettings.cellsPerMove)) settings.entities.lights[f].coordinates[0] -= interfaceSettings.cellsPerMove; // if it WON'T CROSS the LEFT EDGE next frame
                     else settings.entities.lights[f].coordinates[0] += cellsPerRow - interfaceSettings.cellsPerMove - (cellsPerRow * 0.5 + settings.entities.lights[f].coordinates[0]);
-                }
+                }*/
         }
         //////////////////////////////////////////////////////////////////////////////////
         // end FUNCTION updateLights() and FUNCTION moveCameraWithButtons();
@@ -278,10 +315,22 @@ function drawAllCells(cellsArray) {
                                 if (cell.color[aa] < 0) cell.color[aa] = 0;
                             }
                         }
+                        if (cell.coordinates[1] < shadow.coordinates[1]) {
+                            var yDistanceFromShadow = cell.coordinates[1] - shadow.coordinates [1];
+                            if (yDistanceFromShadow < 0) yDistanceFromShadow = -yDistanceFromShadow;
+                            // Math.max is a function
+                            //brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * lightOscillatorValue * light.brightness;
+                            darkness = yDistanceFromShadow * 10;
+                            if (darkness < 0) darkness = 0;
+                            for (var ab = 0; ab < 3; ab++) {
+                                cell.color[ab] -= darkness;
+                                if (cell.color[ab] < 0) cell.color[ab] = 0;
+                            }
+                        }
                     }
                 }
-                for (var ab = 0; ab < 3; ab++) {
-                        cell.color[ab] /= settings.entities.shadows.length + 1;
+                for (var ac = 0; ac < 3; ac++) {
+                        cell.color[ac] /= settings.entities.shadows.length + 1;
                 }*/
                 //////////////////////////////////////////////////////////////////////////////////
                 // end FUNCTION showShadows(cell);
@@ -350,6 +399,9 @@ function drawAllCells(cellsArray) {
                 //////////////////////////////////////////////////////////////////////////////////
                 // end FUNCTION findAverageBrightnessOfCenterCells(cell);
                 //////////////////////////////////////////////////////////////////////////////////
+                //greyscale becomes rainbow if drawingSettings.greyScaleToSpectrum is 'true'
+                // WRONG !!!!FUNCTION CALL WITH FUNCTION CALLS INSIDE OF IT!!!!!
+                drawCellOnSpectrum(cell);
                 //////////////////////////////////////////////////////////////////////////////////
                 // start FUNCTION updateHUD(cell);
                 //////////////////////////////////////////////////////////////////////////////////
@@ -378,6 +430,9 @@ function drawAllCells(cellsArray) {
                                }
                         } else {
                             // if in spectrum mode
+                            if (player.damageWarningUntil > frameCounter) {
+                                    for (var ai = 0; ai < 3; ai++) cell.color[ai] = 2047 * player.damageOscillator.value;
+                                } else for (var ah = 0; ah < 3; ah++) cell.color[ah] = 255 * (player.health / player.maxHealth);
                         }
                     }
                     // temperature bar
@@ -402,6 +457,7 @@ function drawAllCells(cellsArray) {
                                 }
                             } else {
                                 // if in spectrum mode
+                                for (var ae = 0; ae < 3; ae++) cell.color[ae] = 255 * player.temperature;
                             }
                         }
                     }
@@ -422,11 +478,12 @@ function drawAllCells(cellsArray) {
                                 //cell.color = [0, 0, 255];
                                 for (var a = 0; a < 3; a++) {
                                     if (a === 0) cell.color[a] = 0;
-                                    if (a === 1) cell.color[a] = 256 * (player.temperature);
-                                    if (a === 2) cell.color[a] = 1024 * (1 - player.temperature);
+                                    if (a === 1) cell.color[a] = 255 * player.temperature;
+                                    if (a === 2) cell.color[a] = 1023 * (1 - player.temperature);
                                 }
                             } else {
                                 // if in spectrum mode
+                                for (var ad = 0; ad < 3; ad++) cell.color[ad] = 255 * player.temperature;
                             }
                         }
                     }
@@ -435,12 +492,20 @@ function drawAllCells(cellsArray) {
                     if (
                         cell.coordinates[0] >= (canvas.width * player.heatDamageThreshold / 2) / cellSize && cell.coordinates[0] <= (canvas.width * player.heatDamageThreshold / 2) / cellSize + canvas.width * 0.024 / cellSize &&
                         cell.coordinates[1] <= -((cellsPerColumn / 2) - (0.036 * canvasHeight / cellSize))
-                    ) cell.color = [255, 64, 24];
+                    ) {
+                        if (!drawingSettings.greyscaleToSpectrum) {
+                            cell.color = [255, 64, 24];
+                        } else for (var ag = 0; ag < 3; ag++) cell.color[ag] = player.heatDamageThreshold * 255;
+                    }
                     // cold damage threshold indicator
                     if (
                         cell.coordinates[0] <= -(canvas.width * (0.5 - player.coldDamageThreshold) / cellSize) && cell.coordinates[0] >= -(canvas.width * (0.5 - player.coldDamageThreshold) / cellSize) - (canvas.width * 0.024 / cellSize) &&
                         cell.coordinates[1] <= -((cellsPerColumn / 2) - (0.036 * canvasHeight / cellSize))
-                    ) cell.color = [0, 128, 255];
+                    ) {
+                        if (!drawingSettings.greyscaleToSpectrum) {
+                            cell.color = [0, 128, 255];
+                        } else for (var af = 0; af < 3; af++) cell.color[af] = player.coldDamageThreshold * 255;
+                    }
                 }
                 //////////////////////////////////////////////////////////////////////////////////
                 // end FUNCTION updateHUD(cell);
@@ -471,8 +536,6 @@ function drawAllCells(cellsArray) {
                 //////////////////////////////////////////////////////////////////////////////////
                 // end FUNCTION addNoiseToCellColor(cell);
                 //////////////////////////////////////////////////////////////////////////////////
-                //greyscale becomes rainbow if drawingSettings.greyScaleToSpectrum is 'true'
-                drawCellOnSpectrum(cell);
                 //////////////////////////////////////////////////////////////////////////////////
                 // start FUNCTION updatePlayerHealth(cell);
                 //////////////////////////////////////////////////////////////////////////////////
@@ -648,9 +711,10 @@ function makeLight(brightness, radius, coordinates, oscillator, diffusion, frame
                 'directionChangeChance': directionChangeChance,
                 'cell': allCellsList[coordinatesToIndex(coordinates)],
                 'cellIndex': coordinatesToIndex(coordinates),
-                'personality': {
-                }
+                'personality': settings.lightPersonalities[arrayOfRandomNumbers[randomNumberIndex]]
         };
+        if (randomNumberIndex < arrayOfRandomNumbers.length) randomNumberIndex++;
+        else randomNumberIndex = 0;
         return light;
 }
 

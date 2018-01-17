@@ -11,6 +11,8 @@ var cells = [],
                 },
                 'minLights': 8, // min and max number of lights in the level/on the screen (depending on where development goes)
                 'maxLights': 20,
+                'lightPersonalities': [],
+                'globalLightPersonality': {},
                 'gameType': GAME_TYPE_ICARUS,
                 'gameStartTime': Date.now(),
                 'icarusLightMovementSpeedScale': 0.25 // smaller is faster, i.e. time between movements is multiplied by this
@@ -30,7 +32,7 @@ var cells = [],
                 'emergencyPushBackCooldown': 45,
                 'emergencyPushBackDuration': 105,
                 'damageWarningDuration': 10, // number of frames after damage has occurred while player is still warned about it (i.e. flashing health bar)
-                'damageOscillator': makeOscillator(150, 0, SINE, 'playerDamageOscillator'),
+                'damageOscillator': makeOscillator(10, 0, SINE, 'playerDamageOscillator'),
                 'regenerateHealth': true,
                 'healthRegenerationAmount': 1,  // regenerate this amount of health
                 'healthRegenerationInterval': 30,      // every this many frames, player health increases by player.healthRegenerationAmount
@@ -173,6 +175,7 @@ assignDistanceLookupTables();
 initializeCenterCells();
 initializeAllDirections();
 initializeArrayOfRandomNumbers(arrayOfRandomNumbersLength);
+initializeLightPersonalities(10000);
 initializeDeathAphorisms();
 function initializeArrayOfRandomNumbers(length) {
         // wow. A million random number and it doesn't take that long to run.
@@ -181,13 +184,37 @@ function initializeArrayOfRandomNumbers(length) {
         }
 }
 var shadow = {
-                'coordinates': [-15, 1],
+                'coordinates': [-20, -15],
                 'darkness': 0.5,
                 'range': 250,
                 'cellIndex': coordinatesToIndex([-15, 1]),
                 'cell': cells[coordinatesToIndex([-15, 1])]
 };
 settings.entities.shadows.push(shadow);
+
+function initializeLightPersonalities(numberOfPersonalities) {
+    for (var i = 0; i < numberOfPersonalities; i++) {
+        var personality = {
+            'flee': Math.random() * 0.3,
+            'chase': Math.random() * 0.3,
+            'spawn': Math.random() * 0,
+            'die': Math.random() * 0.03, // should only die when oscillator value is very small
+            'wander': Math.random() * 0.3,
+            'flock': Math.random() * 0, // will chase changing targets selected from nearby lights?
+            'sprint': Math.random() *0.3,
+            'orbit': 0,
+            'expressGlobalPersonality': 0.3,
+            'targetCoords': null, // target could be a non-entity, non-player cell. If target is 'player', might treat player coords as 0, 0
+            'targetIndex': null
+        };
+        // might want to add a weighting factor for each trait. I.e. when movement vector is being averaged, multiply a traits influence by some number, then at that number - 1 to the number the total is divided by.
+        if (personality.targetCoords) personality.targetIndex = coordinatesToIndex(personality.targetCoords);
+        settings.lightPersonalities.push(personality);
+    }
+    settings.gobalLightPersonality = { // global personality will respond to things like game type, player temperature, number of lights, total screen brightness (often influenced by shadows) etc. in its update.
+        
+    }
+}
 
 function initializeDeathAphorisms() {
         deathAphorisms.push(
