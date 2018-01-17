@@ -126,17 +126,20 @@ function drawAllCells(cellsArray) {
                     entityXCellsMoveNextFrame -= updateEntityRandomMovementAmount;
                 }
                 // movement toward hot players and away from cool players.
-                if (player.temperature >= 0.5) {// && frameCounter % (player.temperature * 3 - player.temperature *3 % 1) === 0) {
+                if (player.temperature >= 0.5 && frameCounter % 2 === 0) {// && frameCounter % (player.temperature * 3 - player.temperature *3 % 1) === 0) {
                                 if (entity.coordinates[0] < 0) entityXCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
                                 else entityXCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
                                 if (entity.coordinates[1] < 0) entityYCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
                                 else entityYCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
                 }
-                if (player.temperature < 0.5) {// && frameCounter % (player.temperature * 3 - player.temperature * 3 % 1) === 0) {
+                if (player.temperature < 0.5 && frameCounter % 2 === 0) {// && frameCounter % (player.temperature * 3 - player.temperature * 3 % 1) === 0) {
                                 if (entity.coordinates[0] < 0) entityXCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
                                 else entityXCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
                                 if (entity.coordinates[1] < 0) entityYCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
                                 else entityYCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
+                }
+                if (frameCounter % 300 > 150) {
+                                entityYCellsMoveNextFrame -= 4;
                 }
                 // rounding down just before adding to light coordinates
                 // WRONG MAYBE could make this round, not round down, with some more code
