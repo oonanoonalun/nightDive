@@ -51,12 +51,14 @@ var cells = [],
                 'temperatureBarMaxLength': 1
         },
         randomLightSettingsDefault = {
-                'minBrightness': 64,
-                'maxBrightness': 255, // WHY DOESN'T 255 create white here?
-                'minRadius': 30,
-                'maxRadius': 200,
-                'minDiffusion': 10, // in pixels
-                'maxDiffusion': 60,
+                'minBrightness': 0.125,
+                'maxBrightness': 1, // WHY DOESN'T 255 create white here?
+                'minRadius': 150,
+                'maxRadius': 800,
+                'minDiffusion': 5, // in pixels
+                'maxDiffusion': 15,
+                'minFalloffFactor': 1, // lower values make a more-diffuse light, with a less-distinct and -bright core
+                'maxFalloffFactor': 18,
                 'minDeathChance': 0.01, // chance that the light will be removed when it goes dark. 1 = will certainly die when it goes dark.
                 'maxDeathChance': 0.025,
                 'parentCellsArray': cells,
@@ -72,7 +74,7 @@ function setPreferences() {
         drawingSettings.fpsDisplay.fpsDisplayInterval = 5000;      // display it this frequently (in ms)
         drawingSettings.fpsDisplay.fpsDisplayIntervalLongTerm = 30000;     // and this frequently (for a short-term gist and a long-term average)
         // resolution. Currently, 0-7 are valid values. Smaller is chunkier.
-        resolutionFactor = 4; //Leaps in resolution are pretty big for now due to some current constraints on valid widths and heights.
+        resolutionFactor = 4; // WARNING not sure this works anymore (?) //Leaps in resolution are pretty big for now due to some current constraints on valid widths and heights.
         // add color noise to the screen
         drawingSettings.noise.addNoise = true;
         // log resolution information in the console once at the beginning of running the program
@@ -111,8 +113,8 @@ function setPreferences() {
         player.heatingScale = 1;
         player.coolingScale = 1;
         // how cold or hot the player has to get before taking damage (0-1);
-        player.heatDamageThreshold = 0.85;
-        player.coldDamageThreshold = 0.43;
+        player.heatDamageThreshold = 1; // max 1
+        player.coldDamageThreshold = 0; // min 0
         // how fast the player can gain and lose heat
         player.maxHeatGainRate = 0.05;
         player.maxHeatLossRate = 0.05;
@@ -122,10 +124,14 @@ function setPreferences() {
         settings.minLights = 12;
         settings.maxLights = 25;
         // lights parameter ranges
-        randomLightSettingsDefault.minBrightness = 64;
-        randomLightSettingsDefault.maxBrightness = 1200;
-        randomLightSettingsDefault.minRadius = 80;
-        randomLightSettingsDefault.maxRadius = 175;
+        randomLightSettingsDefault.minBrightness = 0.125;
+        randomLightSettingsDefault.maxBrightness = 1.5;
+        randomLightSettingsDefault.minRadius = canvasWidth / 6;
+        randomLightSettingsDefault.maxRadius = canvasWidth;
+        randomLightSettingsDefault.minDiffusion = 10;
+        randomLightSettingsDefault.maxDiffusion = 15;
+        randomLightSettingsDefault.minFalloffFactor = 1; // lower values make a more-diffuse light, with a less-distinct and -bright core
+        randomLightSettingsDefault.maxFalloffFactor = 18;
         // how fast the lights chase and flee from you in the Icarus game type. Smaller is fast.
         settings.icarusLightMovementSpeedScale = 0.25;
 }

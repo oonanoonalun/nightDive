@@ -261,14 +261,21 @@ function drawAllCells(cellsArray) {
                                         // FUNCTION
                                         //distanceFromLight = findDistanceBetweenPoints(cell.centerXY, light.cell.centerXY),
                                         distanceFromLight = cell.distanceToIndex[light.cellIndex],
+                                        xDistanceFromLight = light.cell.centerXY[0] - cell.centerXY[0],
+                                        yDistanceFromLight = light.cell.centerXY[1] - cell.centerXY[1],
                                         // eliminating need for function call to Math.max
-                                        diffusionOrDistanceIsGreater;
+                                        diffusionOrDistanceIsGreater,
+                                        xOrYDistanceIsGreater = xDistanceFromLight;
+                                if (xDistanceFromLight < 0) xDistanceFromLight = -xDistanceFromLight;
+                                if (yDistanceFromLight < 0) yDistanceFromLight = -yDistanceFromLight;
+                                if (yDistanceFromLight > xDistanceFromLight) xOrYDistanceIsGreater = yDistanceFromLight;
                                 if (distanceFromLight > light.diffusion) diffusionOrDistanceIsGreater = distanceFromLight;
                                 else diffusionOrDistanceIsGreater = light.diffusion;
+                                if (diffusionOrDistanceIsGreater < 0) diffusionOrDistanceIsGreater = 1;
                                 if (light.oscillator) lightOscillatorValue = light.oscillator.value;
                                 // Math.max is a function
                                 //brightness = light.radius / Math.max(light.diffusion, distanceFromLight) * lightOscillatorValue * light.brightness;
-                                brightness = light.radius / diffusionOrDistanceIsGreater * lightOscillatorValue * light.brightness;
+                                brightness = light.radius / (diffusionOrDistanceIsGreater + light.radius / light.falloffFactor) * lightOscillatorValue * 255 * light.brightness;
                                 // FUNCTION
                                 //cell.color = addColors(cell.color, [brightness, brightness, brightness]);
                                 for (var j = 0; j < 3; j++) {
@@ -731,6 +738,7 @@ function makeRandomLights(numberOfLights, randomLightParametersObject, destinati
                         randomDirectionChangeChance = randomNumberBetweenNumbers(0.05, 0.3, false),
                         randomOscillator = getRandomNonExcludedOscillator(),
                         randomDiffusion = randomNumberBetweenNumbers(lightSettings.minDiffusion, lightSettings.maxDiffusion, true),
+                        randomFalloffFactor = randomNumberBetweenNumbers(lightSettings.minFalloffFactor, lightSettings.maxFalloffFactor, false),
                         randomDeathChance = randomNumberBetweenNumbers(lightSettings.minDeathChance, lightSettings.maxDeathChance, false),
                         allCellsList = lightSettings.parentCellsArray,
                         randomFramesBetweenMovements = randomNumberBetweenNumbers(lightSettings.minFramesBetweenMovements, lightSettings.maxFramesBetweenMovements, true),
@@ -740,30 +748,17 @@ function makeRandomLights(numberOfLights, randomLightParametersObject, destinati
                 else randomXY[0] = -randomNumberBetweenNumbers(1, 0.5 * cellsPerRow, true);
                 if (Math.random() > 0.5) randomXY[1] = randomNumberBetweenNumbers(1, 0.5 * cellsPerColumn, true);
                 else randomXY[1] = -randomNumberBetweenNumbers(1, 0.5 * cellsPerColumn, true);
-                destinationArray.push(makeLight(randomBrightness, randomRadius, randomXY, randomOscillator, randomDiffusion, randomFramesBetweenMovements, randomDirectionNumber, randomDirectionChangeChance, randomDeathChance, allCellsList, destinationArray));
+                destinationArray.push(makeLight(randomBrightness, randomRadius, randomXY, randomOscillator, randomDiffusion, randomFalloffFactor, randomFramesBetweenMovements, randomDirectionNumber, randomDirectionChangeChance, randomDeathChance, allCellsList, destinationArray));
         }
-}
-
-function getRandomNonExcludedOscillator() {
-        var randomOscillator;
-        for (var j = 0; j < 1; j++) {
-                randomOscillator = settings.oscillators[randomNumberBetweenNumbers(0, (settings.oscillators.length - 1), true)];
-                for (var i = 0; i < excludedNamesFromRandomOscillatorSelection.length; i++) {
-                        if (randomOscillator.name === excludedNamesFromRandomOscillatorSelection[i]) {
-                                i = excludedNamesFromRandomOscillatorSelection.length;
-                                j--;
-                        }
-                }
-        }
-        return randomOscillator;
 }
 
 //WRONG the "make" functions should be in initialization.js (I don't want to move them till everything else is stable)
-function makeLight(brightness, radius, coordinates, oscillator, diffusion, framesBetweenMovements, movementDirection, directionChangeChance, deathChance, allCellsList, lightsArray) {
+function makeLight(brightness, radius, coordinates, oscillator, diffusion, falloffFactor, framesBetweenMovements, movementDirection, directionChangeChance, deathChance, allCellsList, lightsArray) {
         var light = {
                 'brightness': brightness,
                 'radius': radius,
                 'diffusion': diffusion,
+                'falloffFactor': falloffFactor,
                 'oscillator': oscillator,
                 'deathChance': deathChance,
                 'parentCellsArray': allCellsList, // large cellsList of which light's cell is a part
@@ -780,6 +775,20 @@ function makeLight(brightness, radius, coordinates, oscillator, diffusion, frame
         if (randomNumberIndex < arrayOfRandomNumbers.length) randomNumberIndex++;
         else randomNumberIndex = 0;
         return light;
+}
+
+function getRandomNonExcludedOscillator() {
+        var randomOscillator;
+        for (var j = 0; j < 1; j++) {
+                randomOscillator = settings.oscillators[randomNumberBetweenNumbers(0, (settings.oscillators.length - 1), true)];
+                for (var i = 0; i < excludedNamesFromRandomOscillatorSelection.length; i++) {
+                        if (randomOscillator.name === excludedNamesFromRandomOscillatorSelection[i]) {
+                                i = excludedNamesFromRandomOscillatorSelection.length;
+                                j--;
+                        }
+                }
+        }
+        return randomOscillator;
 }
 
 function makeOscillator(period, phase, waveShape, name) {
