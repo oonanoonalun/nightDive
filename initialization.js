@@ -48,6 +48,13 @@ var cells = [],
                 'healthBarWidthScale': 1, // how wide the health bar is. At scale 1, it's two cells wide at 800x600
                 'healthBarXPositionPolarity': -1, // -1 is on the left, 1 is on the right
                 'healthBarMaxLength': 0.5, // max health bar length in screen heights
+                'energy': 100,
+                'maxEnergy': 100,
+                'intervalBetweenEnergyRegenUpdates': 4,
+                'energyRegenerationAmount': 1, // player regnerates this much energy each intervalBetweenEnergyRegenUpdates
+                'energyBarWidthScale': 1, // how wide the health bar is. At scale 1, it's two cells wide at 800x600
+                'energyBarXPositionPolarity': 1, // -1 is on the left, 1 is on the right
+                'energyBarMaxLength': 0.5, // max health bar length in screen heights
                 'temperatureBarWidthScale': 1,
                 'temperatureBarMaxLength': 1
         },
@@ -114,7 +121,7 @@ function setPreferences() {
         player.temperatureChangeRateFrameCounterScale = 0.0000002;
         // how quickly the player cools and heats, specifically
         player.heatingScale = 1;
-        player.coolingScale = 5;
+        player.coolingScale = 2.5;
         // how cold or hot the player has to get before taking damage (0-1);
         player.heatDamageThreshold = 0.75; // max 1
         player.coldDamageThreshold = 0.25; // min 0

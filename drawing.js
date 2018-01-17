@@ -138,8 +138,23 @@ function drawAllCells(cellsArray) {
                                 if (entity.coordinates[1] < 0) entityYCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
                                 else entityYCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
                 }
+                // misc. movement/behavior experiments
                 if (frameCounter % 300 > 150) {
-                                entityYCellsMoveNextFrame -= 4;
+                    if (frameCounter % 2 === 0) {
+                        entityYCellsMoveNextFrame -= 4;
+                        if (frameCounter % 3 === 0) {
+                            if (entity.coordinates[0] < 0) entityXCellsMoveNextFrame -= 1;
+                            else entityXCellsMoveNextFrame += 1;
+                        }
+                    }
+                }
+                if (keysDown[KEY_SPACE] && player.energy > 0) {
+                    if (entity.coordinates[0] > 0) entityXCellsMoveNextFrame += 3;
+                    else entityXCellsMoveNextFrame - 3;
+                    if (entity.coordinates[1] > 0) entityYCellsMoveNextFrame += 3;
+                    else entityYCellsMoveNextFrame -= 3;
+                    // NOTE: sort of WRONG: this energy is being depleted for each entity
+                    if (frameCounter % 2 === 0) player.energy--;
                 }
                 // rounding down just before adding to light coordinates
                 // WRONG MAYBE could make this round, not round down, with some more code
@@ -252,6 +267,35 @@ function drawAllCells(cellsArray) {
         drawingSettings.noise.blueNoise = player.temperature;
         //////////////////////////////////////////////////////////////////////////////////
         // end FUNCTION updateNoise(); // updating the screen noise
+        //////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////
+        // start FUNCTION updatePlyaerHealth() and updatePlayerEnergy(), part 1 (part 2 is per-cell updates to health that affect drawing)
+        //////////////////////////////////////////////////////////////////////////////////
+                // logging health in the console
+                if (player.displayHealth) {
+                        if (
+                                (player.temperature < player.coldDamageThreshold || player.temperature > player.heatDamageThreshold) &&
+                                player.health % 5 === 0 && player.health > 0 && player.health < 100 &&
+                                (player.health !== player.lastLoggedHealth || !player.lastLoggedHealth)
+                        ) {
+                                console.log('Health: ' + player.health);
+                                player.lastLoggedHealth = player.health;
+                        }
+                }
+                // health regeneration
+                if (player.regenerateHealth && frameCounter % player.healthRegenerationInterval === 0 &&
+                    (player.noHealthRegenUntil <= frameCounter || !player.noHealthRegenUntil) &&
+                    player.health < player.maxHealth
+                ) {
+                        player.health += player.healthRegenerationAmount;
+                        player.noHealthRegenUntil = frameCounter + player.healthRegenerationInterval; // just to keep you from getting more than one helath bump in the 50ms window that opens up to make sure you don't miss it altogether.
+                }
+                // energy regen
+                if (frameCounter % player.intervalBetweenEnergyRegenUpdates === 0 && player.energy < player.maxEnergy) {
+                     player.energy += player.energyRegenerationAmount;
+                }
+        //////////////////////////////////////////////////////////////////////////////////
+        // end FUNCTION update health and energy, part 1 (part 2 is per-cell updates to health that affect drawing)
         //////////////////////////////////////////////////////////////////////////////////
         //////////////////////////////////////////////////////////////////////////////////
         // start FUNCTION drawAllCells(cell);
@@ -507,17 +551,34 @@ function drawAllCells(cellsArray) {
                                 if (player.damageWarningUntil > frameCounter) {
                                     for (var b = 0; b < 3; b++) cell.color[b] = 767 * player.damageOscillator.value;
                                 } else {
-                                    for (var y = 0; y < 3; y++) {
-                                        if (y === 0) cell.color[y] = 1024 * (1 - player.health / player.maxHealth);
-                                        if (y === 1) cell.color[y] = 384 * (player.health / player.maxHealth);
-                                        if (y === 2) cell.color[y] = 0;
-                                    }
-                               }
+                                    cell.color[0] = 1024 * (1 - player.health / player.maxHealth);
+                                    cell.color[1] = 384 * (player.health / player.maxHealth);
+                                    cell.color[2] = 0;
+                                }
                         } else {
                             // if in spectrum mode
                             if (player.damageWarningUntil > frameCounter) {
                                     for (var ai = 0; ai < 3; ai++) cell.color[ai] = 2047 * player.damageOscillator.value;
-                                } else for (var ah = 0; ah < 3; ah++) cell.color[ah] = 255 * (player.health / player.maxHealth);
+                            } else for (var ah = 0; ah < 3; ah++) cell.color[ah] = 255 * (player.health / player.maxHealth);
+                        }
+                    }
+                    // energy bar
+                    // if cell is on the right edge, 2 cells wide at 800x600
+                    if (
+                        cell.coordinates[0] >=
+                        player.energyBarXPositionPolarity * (cellsPerRow / 2 - (canvas.width * 0.024 / cellSize) * player.energyBarWidthScale) &&
+                        // and its y coordinate is at or under the y location that corresponds to parametric player.energy * parametric screen height
+	        cell.coordinates[1] <= -(cellsPerColumn / 2) + (player.energy / player.maxEnergy * player.energyBarMaxLength * cellsPerColumn)
+	    ) {
+                        if (!drawingSettings.greyscaleToSpectrum) {
+                        // if in greyScale
+                        // make the cell scale from yellow to blue based on player energy
+                            cell.color[0] = 255 * (1 - player.health / player.maxEnergy);
+                            cell.color[1] = 255 * (1 - player.health / player.maxEnergy);
+                            cell.color[2] = 1024 * (player.energy / player.maxEnergy);
+                        } else {
+                            // if in spectrum mode
+                            for (var ao = 0; ao < 3; ao++) cell.color[ao] = 255 * (player.energy / player.maxEnergy);
                         }
                     }
                     // temperature bar
@@ -620,7 +681,7 @@ function drawAllCells(cellsArray) {
                 // end FUNCTION addNoiseToCellColor(cell);
                 //////////////////////////////////////////////////////////////////////////////////
                 //////////////////////////////////////////////////////////////////////////////////
-                // start FUNCTION updatePlayerHealth(cell);
+                // start FUNCTION updatePlayerHealth();
                 //////////////////////////////////////////////////////////////////////////////////
                 // this needs to be here because it impacts cell colors
                 // updatePlayerHealth() is FUNCTION FREE! except for on Date.now() call that only happens once, at the moment of death
@@ -664,25 +725,6 @@ function drawAllCells(cellsArray) {
                                                 cell.color[u] += 160;
                                         }
                                 }
-                        }
-                        // logging health in the console
-                        if (player.displayHealth) {
-                                if (
-                                        (player.temperature < player.coldDamageThreshold || player.temperature > player.heatDamageThreshold) &&
-                                        player.health % 5 === 0 && player.health > 0 && player.health < 100 &&
-                                        (player.health !== player.lastLoggedHealth || !player.lastLoggedHealth)
-                                ) {
-                                        console.log('Health: ' + player.health);
-                                        player.lastLoggedHealth = player.health;
-                                }
-                        }
-                        // health regeneration
-                        if (player.regenerateHealth && frameCounter % player.healthRegenerationInterval === 0 &&
-                            (player.noHealthRegenUntil <= frameCounter || !player.noHealthRegenUntil) &&
-                            player.health < player.maxHealth
-                        ) {
-                                player.health += player.healthRegenerationAmount;
-                                player.noHealthRegenUntil = frameCounter + player.healthRegenerationInterval; // just to keep you from getting more than one helath bump in the 50ms window that opens up to make sure you don't miss it altogether.
                         }
                 } else { // player is dead
                         cell.color = [0, 0, 0];
