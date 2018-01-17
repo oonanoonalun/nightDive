@@ -19,7 +19,8 @@ var drawingSettings = {
                 // WRONG these next two things do nothing right now, though there's the beginning of relevant code in showLights()
                 'limitLightEffectRadii': false, // if this is true
                 'maxLightRadiusScale': 3, // lights will have no effect past this many times their radius
-                'normalizeBrightnesses': false, // BROKEN doesn't work anymore. Would be worth fixing before deciding whether to ditch it or not. // requires a second pass over all the cells, necessarily (as it checks their relative brightnesses after all their brightnesses have been assigned), and so slows things down.
+                'normalizeBrightnesses': true,
+                'darkStretchScale': 0.5,// affects normalizeBrightness. Values < 1 and >= 0 are valid. Higher values lower contrast and reduce blacks create greys.
                 'displayResolutionInformation': false,
                 'drawScreen': true,
                 'greyscaleToSpectrum': false, // draws the world as rainbow instead of greyscale. Does a little bit of extra cpu work compared to greyscale.
@@ -322,7 +323,43 @@ function drawAllCells(cellsArray) {
                 }*/
                 //////////////////////////////////////////////////////////////////////////////////
                 // end FUNCTION showShadows(cell);
-                //////////////////////////////////////////////////////////////////////////////////                
+                //////////////////////////////////////////////////////////////////////////////////
+                //////////////////////////////////////////////////////////////////////////////////
+                // start FUNCTION normalizeBrightnesses(cell); // make the darkest cell black and lightest cell white
+                //////////////////////////////////////////////////////////////////////////////////
+                if (cell.color[0] > drawingSettings.brightestBrightnessThisFrame || !drawingSettings.brightestBrightnessThisFrame) {
+                                drawingSettings.brightestBrightnessThisFrame = cell.color[0];
+                }
+                if (cell.color[0] < drawingSettings.dimmestBrightnessThisFrame || !drawingSettings.dimmestBrightnessThisFrame) {
+                                drawingSettings.dimmestBrightnessThisFrame = cell.color[0];
+                }
+                if (drawingSettings.normalizeBrightnesses) {
+                    drawingSettings.brightnessRangeLastFrame = drawingSettings.brightestBrightnessLastFrame - drawingSettings.dimmestBrightnessLastFrame;
+                    var normCurrent = cell.color[0],
+                        normPara, // parametric value of current cell brightness relative to the max-to-min range of brightnesses from last frame
+                        normDim = drawingSettings.dimmestBrightnessLastFrame,
+                        normBright = drawingSettings.brightestBrightnessLastFrame,
+                        normRange; // range of brightness from dimmmest to brightest last frame, used as 0-1 for this frame
+                    if (drawingSettings.brightestBrightnessLastFrame > 255) normBright = 255;
+                    if (normCurrent < normDim) normCurrent = 0;
+                    else normCurrent = normCurrent - normDim;
+                    normDim *= (normBright / normDim) * drawingSettings.darkStretchScale; // lowers contrast and creates more greys, fewer blacks
+                    normRange = normBright - normDim;
+                    normPara = normCurrent / normRange;
+                    if (drawingSettings.brightnessRangeLastFrame) {
+                        for (var ak = 0; ak < 3; ak++) cell.color[ak] *= normPara;
+                    }
+                    //if (cell.index === 2000 && frameCounter % 20 === 0) console.log(para);
+                }
+                /*var currentBrightness = averageBrightness(cellsArray[j].color),
+                        currentCellParametricBrightness = (currentBrightness - darkestBrightness) / brightnessRange;
+                newBrightness = darkestValue + brightestValue * currentCellParametricBrightness;
+                cellsArray[j].color = [newBrightness, newBrightness, newBrightness];
+                finalizeCellColorAndDrawCell(cellsArray[i]);
+        }*/
+                //////////////////////////////////////////////////////////////////////////////////
+                // end FUNCTION normalizeBrightnesses(cell);
+                //////////////////////////////////////////////////////////////////////////////////
                 //////////////////////////////////////////////////////////////////////////////////
                 // start FUNCTION findAverageBrightnessOfCenterCells(cell);
                 //////////////////////////////////////////////////////////////////////////////////
@@ -646,26 +683,23 @@ function drawAllCells(cellsArray) {
                 //////////////////////////////////////////////////////////////////////////////////
                 // start FUNCTION finalizeCellColorAndDrawCell(cell);
                 //////////////////////////////////////////////////////////////////////////////////
-                if (!drawingSettings.normalizeBrightnesses) {
-// !!!!!!!WRONG INDENTATION!!!!!!!!!!! this indentation is wrong and this doc is spazzing but I could only fix it manually with a bunch of spacing so I'm not going to right now
-                                // FUNCTION finalizeCellColorAndDrawCell() is FUNCTION-FREE EXCEPT for the context.fillRect() call, which function I don't know how to reproduce yet
-                                // eliminating toHexColor() and capColorBrightness() calls
-                                // cap color brightness
-                                for (var x = 0; x < 3; x++) if (cell.color[x] > 255) cell.color[x] = 255;
-                                // toHexColor
-                                for (var w = 0; w < 3; w++) {
-                                        // Math.round()
-                                        cell.color[w] -= cell.color[w] % 1;
-                                        cell.color[w] = cell.color[w].toString(16);
-                                        if (cell.color[w].length < 2) {
-                                                cell.color[w] = '0' + cell.color[w];
-                                        }
-                                }
-                                cell.color = '#' + cell.color[0] + cell.color[1] + cell.color[2];
-                                if (drawingSettings.drawScreen) {
-                                        context.fillStyle = cell.color;
-                                        context.fillRect(cell.left, cell.top, cell.size, cell.size);
-                                }
+                // FUNCTION finalizeCellColorAndDrawCell() is FUNCTION-FREE EXCEPT for the context.fillRect() call, which function I don't know how to reproduce yet
+                // eliminating toHexColor() and capColorBrightness() calls
+                // cap color brightness
+                for (var x = 0; x < 3; x++) if (cell.color[x] > 255) cell.color[x] = 255;
+                // toHexColor
+                for (var w = 0; w < 3; w++) {
+                        // Math.round()
+                        cell.color[w] -= cell.color[w] % 1;
+                        cell.color[w] = cell.color[w].toString(16);
+                        if (cell.color[w].length < 2) {
+                                cell.color[w] = '0' + cell.color[w];
+                        }
+                }
+                cell.color = '#' + cell.color[0] + cell.color[1] + cell.color[2];
+                if (drawingSettings.drawScreen) {
+                        context.fillStyle = cell.color;
+                        context.fillRect(cell.left, cell.top, cell.size, cell.size);
                 }
                 //////////////////////////////////////////////////////////////////////////////////
                 // end FUNCTION finalizeCellColorAndDrawCell(cell);
@@ -674,7 +708,11 @@ function drawAllCells(cellsArray) {
         //////////////////////////////////////////////////////////////////////////////////
         // end FUNCTION drawAllCells(cell);
         //////////////////////////////////////////////////////////////////////////////////
-        if (drawingSettings.normalizeBrightnesses) normalizeCellsArrayBrightnessRange(cellsArray, 0, 255); // requires a second pass over all the cells, necessarily (as it checks their relative brightnesses after all their brightnesses have been assigned), and so slows things down.
+        // these next four lines are for the normalizeBrightnesses "function"
+        drawingSettings.brightestBrightnessLastFrame = drawingSettings.brightestBrightnessThisFrame;
+        drawingSettings.dimmestBrightnessLastFrame = drawingSettings.dimmestBrightnessThisFrame;
+        drawingSettings.brightestBrightnessThisFrame = 0;
+        drawingSettings.dimmestBrightnessThisFrame = 255;
         frameCounter++;
 }
 

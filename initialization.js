@@ -52,7 +52,7 @@ var cells = [],
         },
         randomLightSettingsDefault = {
                 'minBrightness': 64,
-                'maxBrightness': 2000, // WHY DOESN'T 255 create white here?
+                'maxBrightness': 255, // WHY DOESN'T 255 create white here?
                 'minRadius': 30,
                 'maxRadius': 200,
                 'minDiffusion': 10, // in pixels
@@ -79,9 +79,11 @@ function setPreferences() {
         drawingSettings.displayResolutionInformation = false;
         // set limit on range of lights
         drawingSettings.numberOfRadiiBeforeLightsHaveNoEffect = 10000;
-
-        // If 'true', draws the game as shades of grey or rainbow.
-        drawingSettings.greyscaleToSpectrum = true;
+        // if true, the brightest cell on the screen will be always be white, and the darkest one black
+        drawingSettings.normalizeBrightnesses = false;
+        drawingSettings.darkStretchScale = 0.5; // affects normalizeBrightness. Values < 1 and >= 0 are valid. Higher values lower contrast and reduce blacks create greys.
+        // If 'true', draws the game as rainbow. False is greyscale
+        drawingSettings.greyscaleToSpectrum = false;
         // draw screen. Turn off to look at errors without the screen being drawn slowing things down
         drawingSettings.drawScreen = true;
         
