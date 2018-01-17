@@ -2,18 +2,17 @@ var cells = [],
         resolutionFactor = 4,
         canvasWidth = 800,
         canvasHeight = 600,
-        GAME_TYPE_ICARUS = 'icarusGameType',
         settings = {
                 'oscillators': [],
                 'entities': {
                         'lights': [],
-                        'shadows': []
+                        'shadows': [],
+                        'length': 2 // ok, this means that I can check the lenght of this just like I could an arary, but I have to UPDATE IT MANUALLY! if I add more entity types with their own arrays
                 },
                 'minLights': 8, // min and max number of lights in the level/on the screen (depending on where development goes)
                 'maxLights': 20,
                 'lightPersonalities': [],
                 'globalLightPersonality': {},
-                'gameType': GAME_TYPE_ICARUS,
                 'gameStartTime': Date.now(),
                 'icarusLightMovementSpeedScale': 0.25 // smaller is faster, i.e. time between movements is multiplied by this
         },
@@ -188,22 +187,28 @@ var shadow = {
                 'darkness': 0.5,
                 'range': 250,
                 'cellIndex': coordinatesToIndex([-15, 1]),
-                'cell': cells[coordinatesToIndex([-15, 1])]
+                'cell': cells[coordinatesToIndex([-15, 1])],
+                'parentCellsArray': cells,
+                'movementDirection': 2,
+                'entityType': 'shadow',
+                'deathChance': 0, // WRONG remove this AFTER the updateEntities area has been update to use entity.personality.dieChance
+                'personality': {}
 };
 settings.entities.shadows.push(shadow);
 
 function initializeLightPersonalities(numberOfPersonalities) {
     for (var i = 0; i < numberOfPersonalities; i++) {
         var personality = {
-            'flee': Math.random() * 0.3,
-            'chase': Math.random() * 0.3,
-            'spawn': Math.random() * 0,
-            'die': Math.random() * 0.03, // should only die when oscillator value is very small
-            'wander': Math.random() * 0.3,
-            'flock': Math.random() * 0, // will chase changing targets selected from nearby lights?
-            'sprint': Math.random() *0.3,
-            'orbit': 0,
-            'expressGlobalPersonality': 0.3,
+            'fleeChance': Math.random() * 0.3,
+            'chaseChance': Math.random() * 0.3,
+            'spawnChance': Math.random() * 0,
+            'dieChance': Math.random() * 0.03, // should only die when oscillator value is very small
+            'wanderChance': Math.random() * 0.3,
+            'flockChance': Math.random() * 0, // will chase changing targets selected from nearby lights?
+            'sprintChance': Math.random() * 0.3,
+            'directionChangeChance': Math.random() * 0.3,
+            'orbitChance': 0,
+            'expressGlobalPersonalityChance': 0.3,
             'targetCoords': null, // target could be a non-entity, non-player cell. If target is 'player', might treat player coords as 0, 0
             'targetIndex': null
         };
@@ -212,8 +217,18 @@ function initializeLightPersonalities(numberOfPersonalities) {
         settings.lightPersonalities.push(personality);
     }
     settings.gobalLightPersonality = { // global personality will respond to things like game type, player temperature, number of lights, total screen brightness (often influenced by shadows) etc. in its update.
-        
-    }
+        'fleeChance': Math.random() * 0.3,
+        'chaseChance': Math.random() * 0.3,
+        'spawnChance': Math.random() * 0,
+        'dieChance': Math.random() * 0.03, // should only die when oscillator value is very small
+        'wanderChance': Math.random() * 0.3,
+        'flockChance': Math.random() * 0, // will chase changing targets selected from nearby lights?
+        'sprintChance': Math.random() *0.3,
+        'orbitChance': 0,
+        'expressGlobalPersonalityChance': 0.3,
+        'targetCoords': null, // target could be a non-entity, non-player cell. If target is 'player', might treat player coords as 0, 0
+        'targetIndex': null
+    };
 }
 
 function initializeDeathAphorisms() {

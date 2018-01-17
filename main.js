@@ -8,8 +8,6 @@ var context = canvas.getContext('2d');
 
 //MAIN LOOP
 function mainLoop() {
-    abilityEmergencyPushBack();
-    //updateLights(settings.entities.lights, settings.minLights, settings.maxLights);
     drawAllCells(cells);
     logging();
 }
