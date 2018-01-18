@@ -108,6 +108,7 @@ function drawAllCells(cellsArray) {
             var entityArray;
             if (aj === 0) entityArray = settings.entities.lights;
             if (aj === 1) entityArray = settings.entities.shadows;
+            if (aj === 2) entityArray = settings.entities.lightLines;
             for (var f = 0; f < entityArray.length; f++) {
                 var entity = entityArray[f];
                 // UPDATE ENTITIES
@@ -389,21 +390,14 @@ function drawAllCells(cellsArray) {
                                         // FUNCTION
                                         //distanceFromLight = findDistanceBetweenPoints(cell.centerXY, light.cell.centerXY),
                                         distanceFromLight = cell.distanceToIndex[light.cellIndex],
-                                        xDistanceFromLight = light.cell.centerXY[0] - cell.centerXY[0],
-                                        yDistanceFromLight = light.cell.centerXY[1] - cell.centerXY[1],
                                         // eliminating need for function call to Math.max
-                                        diffusionOrDistanceIsGreater,
-                                        xOrYDistanceIsGreater = xDistanceFromLight;
-                                if (xDistanceFromLight < 0) xDistanceFromLight = -xDistanceFromLight;
-                                if (yDistanceFromLight < 0) yDistanceFromLight = -yDistanceFromLight;
-                                if (yDistanceFromLight > xDistanceFromLight) xOrYDistanceIsGreater = yDistanceFromLight;
-                                if (distanceFromLight > light.coreRadius) diffusionOrDistanceIsGreater = distanceFromLight;
-                                else diffusionOrDistanceIsGreater = light.coreRadius;
-                                if (diffusionOrDistanceIsGreater < 0) diffusionOrDistanceIsGreater = 1;
+                                        lightCoreOrDistanceIsGreater = light.coreRadius;
+                                if (distanceFromLight > light.coreRadius) lightCoreOrDistanceIsGreater = distanceFromLight;
+                                if (lightCoreOrDistanceIsGreater < 0) lightCoreOrDistanceIsGreater = 1;
                                 if (light.oscillator) lightOscillatorValue = light.oscillator.value;
                                 // Math.max is a function
                                 //brightness = light.radius / Math.max(light.coreRadius, distanceFromLight) * lightOscillatorValue * light.brightness;
-                                brightness = light.radius / (diffusionOrDistanceIsGreater + light.radius / light.diffusion) * lightOscillatorValue * 255 * light.brightness;
+                                brightness = light.radius / (lightCoreOrDistanceIsGreater + light.radius / light.diffusion) * lightOscillatorValue * 255 * light.brightness;
                                 // FUNCTION
                                 //cell.color = addColors(cell.color, [brightness, brightness, brightness]);
                                 for (var j = 0; j < 3; j++) {
@@ -418,6 +412,35 @@ function drawAllCells(cellsArray) {
                 }
                 //////////////////////////////////////////////////////////////////////////////////
                 // end FUNCTION showLights(cell);
+                //////////////////////////////////////////////////////////////////////////////////
+                //////////////////////////////////////////////////////////////////////////////////
+                // start FUNCTION showLightLines(cell);
+                //////////////////////////////////////////////////////////////////////////////////
+                if (settings.entities.lightLines.length > 0) {
+                    for (var ap = 0; ap < settings.entities.lightLines.length; ap++) { // for each light line
+                        var lightLine = settings.entities.lightLines[ap],
+                            lightLineBrightness;
+                        if (randomNumberIndex + lightLine.length > arrayOfRandomNumbers.length) randomNumberIndex = 0; // making sure random number index doesn't overshoot durring this loop
+                        for (var aq = 0; aq < lightLine.length; aq++) { // for each cell in the light line
+                            if (cell.coordinates[0] === lightLine.coordinates[0] + aq) {
+                                var distanceToLightLineCoords = (lightLine.coordinates[1] - cell.coordinates[1]) * cellSize;
+                                if (distanceToLightLineCoords < 0) distanceToLightLineCoords = -distanceToLightLineCoords;
+                                lightLineBrightness =
+                                    (lightLine.range - distanceToLightLineCoords) /
+                                    lightLine.range * lightLine.brightness -
+                                    (arrayOfRandomNumbers[randomNumberIndex] * lightLine.noiseFactor)// *
+                                    //lightLine.oscillator.value
+                                ;
+                                randomNumberIndex++;
+                                if (lightLineBrightness < 0) lightLineBrightness = 0;
+                                //if (frameCounter % 100 === 0) console.log(distanceToLightLineCoords);
+                                for (var ar = 0; ar < 3; ar++) cell.color[ar] -= lightLineBrightness;
+                            }
+                        }
+                    }
+                }
+                //////////////////////////////////////////////////////////////////////////////////
+                // end FUNCTION showLightLines(cell);
                 //////////////////////////////////////////////////////////////////////////////////
                 //////////////////////////////////////////////////////////////////////////////////
                 // start FUNCTION showShadows(cell);
@@ -729,6 +752,10 @@ function drawAllCells(cellsArray) {
                 //////////////////////////////////////////////////////////////////////////////////
                 // start FUNCTION addNoiseToCellColor(cell);
                 //////////////////////////////////////////////////////////////////////////////////
+                // keeping shadows from creating negative color values. Just before adding noise, which should be the last color step.
+                for (var as = 0; as < 3; as++) {
+                    if (cell.color[as] < 0) cell.color[as] = 0;
+                }
                 if (drawingSettings.noise.addNoise) {
                                 if (drawingSettings.noNoiseChangeUntil <= frameCounter || !drawingSettings.noNoiseChangeUntil) {
                                         // addNoiseToColor() is FUNCTION-FREE!    |  : D

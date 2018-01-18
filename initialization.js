@@ -7,18 +7,19 @@ var cells = [],
                 'entities': {
                         'lights': [],
                         'shadows': [],
-                        'length': 2 // ok, this means that I can check the lenght of this just like I could an arary, but I have to UPDATE IT MANUALLY! if I add more entity types with their own arrays
+                        'lightLines': [],
+                        'length': 3 // ok, this means that I can check the length of this just like I could an arary, but I have to UPDATE IT MANUALLY! if I add more entity types with their own arrays
                 },
                 'minLights': 8, // min and max number of lights in the level/on the screen (depending on where development goes)
                 'maxLights': 20,
                 'lightPersonalities': [],
                 'globalLightPersonality': {},
-                'gameStartTime': Date.now(),
+                'gameStartTime': Date.now(), // WRONG: this is going to pick up some early game time when things are still initializing and the screen is black.
                 'reserveOfRandomLights': [],
                 'game': {
                         'slipperySlope': {
                                 'on': false, // Whether the behavior is active or not. Cycling turns this on and off automatically at intervals.
-                                'cycle': true, // turns itself on and off at intervals
+                                'cycle': false, // turns itself on and off at intervals
                                 'framesOn': 150, // when cycling, for how many frames will it be on?
                                 'framesOff': 300, // when cycling, for how many frames will it be off?
                                 'notOnUntil': 0, // Cycling starts when the frameCounter reaches this initial value, then this property is used by the cycling process
@@ -26,15 +27,15 @@ var cells = [],
                         },
                         'race': {
                                 'on': false,
-                                'cycle': true,
+                                'cycle': false,
                                 'framesOn': 90,
                                 'framesOff': 300,
                                 'notOnUntil': 0,
                                 'notOffUntil': null
                         },
                         'individualPersonalities': {
-                                'on': false,
-                                'cycle': true,
+                                'on': true,
+                                'cycle': false,
                                 'framesOn': 150,
                                 'framesOff': 150,
                                 'notOnUntil': 0,
@@ -151,13 +152,13 @@ function setPreferences() {
         // how quickly the player gains and dissipates heat
         player.temperatureChangeRateScale = 0.0005;
         // how much time passed since the start of the game increases the rate at which heat is gained and lost
-        player.temperatureChangeRateFrameCounterScale = 0.0000002;
+        player.temperatureChangeRateFrameCounterScale = 0;//0.0000002;
         // how quickly the player cools and heats, specifically
         player.heatingScale = 1;
         player.coolingScale = 2.5;
         // how cold or hot the player has to get before taking damage (0-1);
-        player.heatDamageThreshold = 0.75; // max 1
-        player.coldDamageThreshold = 0.25; // min 0
+        player.heatDamageThreshold = 1;//0.75; // max 1
+        player.coldDamageThreshold = 0;//0.25; // min 0
         // how fast the player can gain and lose heat
         player.maxHeatGainRate = 0.15;
         player.maxHeatLossRate = 0.15;
@@ -227,6 +228,46 @@ initializeCenterCells();
 initializeAllDirections();
 initializeArrayOfRandomNumbers(arrayOfRandomNumbersLength);
 initializeDeathAphorisms();
+
+//////////////////////////
+//////////////////////////
+// TESTING/EXPERIMENTING
+var testLightOscillator = makeOscillator(120, 0, SINE, 'testLightOscillator');
+settings.oscillators.push(testLightOscillator);
+makeLightLine([-40, -10], 20, 150);
+//settings.entities.lights.push(makeLight(0.5, canvasWidth / 4, [-15, -15], testLightOscillator, 10, 18, 0, 0, 0, 0, cells, settings.entities.lights));
+//makeLineOfLights([-20, -15], 35);
+//makeLineOfLights([-40, 10], 60);
+function makeLightLine(startCoordsXYArray, length, range) {
+    var line = {
+        'range': range,
+        'brightness': 200,
+        'noiseFactor': 10,
+        'oscillator': testLightOscillator,
+        'length': length,
+        'coordinates': startCoordsXYArray,
+        'cell': cells[coordinatesToIndex(startCoordsXYArray)],
+        'cellIndex': coordinatesToIndex(startCoordsXYArray), // WRONG, maybe. Should just be '.index' ?
+        'parentCellsArray': cells,
+        'entityType': 'lightLine',
+        'personality': {
+            'dieChance': 0,
+            'directionChangeChance': 0
+        }
+    };
+    settings.entities.lightLines.push(line);
+}
+
+function makeLineOfLights(startCoordsXYArray, length) {
+    for (var i = 0; i < length; i++) {
+        var newXCoord = startCoordsXYArray[0] + i,
+            newYCoord = startCoordsXYArray[1],
+            newCoords = [newXCoord, newYCoord];
+        settings.entities.lights.push(makeLight(0.5, canvasWidth / 4, newCoords, testLightOscillator, 10, 18, 0, 0, 0, 0, cells, settings.entities.lights));
+    }
+}
+//////////////////////////
+//////////////////////////
 
 function initializeArrayOfRandomNumbers(length) {
         // wow. A million random number and it doesn't take that long to run.
