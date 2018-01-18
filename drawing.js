@@ -48,10 +48,24 @@ function drawAllCells(cellsArray) {
             console.log('randomNumberIndex is larger than arrayOfRandomNumbers.length, but it is being reset to 0.');
         }
         ///////////////////////////////////////////////////////////////////////////////////////////////////
+        // start FUNCTION controls();
+        ///////////////////////////////////////////////////////////////////////////////////////////////////
+        if (keysDown[KEY_W]) interfaceSettings.cameraMovingUp = true;
+        else interfaceSettings.cameraMovingUp = false;
+        if (keysDown[KEY_S]) interfaceSettings.cameraMovingDown = true;
+        else interfaceSettings.cameraMovingDown = false;
+        if (keysDown[KEY_A]) interfaceSettings.cameraMovingLeft = true;
+        else interfaceSettings.cameraMovingLeft = false;
+        if (keysDown[KEY_D]) interfaceSettings.cameraMovingRight = true;
+        else interfaceSettings.cameraMovingRight = false;
+        if (keysDown[KEY_SPACE] && player.energy > 0) interfaceSettings.energyBeingUsed = true;
+        else interfaceSettings.energyBeingUsed = false;
+        ///////////////////////////////////////////////////////////////////////////////////////////////////
+        // start FUNCTION controls();
+        ///////////////////////////////////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////////////////////////////////
         // start FUNCTION updateLights(); (includes camera movement)
         ///////////////////////////////////////////////////////////////////////////////////////////////////
-        // WARNING FUNCTION CALLS IN THIS FUNCTION-AREA
-        // afaik, the only one is the .splice call in the death area
         // WARNING This is some kludgy shit because looping over object properties is apparently a pain or at least obscure in js.
         // Manual updates needed for added entity types.
         for (var aj = 0; aj < settings.entities.length; aj++) {
@@ -92,10 +106,10 @@ function drawAllCells(cellsArray) {
                 var entityXCellsMoveNextFrame = 0,
                     entityYCellsMoveNextFrame = 0;
                 // camera movement
-                if (keysDown[KEY_W]) entityYCellsMoveNextFrame -= interfaceSettings.cellsPerMove;
-                if (keysDown[KEY_S]) entityYCellsMoveNextFrame += interfaceSettings.cellsPerMove;
-                if (keysDown[KEY_D]) entityXCellsMoveNextFrame -= interfaceSettings.cellsPerMove;
-                if (keysDown[KEY_A]) entityXCellsMoveNextFrame += interfaceSettings.cellsPerMove;
+                if (interfaceSettings.cameraMovingUp) entityYCellsMoveNextFrame -= interfaceSettings.cellsPerMove;
+                if (interfaceSettings.cameraMovingDown) entityYCellsMoveNextFrame += interfaceSettings.cellsPerMove;
+                if (interfaceSettings.cameraMovingLeft) entityXCellsMoveNextFrame += interfaceSettings.cellsPerMove;
+                if (interfaceSettings.cameraMovingRight) entityXCellsMoveNextFrame -= interfaceSettings.cellsPerMove;
                 // self-movement
                 if ( // if self movement direction is DOWN
                     entity.movementDirection === 4 ||
@@ -126,17 +140,20 @@ function drawAllCells(cellsArray) {
                     entityXCellsMoveNextFrame -= updateEntityRandomMovementAmount;
                 }
                 // movement toward hot players and away from cool players.
-                if (player.temperature >= 0.5 && frameCounter % 2 === 0) {// && frameCounter % (player.temperature * 3 - player.temperature *3 % 1) === 0) {
-                                if (entity.coordinates[0] < 0) entityXCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
-                                else entityXCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
-                                if (entity.coordinates[1] < 0) entityYCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
-                                else entityYCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
-                }
-                if (player.temperature < 0.5 && frameCounter % 2 === 0) {// && frameCounter % (player.temperature * 3 - player.temperature * 3 % 1) === 0) {
-                                if (entity.coordinates[0] < 0) entityXCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
-                                else entityXCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
-                                if (entity.coordinates[1] < 0) entityYCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
-                                else entityYCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
+                // doesn't function if push back ability is being used
+                if (!(player.energyBeingUsed && player.abilities.pushBack)) {
+                                if (player.temperature >= 0.5 && frameCounter % 2 === 0) {// && frameCounter % (player.temperature * 3 - player.temperature *3 % 1) === 0) {
+                                                if (entity.coordinates[0] < 0) entityXCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
+                                                else entityXCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
+                                                if (entity.coordinates[1] < 0) entityYCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
+                                                else entityYCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
+                                }
+                                if (player.temperature < 0.5 && frameCounter % 2 === 0) {// && frameCounter % (player.temperature * 3 - player.temperature * 3 % 1) === 0) {
+                                                if (entity.coordinates[0] < 0) entityXCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
+                                                else entityXCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
+                                                if (entity.coordinates[1] < 0) entityYCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
+                                                else entityYCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
+                                }
                 }
                 // misc. movement/behavior experiments
                 if (frameCounter % 300 > 150) {
@@ -148,14 +165,18 @@ function drawAllCells(cellsArray) {
                         }
                     }
                 }
-                if (keysDown[KEY_SPACE] && player.energy > 0) {
-                    if (entity.coordinates[0] > 0) entityXCellsMoveNextFrame += 3;
-                    else entityXCellsMoveNextFrame - 3;
-                    if (entity.coordinates[1] > 0) entityYCellsMoveNextFrame += 3;
-                    else entityYCellsMoveNextFrame -= 3;
-                    // NOTE: sort of WRONG: this energy is being depleted for each entity
-                    if (frameCounter % 2 === 0) player.energy--;
+                // push back ability
+                if (interfaceSettings.energyBeingUsed && player.abilities.pushBack) {
+                    var xPushBackAmount,
+                        yPushBackAmount;
+                    if (((cellsPerRow / 2) / entity.coordinates[0]) - ((cellsPerRow / 2) / entity.coordinates[0] % 1) > player.abilities.maxPushBackAmount) xPushBackAmount = player.abilities.maxPushBackAmount;
+                    else xPushBackAmount = ((cellsPerRow / 2) / entity.coordinates[0]) - ((cellsPerRow / 2) / entity.coordinates[0] % 1);
+                    if (((cellsPerColumn / 2) / entity.coordinates[1]) - ((cellsPerColumn / 2) / entity.coordinates[1] % 1) > player.abilities.maxPushBackAmount) yPushBackAmount = player.abilities.maxPushBackAmount;
+                    else yPushBackAmount = ((cellsPerColumn / 2) / entity.coordinates[1]) - ((cellsPerColumn / 2) / entity.coordinates[1] % 1);
+                    entityXCellsMoveNextFrame += xPushBackAmount;
+                    entityYCellsMoveNextFrame += yPushBackAmount;
                 }
+                // FINAL STEPS to translate move amounts into coordinate changes
                 // rounding down just before adding to light coordinates
                 // WRONG MAYBE could make this round, not round down, with some more code
                 if (entityYCellsMoveNextFrame > 0) entityYCellsMoveNextFrame = entityYCellsMoveNextFrame - entityYCellsMoveNextFrame % 1;
@@ -198,13 +219,6 @@ function drawAllCells(cellsArray) {
         }
         //////////////////////////////////////////////////////////////////////////////////
         // end FUNCTION updateLights() and FUNCTION moveCameraWithButtons();
-        //////////////////////////////////////////////////////////////////////////////////
-        //////////////////////////////////////////////////////////////////////////////////
-        // start FUNCTION abilityEmergencyPushBack();
-        //////////////////////////////////////////////////////////////////////////////////
-        
-        //////////////////////////////////////////////////////////////////////////////////
-        // end FUNCTION abilityEmergencyPushBack();
         //////////////////////////////////////////////////////////////////////////////////
         //////////////////////////////////////////////////////////////////////////////////
         // start FUNCTION updateOscillators(arrayOfOscillators);
@@ -285,14 +299,28 @@ function drawAllCells(cellsArray) {
                 // health regeneration
                 if (player.regenerateHealth && frameCounter % player.healthRegenerationInterval === 0 &&
                     (player.noHealthRegenUntil <= frameCounter || !player.noHealthRegenUntil) &&
-                    player.health < player.maxHealth
+                    player.health < player.maxHealth &&
+                    !player.died
                 ) {
                         player.health += player.healthRegenerationAmount;
                         player.noHealthRegenUntil = frameCounter + player.healthRegenerationInterval; // just to keep you from getting more than one helath bump in the 50ms window that opens up to make sure you don't miss it altogether.
                 }
+                // energy use
+                // is the "player.energyJustDepleted" thing inelegant/kludgy?
+                if (interfaceSettings.energyBeingUsed) player.energy -= player.energyUseRate;
+                if (player.energy < 0) player.energy = 0;
+                if (player.energy === 0 && !player.energyJustDepleted) {
+                    player.noEnergyRegenUntil = frameCounter + player.delayBeforeEnergyRegenUponDepletion;
+                    player.energyJustDepleted = true;
+                }
                 // energy regen
-                if (frameCounter % player.intervalBetweenEnergyRegenUpdates === 0 && player.energy < player.maxEnergy) {
-                     player.energy += player.energyRegenerationAmount;
+                if (
+                    frameCounter % player.intervalBetweenEnergyRegenUpdates === 0 &&
+                    player.energy < player.maxEnergy &&
+                    (player.noEnergyRegenUntil <= frameCounter || !player.noEnergyRegenUntil)
+                ) {
+                    player.energy += player.energyRegenerationAmount;
+                    if (player.energyJustDepleted) player.energyJustDepleted = false;
                 }
         //////////////////////////////////////////////////////////////////////////////////
         // end FUNCTION update health and energy, part 1 (part 2 is per-cell updates to health that affect drawing)
@@ -736,7 +764,7 @@ function drawAllCells(cellsArray) {
                                 if (randomNumberIndex < arrayOfRandomNumbers.length - 1) randomNumberIndex++;
                                 else randomNumberIndex = 0;
                                 player.died = true;
-                                // FUNCTION call here, but it runs very rarely, at a time when framerate doesn't matter. I can't do this with frames because framerate will vary.
+                                // FUNCTION calls here (.now() & .toFixed()), but it runs very rarely, at a time when framerate doesn't matter. I can't do this with frames because framerate will vary.
                                 console.log('Play time was ' + ((Date.now() - settings.gameStartTime) / 1000).toFixed(2) + ' seconds.');
                         }
                 }

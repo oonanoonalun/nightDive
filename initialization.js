@@ -48,10 +48,17 @@ var cells = [],
                 'healthBarWidthScale': 1, // how wide the health bar is. At scale 1, it's two cells wide at 800x600
                 'healthBarXPositionPolarity': -1, // -1 is on the left, 1 is on the right
                 'healthBarMaxLength': 0.5, // max health bar length in screen heights
+                'abilities': {
+                        'maxPushBackAmount': 8, // WRONG this is in cells, but should be pixels converted to cells, but the ordering of where vars are declared (incl. w/ realtion to preferences function) is fucking that up
+                        'pushBack': true
+                },
+                // WRONG, maybe. All this energy stuff should maybe be its own object so that it's easy to look at player.energy...
                 'energy': 100,
                 'maxEnergy': 100,
                 'intervalBetweenEnergyRegenUpdates': 4,
+                'delayBeforeEnergyRegenUponDepletion': 15,
                 'energyRegenerationAmount': 1, // player regnerates this much energy each intervalBetweenEnergyRegenUpdates
+                'energyUseRate': 10, // amount of energy consumed per frame (is that working? It seems slow for that) when player.energyBeingUsed. 20 is a good nummber for the push back ability.
                 'energyBarWidthScale': 1, // how wide the health bar is. At scale 1, it's two cells wide at 800x600
                 'energyBarXPositionPolarity': 1, // -1 is on the left, 1 is on the right
                 'energyBarMaxLength': 0.5, // max health bar length in screen heights
