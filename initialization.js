@@ -14,7 +14,7 @@ var cells = [],
                 'lightPersonalities': [],
                 'globalLightPersonality': {},
                 'gameStartTime': Date.now(),
-                'icarusLightMovementSpeedScale': 0.25 // smaller is faster, i.e. time between movements is multiplied by this
+                'reserveOfRandomLights': []
         },
         player = {
                 'temperatureNoiseScale': 0.67, // scales how much the global noise level is affected by player temperature
@@ -186,11 +186,11 @@ var frameCounter = 0, // using this to avoid Date.now() calls as part of optimiz
         allDirections = [],
         deathAphorisms = [],
         arrayOfRandomNumbers = [], // this is to avoid having to call the Math.radnom() function, as part of optimization.
-        randomNumberIndex = 0, // this will be incremeented each time an random number from arrayOfRandomNumbers is accessed so that we're always getting new random numbers.
+        randomNumberIndex = 0, // this will be incremented each time an random number from arrayOfRandomNumbers is accessed so that we're always getting new random numbers.
         arrayOfRandomNumbersLength = 1000000, // one million
         excludedNamesFromRandomOscillatorSelection = [
                 'playerDamageOscillator'
-];
+        ];
         
 settings.oscillators.push(player.damageOscillator);
 initializeLightPersonalities(10000);
@@ -201,6 +201,7 @@ initializeCenterCells();
 initializeAllDirections();
 initializeArrayOfRandomNumbers(arrayOfRandomNumbersLength);
 initializeDeathAphorisms();
+
 function initializeArrayOfRandomNumbers(length) {
         // wow. A million random number and it doesn't take that long to run.
         for (var i = 0; i < length; i++) {
@@ -281,6 +282,7 @@ function assignDistanceLookupTables() {
         }
 }
 
+// WRONG THIS ISN'T DOING ANYTHING
 function initializeAllDirections() {
         allDirections.push(UP, DOWN, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT);
 }
