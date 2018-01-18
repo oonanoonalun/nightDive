@@ -64,6 +64,42 @@ function drawAllCells(cellsArray) {
         // start FUNCTION controls();
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////////////////////////////////
+        // start FUNCTION gameSettings(); // i.e. turning gametypes and associated behaviors on and off
+        ///////////////////////////////////////////////////////////////////////////////////////////////////
+        if (settings.game.individualPersonalities.cycle) {
+            if (settings.game.individualPersonalities.notOnUntil === frameCounter) {
+                settings.game.individualPersonalities.on = true;
+                settings.game.individualPersonalities.notOffUntil = frameCounter + settings.game.individualPersonalities.framesOn;
+            }
+            if (settings.game.individualPersonalities.notOffUntil === frameCounter) {
+                settings.game.individualPersonalities.on = false;
+                settings.game.individualPersonalities.notOnUntil = frameCounter + settings.game.individualPersonalities.framesOff;
+            }
+        }
+        if (settings.game.slipperySlope.cycle) {
+            if (settings.game.slipperySlope.notOnUntil === frameCounter) {
+                settings.game.slipperySlope.on = true;
+                settings.game.slipperySlope.notOffUntil = frameCounter + settings.game.slipperySlope.framesOn;
+            }
+            if (settings.game.slipperySlope.notOffUntil === frameCounter) {
+                settings.game.slipperySlope.on = false;
+                settings.game.slipperySlope.notOnUntil = frameCounter + settings.game.slipperySlope.framesOff;
+            }
+        }
+        if (settings.game.race.cycle) {
+            if (settings.game.race.notOnUntil === frameCounter) {
+                settings.game.race.on = true;
+                settings.game.race.notOffUntil = frameCounter + settings.game.race.framesOn;
+            }
+            if (settings.game.race.notOffUntil === frameCounter) {
+                settings.game.race.on = false;
+                settings.game.race.notOnUntil = frameCounter + settings.game.race.framesOff;
+            }
+        }
+        ///////////////////////////////////////////////////////////////////////////////////////////////////
+        // end FUNCTION gameSettings();
+        ///////////////////////////////////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////////////////////////////////
         // start FUNCTION updateLights(); (includes camera movement)
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         // WARNING This is some kludgy shit because looping over object properties is apparently a pain or at least obscure in js.
@@ -111,67 +147,73 @@ function drawAllCells(cellsArray) {
                 if (interfaceSettings.cameraMovingLeft) entityXCellsMoveNextFrame += interfaceSettings.cellsPerMove;
                 if (interfaceSettings.cameraMovingRight) entityXCellsMoveNextFrame -= interfaceSettings.cellsPerMove;
                 // self-movement
-                if ( // if self movement direction is DOWN
-                    entity.movementDirection === 4 ||
-                    entity.movementDirection === 5 ||
-                    entity.movementDirection === 3
-                ) { // DOWN || DOWN_LEFT || DOWN_RIGHT // move down
-                    entityYCellsMoveNextFrame -= updateEntityRandomMovementAmount;
-                }
-                if ( // if self movement direction is UP
-                    entity.movementDirection === 0 ||
-                    entity.movementDirection === 7 ||
-                    entity.movementDirection === 1
-                ) { // UP || UP_LEFT || UP_RIGHT // move up
-                    entityYCellsMoveNextFrame += updateEntityRandomMovementAmount;
-                }
-                if ( // if self movement direction is RIGHT
-                    entity.movementDirection === 2 ||
-                    entity.movementDirection === 1 ||
-                    entity.movementDirection === 3
-                ) { // RIGHT || UP_RIGHT || DOWN_RIGHT // move right
-                    entityXCellsMoveNextFrame += updateEntityRandomMovementAmount;
-                }
-                if ( // if self movement direction is LEFT
-                    entity.movementDirection === 6 ||
-                    entity.movementDirection === 7 ||
-                    entity.movementDirection === 5
-                ) { // LEFT || UP_LEFT || DOWN_LEFT // move left
-                    entityXCellsMoveNextFrame -= updateEntityRandomMovementAmount;
+                if (settings.game.individualPersonalities.on) {                    
+                                if ( // if self movement direction is DOWN
+                                    entity.movementDirection === 4 ||
+                                    entity.movementDirection === 5 ||
+                                    entity.movementDirection === 3
+                                ) { // DOWN || DOWN_LEFT || DOWN_RIGHT // move down
+                                    entityYCellsMoveNextFrame -= updateEntityRandomMovementAmount;
+                                }
+                                if ( // if self movement direction is UP
+                                    entity.movementDirection === 0 ||
+                                    entity.movementDirection === 7 ||
+                                    entity.movementDirection === 1
+                                ) { // UP || UP_LEFT || UP_RIGHT // move up
+                                    entityYCellsMoveNextFrame += updateEntityRandomMovementAmount;
+                                }
+                                if ( // if self movement direction is RIGHT
+                                    entity.movementDirection === 2 ||
+                                    entity.movementDirection === 1 ||
+                                    entity.movementDirection === 3
+                                ) { // RIGHT || UP_RIGHT || DOWN_RIGHT // move right
+                                    entityXCellsMoveNextFrame += updateEntityRandomMovementAmount;
+                                }
+                                if ( // if self movement direction is LEFT
+                                    entity.movementDirection === 6 ||
+                                    entity.movementDirection === 7 ||
+                                    entity.movementDirection === 5
+                                ) { // LEFT || UP_LEFT || DOWN_LEFT // move left
+                                    entityXCellsMoveNextFrame -= updateEntityRandomMovementAmount;
+                                }
                 }
                 // movement toward hot players and away from cool players.
                 // doesn't function if push back ability is being used
-                if (!(player.energyBeingUsed && player.abilities.pushBack)) {
-                                if (player.temperature >= 0.5 && frameCounter % 2 === 0) {// && frameCounter % (player.temperature * 3 - player.temperature *3 % 1) === 0) {
-                                                if (entity.coordinates[0] < 0) entityXCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
-                                                else entityXCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
-                                                if (entity.coordinates[1] < 0) entityYCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
-                                                else entityYCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
-                                }
-                                if (player.temperature < 0.5 && frameCounter % 2 === 0) {// && frameCounter % (player.temperature * 3 - player.temperature * 3 % 1) === 0) {
-                                                if (entity.coordinates[0] < 0) entityXCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
-                                                else entityXCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
-                                                if (entity.coordinates[1] < 0) entityYCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
-                                                else entityYCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
-                                }
-                }
-                // misc. movement/behavior experiments
-                if (frameCounter % 300 > 150) {
-                    if (frameCounter % 2 === 0) {
-                        entityYCellsMoveNextFrame -= 4;
-                        if (frameCounter % 3 === 0) {
-                            if (entity.coordinates[0] < 0) entityXCellsMoveNextFrame -= 1;
-                            else entityXCellsMoveNextFrame += 1;
+                if (settings.game.slipperySlope.on) {
+                    if (!(player.energyBeingUsed && player.abilities.pushBack)) {
+                        if (player.temperature >= 0.5 && frameCounter % 2 === 0) {// && frameCounter % (player.temperature * 3 - player.temperature *3 % 1) === 0) {
+                            if (entity.coordinates[0] < 0) entityXCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
+                            else entityXCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
+                            if (entity.coordinates[1] < 0) entityYCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
+                            else entityYCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
+                        }
+                        if (player.temperature < 0.5 && frameCounter % 2 === 0) {// && frameCounter % (player.temperature * 3 - player.temperature * 3 % 1) === 0) {
+                            if (entity.coordinates[0] < 0) entityXCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
+                            else entityXCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
+                            if (entity.coordinates[1] < 0) entityYCellsMoveNextFrame -= 1;//player.temperature * 3 - player.temperature *3 % 1;
+                            else entityYCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
                         }
                     }
                 }
-                // push back ability
+                // misc. movement/behavior experiments
+                if (settings.game.race.on) {
+                    if (frameCounter % 300 > 150) {
+                        if (frameCounter % 2 === 0) {
+                            entityYCellsMoveNextFrame -= 4;
+                            if (frameCounter % 3 === 0) {
+                                if (entity.coordinates[0] < 0) entityXCellsMoveNextFrame -= 1;
+                                else entityXCellsMoveNextFrame += 1;
+                            }
+                        }
+                    }
+                }
+                // push back ability's effects
                 if (interfaceSettings.energyBeingUsed && player.abilities.pushBack) {
                     var xPushBackAmount,
                         yPushBackAmount;
-                    if (((cellsPerRow / 2) / entity.coordinates[0]) - ((cellsPerRow / 2) / entity.coordinates[0] % 1) > player.abilities.maxPushBackAmount) xPushBackAmount = player.abilities.maxPushBackAmount;
+                    if (((cellsPerRow / 2) / entity.coordinates[0]) - ((cellsPerRow / 2) / entity.coordinates[0] % 1) > (player.abilities.maxPushBackAmount / cellSize)) xPushBackAmount = player.abilities.maxPushBackAmount / cellSize;
                     else xPushBackAmount = ((cellsPerRow / 2) / entity.coordinates[0]) - ((cellsPerRow / 2) / entity.coordinates[0] % 1);
-                    if (((cellsPerColumn / 2) / entity.coordinates[1]) - ((cellsPerColumn / 2) / entity.coordinates[1] % 1) > player.abilities.maxPushBackAmount) yPushBackAmount = player.abilities.maxPushBackAmount;
+                    if (((cellsPerColumn / 2) / entity.coordinates[1]) - ((cellsPerColumn / 2) / entity.coordinates[1] % 1) > (player.abilities.maxPushBackAmount / cellSize)) yPushBackAmount = player.abilities.maxPushBackAmount / cellSize;
                     else yPushBackAmount = ((cellsPerColumn / 2) / entity.coordinates[1]) - ((cellsPerColumn / 2) / entity.coordinates[1] % 1);
                     entityXCellsMoveNextFrame += xPushBackAmount;
                     entityYCellsMoveNextFrame += yPushBackAmount;

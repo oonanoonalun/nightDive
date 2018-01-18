@@ -14,7 +14,33 @@ var cells = [],
                 'lightPersonalities': [],
                 'globalLightPersonality': {},
                 'gameStartTime': Date.now(),
-                'reserveOfRandomLights': []
+                'reserveOfRandomLights': [],
+                'game': {
+                        'slipperySlope': {
+                                'on': false, // Whether the behavior is active or not. Cycling turns this on and off automatically at intervals.
+                                'cycle': true, // turns itself on and off at intervals
+                                'framesOn': 150, // when cycling, for how many frames will it be on?
+                                'framesOff': 300, // when cycling, for how many frames will it be off?
+                                'notOnUntil': 0, // Cycling starts when the frameCounter reaches this initial value, then this property is used by the cycling process
+                                'notOffUntil': null
+                        },
+                        'race': {
+                                'on': false,
+                                'cycle': true,
+                                'framesOn': 90,
+                                'framesOff': 300,
+                                'notOnUntil': 0,
+                                'notOffUntil': null
+                        },
+                        'individualPersonalities': {
+                                'on': false,
+                                'cycle': true,
+                                'framesOn': 150,
+                                'framesOff': 150,
+                                'notOnUntil': 0,
+                                'notOffUntil': null
+                        }
+                }
         },
         player = {
                 'temperatureNoiseScale': 0.67, // scales how much the global noise level is affected by player temperature
@@ -36,7 +62,7 @@ var cells = [],
                 'healthRegenerationAmount': 1,  // regenerate this amount of health
                 'healthRegenerationInterval': 30,      // every this many frames, player health increases by player.healthRegenerationAmount
                 'temperatureChangeRateScale': 0.0005, // affect how quickly the player gains and loses temperature based on center-screen brightnesspl
-                'temperatureChangeRateFrameCounterScale': 0.000001, // this is how much the frame counter value affects the speed at which the player gains and loses heat
+                'temperatureChangeRateFrameCounterScale': 0.0000005, // this is how much the frame counter value affects the speed at which the player gains and loses heat
                 'coolingScale': 1, // scale the rate at which you heat and cool for balancing purposes (or for special effects)
                 'heatingScale': 1,
                 // WRONG so stupid that I can't just have a 'damageZoneWidth' property and base the cold and heat
@@ -49,7 +75,7 @@ var cells = [],
                 'healthBarXPositionPolarity': -1, // -1 is on the left, 1 is on the right
                 'healthBarMaxLength': 0.5, // max health bar length in screen heights
                 'abilities': {
-                        'maxPushBackAmount': 8, // WRONG this is in cells, but should be pixels converted to cells, but the ordering of where vars are declared (incl. w/ realtion to preferences function) is fucking that up
+                        'maxPushBackAmount': 80, // in pixels
                         'pushBack': true
                 },
                 // WRONG, maybe. All this energy stuff should maybe be its own object so that it's easy to look at player.energy...
