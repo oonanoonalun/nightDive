@@ -64,11 +64,75 @@ function drawAllCells(cellsArray) {
         if (keysDown[KEY_SPACE] && player.energy > 0) interfaceSettings.energyBeingUsed = true;
         else interfaceSettings.energyBeingUsed = false;
         ///////////////////////////////////////////////////////////////////////////////////////////////////
-        // start FUNCTION controls();
+        // end FUNCTION controls();
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         // start FUNCTION gameSettings(); // i.e. turning gametypes and associated behaviors on and off
         ///////////////////////////////////////////////////////////////////////////////////////////////////
+        /////////////////
+        // start ambient temperature updates
+        ///////////////
+        if (settings.game.ambientTemperature.noChangeUntil <= frameCounter ||
+            !settings.game.ambientTemperature.noChangeUntil) {
+                if (settings.game.diurnal.on) {
+                    // time of day affects ambient temperature
+                    // UGH! Percariously balanced by hand to make natural times of day's peak and low temperatures (3pm-ish and 7am-ish)
+                    // sync with what happens here.
+                    var oClock = settings.game.diurnal.timeOfDayNormalized; // coldest at 0.29 o'clock (7am), warmest at 0.625 (3pm) in .timeOfDayNormalized
+                    // oClock is < 0.625 and > 0.29, i.e. if it's after the coldest part of the day, and before the warmest, ambient temperature is increasing.
+                    // cooling phase part I (broken up because the normalizing clock crosses 0 during cooling)
+                    if (oClock <= 0.29) {
+                        // GOOD, working. Good temp at midnight (about 0.25), at min temp of 0.25 right on the dot at 0.29 oClock (7am)
+                        settings.game.ambientTemperature.current =
+                        settings.game.ambientTemperature.min + 0.11 - oClock / 3 *
+                        settings.game.ambientTemperature.scale;
+                        // starts at about 0.35 (a good temp for midnight/oClock 0) when oClock is 0.29 (7am). Gets us down to min temp of 0.25 by oClock 0.29 (7am).
+                    }
+                    // cooling phase part II
+                    if (oClock >= 0.625) {
+                        settings.game.ambientTemperature.current =
+                        settings.game.ambientTemperature.min + 0.5 + (0.625 / 0.96) - oClock / 0.96 *
+                        settings.game.ambientTemperature.scale;
+                    }
+                    // warming phase
+                    if (oClock > 0.29 && oClock < 0.625) { // if it's after the warmest point in the day and before the coldest, ambient temperature is decreasing.
+                        // this needs to pick up from the <= 0.29 bit of code at min temp (0.25), and carry us to 0.75
+                        // oClock will be at 0.29 when this starts, so we need (pseudo-code):
+                        // initial start state = temp of min of 0.25
+                        // this rate reaching oClock = 0.625 = temp max of 0.75
+                        settings.game.ambientTemperature.current =
+                        settings.game.ambientTemperature.min + oClock * 1.5 - (0.29 * 1.5) *
+                        settings.game.ambientTemperature.scale;
+                        // this balances out to start at temp min of 0.25, and arrive at 0.75 temp (max) by 0.625 clock (3pm, hottest point in the day)
+                    }
+                    // could not work out the math on this one, but the basic info is there to actually do this right.
+                    /*var decreasingTempDuration = 1 - 0.625 + 0.29, // 0.665 i.e. for how long, in normalized clock time, is the ambient temperature cooling
+                        increasingTempDuration = 0.625 - 0.29, // 0.335 i.e. for how long, in normalized clock time, is the ambient temperature warming
+                        coolingStretch = decreasingTempDuration / 0.5,
+                        heatingScrunch = increasingTempDuration / 0.5,
+                        oClock = settings.game.diurnal.timeOfDayNormalized; // coldest at 0.29 o'clock (7am), warmest at 0.625 (3pm) in .timeOfDayNormalized
+                    // if it's after the warmest point in the day and before the coldest, ambient temperature is decreasing.
+                    if (oClock >= 0.625 || oClock <= 0.29) {
+                        settings.game.ambientTemperature.current =
+                        settings.game.ambientTemperature.min +
+                        ((settings.game.ambientTemperature.max - settings.game.ambientTemperature.min) *
+                        coolingStretch * ((oClock - (1 - 0.29)) % 1) * settings.game.ambientTemperature.scale);
+                    } else { // oClock is < 0.625 and > 0.29, i.e. if it's after the coldest part of the day, and before the warmest, ambient temperature is increasing.
+                        settings.game.ambientTemperature.current =
+                        settings.game.ambientTemperature.min +
+                        ((settings.game.ambientTemperature.max - settings.game.ambientTemperature.min) *
+                        heatingScrunch * (oClock - 0.625 % 1) * settings.game.ambientTemperature.scale);
+                    }*/
+                    //console.log('Ambient temp.: ' + settings.game.ambientTemperature.current + ' Time of day: ' + settings.game.diurnal.timeOfDayNormalized);
+                }
+                //limiting max and min ambient temperature
+                if (settings.game.ambientTemperature.current > settings.game.ambientTemperature.max) settings.game.ambientTemperature.current = settings.game.ambientTemperature.max;
+                if (settings.game.ambientTemperature.current < settings.game.ambientTemperature.min) settings.game.ambientTemperature.current = settings.game.ambientTemperature.mmin;
+                settings.game.ambientTemperature.noChangeUntil = frameCounter + settings.game.ambientTemperature.intervalBetweenUpdates;
+            }
+        ////////////////
+        // end ambient temperature updates
+        //////////////////
         if (settings.game.individualPersonalities.cycle) {
             if (settings.game.individualPersonalities.notOnUntil === frameCounter) {
                 settings.game.individualPersonalities.on = true;
@@ -292,17 +356,19 @@ function drawAllCells(cellsArray) {
         //////////////////////////////////////////////////////////////////////////////////
         if (player.noTemperatureChangeUntil <= frameCounter || !player.noTemperatureChangeUntil) {
                 player.brightness = player.temperature * 255;
-                var heatGainRate = interfaceSettings.centerCellsAverageBrightness * player.heatingScale * player.temperatureChangeRateScale * ((interfaceSettings.centerCellsAverageBrightness - player.brightness) / 255),
-                        heatLossRate = interfaceSettings.centerCellsAverageBrightness * player.coolingScale * player.temperatureChangeRateScale * ((player.brightness - interfaceSettings.centerCellsAverageBrightness) / 255);
+                var ambientTempInfluence = 1;
+                // factoring in ambient tmperature based on time of day
+                if (settings.game.diurnal.on && settings.game.ambientTemperature) ambientTempInfluence = settings.game.ambientTemperature.current * 2;
+                var heatGainRate = interfaceSettings.centerCellsAverageBrightness * ambientTempInfluence * player.heatingScale * player.temperatureChangeRateScale * ((interfaceSettings.centerCellsAverageBrightness - player.brightness) / 255),
+                        heatLossRate = interfaceSettings.centerCellsAverageBrightness * ambientTempInfluence * player.coolingScale * player.temperatureChangeRateScale * ((player.brightness - interfaceSettings.centerCellsAverageBrightness) / 255);
+                // limiting rate of heat gain or loss
                 if (heatGainRate > player.maxHeatGainRate) heatGainRate = player.maxHeatGainRate;
                 if (heatLossRate > player.maxHeatLossRate) heatLossRate = player.maxHeatLossRate;
-                // if the center cells are cooler than the player
+                // if the center cells (and ambient temp, if settings.game.diurnal is on) are cooler than the player
                 if (interfaceSettings.centerCellsAverageBrightness <= player.brightness) {
                     player.temperature -= heatLossRate;
                     player.currentTemperatureChangeRate = -heatLossRate;
-                }
-                // if the center cells are warmer than the player
-                else {
+                } else { // if the center cells are warmer than the player
                     player.temperature += heatGainRate;
                     player.currentTemperatureChangeRate = heatGainRate;
                 }

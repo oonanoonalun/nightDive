@@ -17,6 +17,13 @@ var cells = [],
                 'gameStartTime': Date.now(), // WRONG: this is going to pick up some early game time when things are still initializing and the screen is black.
                 'reserveOfRandomLights': [],
                 'game': {
+                        'ambientTemperature': {
+                            'current': 0.5,
+                            'scale': 1, // scales ambient temperature when it's adjusted by other factors
+                            'min': 0.25, // keeps other factors from making the ambient temperature too hot or too cold
+                            'max': 0.75,
+                            'intervalBetweenUpdates': 20 // frames between updates
+                        },
                         'slipperySlope': {
                                 'on': false, // Whether the behavior is active or not. Cycling turns this on and off automatically at intervals.
                                 'cycle': false, // turns itself on and off at intervals
@@ -43,7 +50,7 @@ var cells = [],
                         },
                         'diurnal': {
                             'on': true, // diurnal cycle will play out
-                            'duration': 3600, // length of day, midnight to midnight. 3600 is two minutes at 30fps
+                            'duration': 1800, // length of day, midnight to midnight. 3600 is two minutes at 30fps
                         }
                 }
         },
