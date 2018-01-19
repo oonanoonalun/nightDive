@@ -128,6 +128,7 @@ function setPreferences() {
         drawingSettings.darkStretchScale = 0.7; // affects normalizeBrightness. Values < 1 and >= 0 are valid. Higher values lower contrast and reduce blacks create greys.
         // If 'true', draws the game as rainbow. False is greyscale
         drawingSettings.greyscaleToSpectrum = false;
+        drawingSettings.muteSpectralTones = true;
         // draw screen. Turn off to look at errors without the screen being drawn slowing things down
         drawingSettings.drawScreen = true;
         
@@ -165,8 +166,8 @@ function setPreferences() {
         // number of cells per player move (one move per frame)
         interfaceSettings.cellsPerMove = 2;
         // minimum and maximum number of lights on the map at any one time
-        settings.minLights = 12;
-        settings.maxLights = 25;
+        settings.minLights = 5;
+        settings.maxLights = 16;
         // lights parameter ranges
         randomLightSettingsDefault.minBrightness = 0.125;
         randomLightSettingsDefault.maxBrightness = 2;
@@ -234,14 +235,15 @@ initializeDeathAphorisms();
 // TESTING/EXPERIMENTING
 var testLightOscillator = makeOscillator(120, 0, SINE, 'testLightOscillator');
 settings.oscillators.push(testLightOscillator);
-makeLightLine([-40, -10], 20, 150);
+makeLightLine([-40, -10], 20, 250);
 //settings.entities.lights.push(makeLight(0.5, canvasWidth / 4, [-15, -15], testLightOscillator, 10, 18, 0, 0, 0, 0, cells, settings.entities.lights));
 //makeLineOfLights([-20, -15], 35);
 //makeLineOfLights([-40, 10], 60);
 function makeLightLine(startCoordsXYArray, length, range) {
     var line = {
         'range': range,
-        'brightness': 200,
+        'brightness': 260,
+        'trapezoidSlope': 1, // 0 is rectalinear, 1 is 45° (i.e. 1:1 slope), 2 is 2:1 slope // doesn't really work
         'noiseFactor': 10,
         'oscillator': testLightOscillator,
         'length': length,
@@ -249,7 +251,7 @@ function makeLightLine(startCoordsXYArray, length, range) {
         'cell': cells[coordinatesToIndex(startCoordsXYArray)],
         'cellIndex': coordinatesToIndex(startCoordsXYArray), // WRONG, maybe. Should just be '.index' ?
         'parentCellsArray': cells,
-        'entityType': 'lightLine',
+        'entityType': 'shadow',
         'personality': {
             'dieChance': 0,
             'directionChangeChance': 0

@@ -209,7 +209,7 @@ function drawAllCells(cellsArray) {
                     }
                 }
                 // push back ability's effects
-                if (interfaceSettings.energyBeingUsed && player.abilities.pushBack) {
+                if (interfaceSettings.energyBeingUsed && player.abilities.pushBack && entity.entityType !== 'shadow') {
                     var xPushBackAmount,
                         yPushBackAmount;
                     if (((cellsPerRow / 2) / entity.coordinates[0]) - ((cellsPerRow / 2) / entity.coordinates[0] % 1) > (player.abilities.maxPushBackAmount / cellSize)) xPushBackAmount = player.abilities.maxPushBackAmount / cellSize;
@@ -422,13 +422,19 @@ function drawAllCells(cellsArray) {
                             lightLineBrightness;
                         if (randomNumberIndex + lightLine.length > arrayOfRandomNumbers.length) randomNumberIndex = 0; // making sure random number index doesn't overshoot durring this loop
                         for (var aq = 0; aq < lightLine.length; aq++) { // for each cell in the light line
-                            if (cell.coordinates[0] === lightLine.coordinates[0] + aq) {
-                                var distanceToLightLineCoords = (lightLine.coordinates[1] - cell.coordinates[1]) * cellSize;
+                            if (
+                                (cell.coordinates[0] === lightLine.coordinates[0] + (0.5 * aq) ||
+                                cell.coordinates[0] === lightLine.coordinates[0] - (0.5 * aq)) && // on either side of line coordinats
+                                cell.coordinates[1] < lightLine.coordinates[1] // one-sided
+                            ) {
+                                var distanceToLightLineCoords = (lightLine.coordinates[1] - cell.coordinates[1]) * cellSize,
+                                    lightLineNoise = lightLine.noiseFactor;
+                                    lightLineNoise *= (1 - player.energy / player.maxEnergy) * 4;
                                 if (distanceToLightLineCoords < 0) distanceToLightLineCoords = -distanceToLightLineCoords;
                                 lightLineBrightness =
-                                    (lightLine.range - distanceToLightLineCoords) /
+                                    ((lightLine.range * lightLine.oscillator.value) - distanceToLightLineCoords) /
                                     lightLine.range * lightLine.brightness -
-                                    (arrayOfRandomNumbers[randomNumberIndex] * lightLine.noiseFactor)// *
+                                    (arrayOfRandomNumbers[randomNumberIndex] * lightLineNoise * lightLine.oscillator.value)// *
                                     //lightLine.oscillator.value
                                 ;
                                 randomNumberIndex++;
@@ -619,6 +625,15 @@ function drawAllCells(cellsArray) {
                                         if (cellAverageBrightnessForGreyScaleToSpectrum > 0.75 && cellAverageBrightnessForGreyScaleToSpectrum <= 1) {             //anywhere from yellow to red
                                                 cell.color = [255, Math.abs((255 * (cellAverageBrightnessForGreyScaleToSpectrum - 1) * 4)), 0];    //the G cellAverageBrightnessForGreyScaleToSpectrum should be 0 for input 0.5 and 1 for input 0.25.
                                         }                
+                                }
+                                if (drawingSettings.muteSpectralTones) {
+                                    // sky blue (cool) to orange (hot):
+                                    if (cell.color[0] > cell.color[2]) cell.color[1] = 0.33 * cell.color[0];
+                                    else cell.color[1] = 0.5 * cell.color[2];
+                                    // aqua to pink
+                                    //cell.color[1] = (cell.color[1] + cell.color[2]) * 0.5;
+                                    //cell.color[2] = (0.5 * cell.color[0]) + (cell.color[1] * 3);
+                                    
                                 }
                 }
                 //////////////////////////////////////////////////////////////////////////////////
