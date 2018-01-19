@@ -630,7 +630,7 @@ function drawAllCells(cellsArray) {
                                                 cell.color = [255, Math.abs((255 * (cellAverageBrightnessForGreyScaleToSpectrum - 1) * 4)), 0];    //the G cellAverageBrightnessForGreyScaleToSpectrum should be 0 for input 0.5 and 1 for input 0.25.
                                         }                
                                 }
-                                if (drawingSettings.muteSpectralTones) {
+                                if (settings.game.diurnal.on) {
                                     // capping brightness
                                     for (var at = 0; at < 3; at++) {
                                         if (cell.color[at] > 255) cell.color[at] = 255;
@@ -648,7 +648,40 @@ function drawAllCells(cellsArray) {
                                         coldCol0 = drawingSettings.spectrumColdColor[0],
                                         coldCol1 = drawingSettings.spectrumColdColor[1],
                                         coldCol2 = drawingSettings.spectrumColdColor[2],
-                                        normCol = cell.color[0] / 255;
+                                        normCol = cell.color[0] / 255,
+                                        targetColor = [
+                                            (coldCol0 * (1 - normCol)) + (hotCol0 * normCol),
+                                            (coldCol1 * (1 - normCol)) + (hotCol1 * normCol),
+                                            (coldCol2 * (1 - normCol)) + (hotCol2 * normCol)
+                                        ];
+                                    // WRONG this doesn't need to be declared here, and not every frame. Just here for convenience right now.
+                                    //settings.game.diurnal.duration = 350; // 3600 frames is two minutes at 30 fps
+                                    // 1800 frames (or about a minute) to get to target color
+                                    // this should be run every frame, though
+                                    settings.game.diurnal.timeOfDayNormalized = (frameCounter % settings.game.diurnal.duration) / settings.game.diurnal.duration; // 0 and 1 are midnight
+                                    // midnight. setting the frames for the next noon and midnight
+                                    if (frameCounter % settings.game.diurnal.duration === 0) {
+                                        settings.game.diurnal.noon = frameCounter + settings.game.diurnal.duration / 2;
+                                        settings.game.diurnal.midnight = frameCounter + settings.game.diurnal.duration;
+                                        //if (cell.index === 2000) console.log('midnight');
+                                    }
+                                    // rising sun
+                                    if (frameCounter < settings.game.diurnal.noon) {
+                                        cell.color[0] += (targetColor[0] - cell.color[0]) * settings.game.diurnal.timeOfDayNormalized * 2;
+                                        cell.color[1] += (targetColor[1] - cell.color[1]) * settings.game.diurnal.timeOfDayNormalized * 2;
+                                        cell.color[2] += (targetColor[2] - cell.color[2]) * settings.game.diurnal.timeOfDayNormalized * 2;
+                                        //if (frameCounter % 10 === 0 && cell.index === 2000) console.log('rising ' + settings.game.diurnal.timeOfDayNormalized.toFixed(2));
+                                    }
+                                    // setting sun
+                                    else {
+                                        cell.color[0] += (targetColor[0] - cell.color[0]) * (1 - ((settings.game.diurnal.timeOfDayNormalized - 0.5) * 2));
+                                        cell.color[1] += (targetColor[1] - cell.color[1]) * (1 - ((settings.game.diurnal.timeOfDayNormalized - 0.5) * 2));
+                                        cell.color[2] += (targetColor[2] - cell.color[2]) * (1 - ((settings.game.diurnal.timeOfDayNormalized - 0.5) * 2));
+                                        //if (frameCounter % 10 === 0 && cell.index === 2000) console.log('setting ' + settings.game.diurnal.timeOfDayNormalized.toFixed(2));
+                                    }
+                                    //cell.color[0] = (coldCol0 * (1 - normCol)) + (hotCol0 * normCol);
+                                    //cell.color[1] = (coldCol1 * (1 - normCol)) + (hotCol1 * normCol);
+                                    //cell.color[2] = (coldCol2 * (1 - normCol)) + (hotCol2 * normCol);
                                         
                                     /*if (normCol <= 0.5) {
                                         cell.color[0] = (coldCol0 * (1 - normCol * 2)) + (medCol0 * (2 * normCol));
@@ -667,10 +700,6 @@ function drawAllCells(cellsArray) {
                                     /*cell.color[0] = (coldCol0 * (1 - normCol * 2)) + (hotCol0 * normCol * 2 - 1);
                                     cell.color[1] = (coldCol1 * (1 - normCol * 2)) + (hotCol1 * normCol * 2 - 1);
                                     cell.color[2] = (coldCol2 * (1 - normCol * 2)) + (hotCol2 * normCol * 2 - 1);*/
-                                    
-                                    cell.color[0] = (coldCol0 * (1 - normCol)) + (hotCol0 * normCol);
-                                    cell.color[1] = (coldCol1 * (1 - normCol)) + (hotCol1 * normCol);
-                                    cell.color[2] = (coldCol2 * (1 - normCol)) + (hotCol2 * normCol);
                                 }
                 }
                 //////////////////////////////////////////////////////////////////////////////////

@@ -40,6 +40,10 @@ var cells = [],
                                 'framesOff': 150,
                                 'notOnUntil': 0,
                                 'notOffUntil': null
+                        },
+                        'diurnal': {
+                            'on': true, // diurnal cycle will play out
+                            'duration': 3600, // length of day, midnight to midnight. 3600 is two minutes at 30fps
                         }
                 }
         },
