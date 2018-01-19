@@ -24,6 +24,9 @@ var drawingSettings = {
                 'displayResolutionInformation': false,
                 'drawScreen': true,
                 'greyscaleToSpectrum': false, // draws the world as rainbow instead of greyscale. Does a little bit of extra cpu work compared to greyscale.
+                'spectrumHotColor': [255, 160, 80],
+                'spectrumMedColor': [0, 255, 0],
+                'spectrumColdColor': [64, 96, 255],
                 'blueIsHot': false // only matters if 'grescaleToSpectrum' is true. If this is true, blue will be hot and red will be cool
 };
 
@@ -609,10 +612,11 @@ function drawAllCells(cellsArray) {
                                         if (cellAverageBrightnessForGreyScaleToSpectrum > 0.5 && cellAverageBrightnessForGreyScaleToSpectrum <= 0.75) {
                                                 cell.color = [0, 255, (255 * ((cellAverageBrightnessForGreyScaleToSpectrum - 0.5) * 4))];    //anywhere  from green to cyan
                                         }
-                                        if (cellAverageBrightnessForGreyScaleToSpectrum > 0.75 && cellAverageBrightnessForGreyScaleToSpectrum <= 1) {             //anywhere from yellow to green
+                                        if (cellAverageBrightnessForGreyScaleToSpectrum > 0.75 && cellAverageBrightnessForGreyScaleToSpectrum <= 1) {             //anywhere from cyan to blue
                                                 cell.color = [0, Math.abs((255 * (cellAverageBrightnessForGreyScaleToSpectrum - 1) * 4)), 255];    //the G cellAverageBrightnessForGreyScaleToSpectrum should be 0 for input 0.5 and 1 for input 0.25.
                                         }
-                                } else {
+                                }
+                                if (!drawingSettings.blueIsHot && !drawingSettings.muteSpectralTones) {
                                         if (cellAverageBrightnessForGreyScaleToSpectrum <= 0.25) {                            //anywhere from blue to cyan
                                                 cell.color = [0, (255 * (cellAverageBrightnessForGreyScaleToSpectrum * 4)), 255];
                                         }
@@ -627,13 +631,46 @@ function drawAllCells(cellsArray) {
                                         }                
                                 }
                                 if (drawingSettings.muteSpectralTones) {
-                                    // sky blue (cool) to orange (hot):
-                                    if (cell.color[0] > cell.color[2]) cell.color[1] = 0.33 * cell.color[0];
-                                    else cell.color[1] = 0.5 * cell.color[2];
-                                    // aqua to pink
-                                    //cell.color[1] = (cell.color[1] + cell.color[2]) * 0.5;
-                                    //cell.color[2] = (0.5 * cell.color[0]) + (cell.color[1] * 3);
+                                    // capping brightness
+                                    for (var at = 0; at < 3; at++) {
+                                        if (cell.color[at] > 255) cell.color[at] = 255;
+                                    }
+                                    // pretty good cheap, simple approximation of original effect. Not much yellow, deep blue is too blue.
+                                    //cell.color[2] = 255 - cell.color[2];
+                                    //if (cell.color[0] <= 127) cell.color[1] = cell.color[0] * 2;
+                                    //else cell.color[1] = cell.color[2] * 2;
+                                    var hotCol0 = drawingSettings.spectrumHotColor[0],
+                                        hotCol1 = drawingSettings.spectrumHotColor[1],
+                                        hotCol2 = drawingSettings.spectrumHotColor[2],
+                                        medCol0 = drawingSettings.spectrumMedColor[0],
+                                        medCol1 = drawingSettings.spectrumMedColor[1],
+                                        medCol2 = drawingSettings.spectrumMedColor[2],
+                                        coldCol0 = drawingSettings.spectrumColdColor[0],
+                                        coldCol1 = drawingSettings.spectrumColdColor[1],
+                                        coldCol2 = drawingSettings.spectrumColdColor[2],
+                                        normCol = cell.color[0] / 255;
+                                        
+                                    /*if (normCol <= 0.5) {
+                                        cell.color[0] = (coldCol0 * (1 - normCol * 2)) + (medCol0 * (2 * normCol));
+                                        cell.color[1] = (coldCol1 * (1 - normCol * 2)) + (medCol1 * (2 * normCol));
+                                        cell.color[2] = (coldCol2 * (1 - normCol * 2)) + (medCol2 * (2 * normCol));
+                                    } else {
+                                       cell.color[0] = (medCol0 * ((normCol - 1) * -2)) + (hotCol0 * (normCol * 2 - 1));
+                                       cell.color[1] = (medCol1 * ((normCol - 1) * -2)) + (hotCol1 * (normCol * 2 - 1));
+                                       cell.color[2] = (medCol2 * ((normCol - 1) * -2)) + (hotCol2 * (normCol * 2 - 1));
+                                    }*/
                                     
+                                    /*cell.color[0] = (coldCol0 * ((normCol - 1) * -2)) + (hotCol0 * normCol * 2 - 1);
+                                    cell.color[1] = (coldCol1 * ((normCol - 1) * -2)) + (hotCol1 * normCol * 2 - 1);
+                                    cell.color[2] = (coldCol2 * ((normCol - 1) * -2)) + (hotCol2 * normCol * 2 - 1);*/
+                                    
+                                    /*cell.color[0] = (coldCol0 * (1 - normCol * 2)) + (hotCol0 * normCol * 2 - 1);
+                                    cell.color[1] = (coldCol1 * (1 - normCol * 2)) + (hotCol1 * normCol * 2 - 1);
+                                    cell.color[2] = (coldCol2 * (1 - normCol * 2)) + (hotCol2 * normCol * 2 - 1);*/
+                                    
+                                    cell.color[0] = (coldCol0 * (1 - normCol)) + (hotCol0 * normCol);
+                                    cell.color[1] = (coldCol1 * (1 - normCol)) + (hotCol1 * normCol);
+                                    cell.color[2] = (coldCol2 * (1 - normCol)) + (hotCol2 * normCol);
                                 }
                 }
                 //////////////////////////////////////////////////////////////////////////////////

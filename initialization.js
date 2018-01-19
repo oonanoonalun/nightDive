@@ -127,7 +127,7 @@ function setPreferences() {
         drawingSettings.normalizeBrightnesses = false;
         drawingSettings.darkStretchScale = 0.7; // affects normalizeBrightness. Values < 1 and >= 0 are valid. Higher values lower contrast and reduce blacks create greys.
         // If 'true', draws the game as rainbow. False is greyscale
-        drawingSettings.greyscaleToSpectrum = false;
+        drawingSettings.greyscaleToSpectrum = true;
         drawingSettings.muteSpectralTones = true;
         // draw screen. Turn off to look at errors without the screen being drawn slowing things down
         drawingSettings.drawScreen = true;
