@@ -10,11 +10,11 @@ var context = canvas.getContext('2d');
 function mainLoop() {
     drawAllCells(cells);
     logging();
+    if (frameCounter % 60 === 0) console.log(player.heatDamageThreshold, player.coldDamageThreshold);
 }
 // Every .033 seconds run the code in function mainLoop. 40(ms) is 25fps, 33.33etc.ms is 30.
-setInterval(mainLoop, 33.3333333333); // locking this to 25fps for consistency of gameplay
+setInterval(mainLoop, 33.3333333333); // locking this to 30fps for consistency of gameplay
 //setInterval(mainLoop, (33.333333333333 * 0.01)); // high framerate is just to see how efficient things are by seeing how fast they can possibly go
-
 
 function displayCenterCellsAverageBrightness(displayInterval) {
     if (interfaceSettings.noCenterCellsAverageBrightnessDisplayUntil <= Date.now() || !interfaceSettings.noCenterCellsAverageBrightnessDisplayUntil) {
@@ -29,7 +29,7 @@ function logging() {
     //if (settings.game.ambientTemperature.log && settings.gamesettings.game.ambientTemperature.current) {
       //  console.log('Ambient temp.: ' + settings.game.ambientTemperature.current.toFixed(2));
     //}
-    //if (settings.game.diurnal.timeOfDayNormalized && settings.game.diurnal.on && settings.game.diurnal.logTimeOfDay) {
+    //if (settings.game.diurnal.timeOfDayNormalized && settings.game.diurnal.on && settings.game.diurnal.logTimeOfDay && frameCounter % 45 === 0) {
       //  console.log(' Time of day: ' + settings.game.diurnal.timeOfDayNormalized.toFixed(2));
     //}
 }

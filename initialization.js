@@ -23,7 +23,8 @@ var cells = [],
                             'min': 0.25, // keeps other factors from making the ambient temperature too hot or too cold
                             'max': 0.75,
                             'intervalBetweenUpdates': 20, // frames between updates
-                            'log': false
+                            'log': false,
+                            'settings.game.ambientTemperature.scale': 2 // how strongly the ambient temperature affects screen brightness
                         },
                         'slipperySlope': {
                                 'on': true, // Whether the behavior is active or not. Cycling turns this on and off automatically at intervals.
@@ -53,7 +54,8 @@ var cells = [],
                             'on': true, // diurnal cycle will play out
                             'duration': 900, // length of day, midnight to midnight. 3600 is two minutes at 30fps
                             'dayCounter': 0,
-                            'logTimeOfDay': false
+                            'logTimeOfDay': false,
+                            'clockColor': [0, 0, 255] // starting color at midnight. Putting this here just to make sure there's an initial value before the update code kicks in.
                         }
                 }
         },
@@ -78,14 +80,15 @@ var cells = [],
                 'healthRegenerationInterval': 30,      // every this many frames, player health increases by player.healthRegenerationAmount
                 'temperatureChangeRateScale': 0.0005, // affect how quickly the player gains and loses temperature based on center-screen brightnesspl
                 'temperatureChangeRateFrameCounterScale': 0.0000005, // this is how much the frame counter value affects the speed at which the player gains and loses heat
-                'coolingScale': 1, // scale the rate at which you heat and cool for balancing purposes (or for special effects)
-                'heatingScale': 1,
+                'coolingScale': 1, // not being used // scale the rate at which you heat and cool for balancing purposes (or for special effects)
+                'heatingScale': 1, // not being used
                 // WRONG so stupid that I can't just have a 'damageZoneWidth' property and base the cold and heat
                 //      damage thresholds off of it, but "this.etc" doesn't seem to work in objects. : /
                 'coldDamageThreshold': 0.33, // when player temperature falls below this, receive damage
                 'heatDamageThreshold': 0.67, // when player temperature rises above this, receive damage
                 'maxHeatGainRate': 0.05, // max rate at which heat will be gained
                 'maxHeatLossRate': 0.05, // "" ... lost
+                'dailyMaxGainLossRateIncreaseScale': 1.2, // each day, max rate of heat gain and loss will be multiplied by this
                 'healthBarWidthScale': 1, // how wide the health bar is. At scale 1, it's two cells wide at 800x600
                 'healthBarXPositionPolarity': -1, // -1 is on the left, 1 is on the right
                 'healthBarMaxLength': 0.5, // max health bar length in screen heights
@@ -160,8 +163,8 @@ function setPreferences() {
         player.logPlayerTemperature = false;
         player.logPlayerTemperatureChangeRate = false;
         player.intervalBetweenTemperatureUpdates = 6; // ms between logged temperature updates
-        settings.game.ambientTemperature.log = true;
-        settings.game.diurnal.logTimeOfDay = true;
+        settings.game.ambientTemperature.log = false; // won't work. have to uncomment-out the code logging() in main.js
+        settings.game.diurnal.logTimeOfDay = false; // won't work. have to uncomment-out the code logging() in main.js
         
         // GAMEPLAY
         // health regen per second (max health is 100)
@@ -174,16 +177,20 @@ function setPreferences() {
         player.heatingScale = 1; // WRONG not being used
         player.coolingScale = 1; // WRONG not being used
         // how cold or hot the player has to get before taking damage (0-1);
-        player.heatDamageThreshold = 0.75; // max 1
-        player.coldDamageThreshold = 0.25; // min 0
+        player.heatDamageThreshold = 1; // max 1
+        player.coldDamageThreshold = 0; // min 0
         // how fast the player can gain and lose heat
-        player.maxHeatGainRate = 0.01;
-        player.maxHeatLossRate = 0.01;
+        player.maxHeatGainRate = 0.03;
+        player.maxHeatLossRate = 0.03;
+        // how much faster the player can change temperature each day
+        player.dailyMaxGainLossRateIncreaseScale = 1.33; // WRONG Doesn't do anything right now.
+        // how strongly the ambient temperature affects the screen (cell brightness is multiplied by ambient temp and then again by this numebr)
+        settings.game.ambientTemperature.scale = 2;
         // number of cells per player move (one move per frame)
         interfaceSettings.cellsPerMove = 2;
         // minimum and maximum number of lights on the map at any one time
-        settings.minLights = 3;
-        settings.maxLights = 8;
+        settings.minLights = 5;
+        settings.maxLights = 12;
         // lights parameter ranges
         randomLightSettingsDefault.minBrightness = 0.125;
         randomLightSettingsDefault.maxBrightness = 2;
@@ -194,12 +201,12 @@ function setPreferences() {
         randomLightSettingsDefault.minDiffusion = 1; // lower values make a more-diffuse light, with a less-distinct and -bright core
         randomLightSettingsDefault.maxDiffusion = 18;
         // how fast the lights chase and flee from you in the Icarus game type. Smaller is fast.
-        settings.icarusLightMovementSpeedScale = 0.25;
+        settings.icarusLightMovementSpeedScale = 0.25; // WRONG doesn't do anything anymore
+        settings.game.diurnal.duration = 300; // how long a full day/night cycle lasts. 3600 is two minutes, 1800 is 1, 900 is 30 seconds
 }
 
 // WARNING setPrefences NEEDS TO BE CALLED HERE, before the following declarations of vars.
 setPreferences();
-
 var //current coordinate system needs even number of cells in rows and columns. Either update findValidCellsPerRowForCanvas so that an option is to lock it even numbers in both directions (DONE), or update assignCoordinatesToCells. coordinatesToIndex won't work with odd numbers, either
         arrayOfValidCellsPerRow = findValidCellsPerRowForCanvas(canvasWidth, canvasHeight, false, true),
         cellsPerRow = arrayOfValidCellsPerRow[resolutionFactor], // Smaller is chunkier.
@@ -245,6 +252,7 @@ initializeCenterCells();
 initializeAllDirections();
 initializeArrayOfRandomNumbers(arrayOfRandomNumbersLength);
 initializeDeathAphorisms();
+initializeClockCells();
 
 //////////////////////////
 //////////////////////////
@@ -281,6 +289,54 @@ function makeLightLine(startCoordsXYArray, length, range) {
         }
     };
     settings.entities.lightLines.push(line);
+}
+
+function initializeClockCells() {
+        hudSettings.clockCells.push(
+                cells[coordinatesToIndex([1, 26])], // center
+                cells[coordinatesToIndex([2, 26])], // four points around center
+                cells[coordinatesToIndex([-1, 26])], // four points around center
+                cells[coordinatesToIndex([1, 27])],// four points around center
+                cells[coordinatesToIndex([1, 25])], // four points around center
+                cells[coordinatesToIndex([1, 29])], // noon
+                cells[coordinatesToIndex([1, 28])], // noon inner
+                cells[coordinatesToIndex([1, 23])], // midnight
+                cells[coordinatesToIndex([1, 24])], // midnight inner
+                cells[coordinatesToIndex([4, 26])], // 6pm
+                cells[coordinatesToIndex([3, 26])], // 6pm inner
+                cells[coordinatesToIndex([-3, 26])], // 6am
+                cells[coordinatesToIndex([-2, 26])], // 6am inner
+                cells[coordinatesToIndex([3, 28])], // 3pm
+                cells[coordinatesToIndex([2, 27])], // 3pm inner
+                cells[coordinatesToIndex([3, 24])], // 9pm
+                cells[coordinatesToIndex([2, 25])], // 9pm inner
+                cells[coordinatesToIndex([-2, 24])], // 3am
+                cells[coordinatesToIndex([-1, 25])], // 3am inner
+                cells[coordinatesToIndex([-2, 28])], // 9am
+                cells[coordinatesToIndex([-1, 27])] // 9am inner
+        );
+        // giving clock cells properties for their times
+        cells[coordinatesToIndex([1, 26])].clock = 'center'; // center
+        cells[coordinatesToIndex([2, 26])].clock = 'centerCross'; // four points around center
+        cells[coordinatesToIndex([-1, 26])].clock = 'centerCross'; // four points around center
+        cells[coordinatesToIndex([1, 27])].clock = 'centerCross'; // four points around center
+        cells[coordinatesToIndex([1, 25])].clock = 'centerCross'; // four points around center
+        cells[coordinatesToIndex([1, 29])].clock = 0.5; // noon
+        cells[coordinatesToIndex([1, 28])].clock = 0.5; // noon inner
+        cells[coordinatesToIndex([1, 23])].clock = 0; // midnight
+        cells[coordinatesToIndex([1, 24])].clock = 0; // midnight inner
+        cells[coordinatesToIndex([-3, 26])].clock = 0.25; // 6am
+        cells[coordinatesToIndex([-2, 26])].clock = 0.25; // 6am inner
+        cells[coordinatesToIndex([4, 26])].clock = 0.75; // 6pm
+        cells[coordinatesToIndex([3, 26])].clock = 0.75; // 6pm inner
+        cells[coordinatesToIndex([3, 28])].clock = 0.625; // 3pm
+        cells[coordinatesToIndex([2, 27])].clock = 0.625; // 3pm inner
+        cells[coordinatesToIndex([3, 24])].clock = 0.875; // 9pm
+        cells[coordinatesToIndex([2, 25])].clock = 0.875; // 9pm inner
+        cells[coordinatesToIndex([-2, 24])].clock = 0.125; // 3am
+        cells[coordinatesToIndex([-1, 25])].clock = 0.125; // 3am inner
+        cells[coordinatesToIndex([-2, 28])].clock = 0.375; // 9am
+        cells[coordinatesToIndex([-1, 27])].clock = 0.375; // 9am inner
 }
 
 function makeLineOfLights(startCoordsXYArray, length) {

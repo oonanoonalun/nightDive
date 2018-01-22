@@ -48,19 +48,25 @@ function drawAllCells(cellsArray) {
         //////////////
         // game type diurnal updates
         //////////////
-        // day counter
+        // day counter, daily events, things that happen at midnight
         if (settings.game.diurnal.on && frameCounter % settings.game.diurnal.duration === 0) {
-                settings.game.diurnal.dayCounter++;
-                console.log('Day ' + settings.game.diurnal.dayCounter);
+            settings.game.diurnal.dayCounter++;
+            console.log('Day ' + settings.game.diurnal.dayCounter + ', midnight');
+            settings.game.diurnal.noon = frameCounter + settings.game.diurnal.duration / 2;
+            settings.game.diurnal.midnight = frameCounter + settings.game.diurnal.duration;
+            if (frameCounter !== 0) {
+                // it becomes easier to get too hot or cold
+                //player.maxHeatGainRate *= player.dailyMaxGainLossRateIncreaseScale;
+                //player.maxHeatLossRate *= player.dailyMaxGainLossRateIncreaseScale;
+                if (player.heatDamageThreshold > 0.65) player.heatDamageThreshold = (11 - settings.game.diurnal.dayCounter) * 0.1;
+                if (player.coldDamageThreshold < 0.35) player.coldDamageThreshold = (settings.game.diurnal.dayCounter - 1) * 0.1;
+            }
+        }
+        if (settings.game.diurnal.on && frameCounter % settings.game.diurnal.duration === Math.round(settings.game.diurnal.duration / 2)) {
+            console.log('Day ' + settings.game.diurnal.dayCounter + ', noon.');
         }
         // day cycle clock
         settings.game.diurnal.timeOfDayNormalized = (frameCounter % settings.game.diurnal.duration) / settings.game.diurnal.duration; // 0 and 1 are midnight
-        // midnight. setting the frames for the next noon and midnight
-        if (frameCounter % settings.game.diurnal.duration === 0) {
-            settings.game.diurnal.noon = frameCounter + settings.game.diurnal.duration / 2;
-            settings.game.diurnal.midnight = frameCounter + settings.game.diurnal.duration;
-            //if (cell.index === 2000) console.log('midnight');
-        }
         //////////////
         // end game type diurnal updates
         //////////////
@@ -157,9 +163,6 @@ function drawAllCells(cellsArray) {
                         heatingScrunch * (oClock - 0.625 % 1) * settings.game.ambientTemperature.scale);
                     }*/
                 }
-                //limiting max and min ambient temperature
-                if (settings.game.ambientTemperature.current > settings.game.ambientTemperature.max) settings.game.ambientTemperature.current = settings.game.ambientTemperature.max;
-                if (settings.game.ambientTemperature.current < settings.game.ambientTemperature.min) settings.game.ambientTemperature.current = settings.game.ambientTemperature.min;
                 settings.game.ambientTemperature.noChangeUntil = frameCounter + settings.game.ambientTemperature.intervalBetweenUpdates;
             }
         ////////////////
@@ -392,6 +395,8 @@ function drawAllCells(cellsArray) {
         //////////////////////////////////////////////////////////////////////////////////
         if (player.noTemperatureChangeUntil <= frameCounter || !player.noTemperatureChangeUntil) {
                 player.brightness = player.temperature * 255;
+                if (interfaceSettings.centerCellsAverageBrightness > 255) interfaceSettings.centerCellsAverageBrightnessCapped = 255;
+                else interfaceSettings.centerCellsAverageBrightnessCapped = interfaceSettings.centerCellsAverageBrightness;
                 /*var ambientTempInfluence = 1;
                 // factoring in ambient tmperature based on time of day
                 if (settings.game.diurnal.on && settings.game.ambientTemperature) {
@@ -406,13 +411,9 @@ function drawAllCells(cellsArray) {
                 if (heatGainRate > player.maxHeatGainRate) heatGainRate = player.maxHeatGainRate;
                 if (heatLossRate > player.maxHeatLossRate) heatLossRate = player.maxHeatLossRate;
                 */
-                ////////////////
-                // PSEUDO CODE:
-                // have ambTemp affect cells when they're drawn
-                // day affects max gain/loss rates
-                ////////////////
-                heatGainRate = player.maxHeatGainRate;
-                heatLossRate = player.maxHeatLossRate;
+                // i.e. player.max...rate * normalized fraction of 255 that's the difference between the player brightness and the center cells' brighteness
+                heatGainRate = player.maxHeatGainRate * ((interfaceSettings.centerCellsAverageBrightnessCapped - player.brightness) / 255);
+                heatLossRate = player.maxHeatLossRate * ((player.brightness - interfaceSettings.centerCellsAverageBrightnessCapped) / 255);
                 // if the center cells (and ambient temp, if settings.game.diurnal is on) are cooler than the player
                 if (interfaceSettings.centerCellsAverageBrightness <= player.brightness) {
                     player.temperature -= heatLossRate;
@@ -609,10 +610,9 @@ function drawAllCells(cellsArray) {
                 /////////
                 // apply ambient temperature to cell brightness
                 ////////
-                cell.color[0] *= settings.game.ambientTemperature.current;
-                cell.color[1] *= settings.game.ambientTemperature.current;
-                cell.color[2] *= settings.game.ambientTemperature.current;
-                //cell.color[2] *= settings.game.ambientTemperature.current * 2;
+                cell.color[0] *= settings.game.ambientTemperature.current * settings.game.ambientTemperature.scale;
+                cell.color[1] *= settings.game.ambientTemperature.current * settings.game.ambientTemperature.scale;
+                cell.color[2] *= settings.game.ambientTemperature.current * settings.game.ambientTemperature.scale;
                 //////////////////////////////////////////////////////////////////////////////////
                 // start FUNCTION normalizeBrightnesses(cell); // make the darkest cell black and lightest cell white
                 // note: this is usually off
@@ -709,7 +709,7 @@ function drawAllCells(cellsArray) {
                 // average color when done looking at all the cells
                 // removed an instance of FUNCTION .indexOf
                 if (cell.index === totalNumberOfCells - 1) {
-                        interfaceSettings.centerCellsAverageBrightness /= interfaceSettings.centerCells.length;
+                    interfaceSettings.centerCellsAverageBrightness /= interfaceSettings.centerCells.length;
                 }
                 //////////////////////////////////////////////////////////////////////////////////
                 // end FUNCTION findAverageBrightnessOfCenterCells(cell);
@@ -925,7 +925,7 @@ function drawAllCells(cellsArray) {
                     // temperature damage threshold indicators
                     // heat damage threshold indicator
                     if (
-                        cell.coordinates[0] >= (canvas.width * (player.heatDamageThreshold - 0.5)) / cellSize && cell.coordinates[0] <= (canvas.width * (player.heatDamageThreshold - 0.5)) / cellSize + canvas.width * 0.024 / cellSize &&
+                        cell.coordinates[0] >= (canvas.width * (player.heatDamageThreshold - 0.5)) / cellSize && cell.coordinates[0] <= canvas.width * (player.heatDamageThreshold - 0.5) / cellSize + (canvas.width * 0.024 / cellSize) &&
                         cell.coordinates[1] <= -((cellsPerColumn / 2) - (0.036 * canvasHeight / cellSize))
                     ) {
                         if (!drawingSettings.greyscaleToSpectrum) {
@@ -940,6 +940,90 @@ function drawAllCells(cellsArray) {
                         if (!drawingSettings.greyscaleToSpectrum) {
                             cell.color = [0, 128, 255];
                         } else for (var af = 0; af < 3; af++) cell.color[af] = player.coldDamageThreshold * 255;
+                    }
+                    // diurnal clock WRONG-ish. Only works properly at 800 x 600
+                    if (settings.game.diurnal.on) {
+                        // indentation f'd up
+                                if (settings.game.diurnal.timeOfDayNormalized <= 0.25) {
+                                    // settings.game.diurnal.clockColor = [ // use this as target color to blend into
+                                    //     radial clock cells depending on how close settings.game.diurnal.timeOfDay is to them.
+                                    settings.game.diurnal.clockColor = [
+                                        0,
+                                        1023 * settings.game.diurnal.timeOfDayNormalized,
+                                        255 - (1023 * settings.game.diurnal.timeOfDayNormalized)
+                                    ];
+                                    //cell.color[0] = 0;
+                                    //cell.color[1] = 1023 * settings.game.diurnal.timeOfDayNormalized;
+                                    //cell.color[2] = 255 - (1023 * settings.game.diurnal.timeOfDayNormalized);
+                                }
+                                if (settings.game.diurnal.timeOfDayNormalized > 0.25 && settings.game.diurnal.timeOfDayNormalized <= 0.5) {
+                                    settings.game.diurnal.clockColor = [
+                                        1023 * (settings.game.diurnal.timeOfDayNormalized - 0.25),
+                                        255 - (1023 * (settings.game.diurnal.timeOfDayNormalized - 0.25)),
+                                        0
+                                    ];
+                                    //cell.color[0] = 1023 * (settings.game.diurnal.timeOfDayNormalized - 0.25);
+                                    //cell.color[1] = 255 - (1023 * (settings.game.diurnal.timeOfDayNormalized - 0.25));
+                                    //cell.color[2] = 0;
+                                }
+                                if (settings.game.diurnal.timeOfDayNormalized > 0.5 && settings.game.diurnal.timeOfDayNormalized <= 0.75) {
+                                    settings.game.diurnal.clockColor = [
+                                        255 - (255 * (settings.game.diurnal.timeOfDayNormalized - 0.5)),
+                                        1023 * (settings.game.diurnal.timeOfDayNormalized - 0.5),
+                                        0
+                                    ];
+                                    //cell.color[0] = 255 - (1023 * (settings.game.diurnal.timeOfDayNormalized - 0.5));
+                                    //cell.color[1] = 1023 * (settings.game.diurnal.timeOfDayNormalized - 0.5);
+                                    //cell.color[2] = 0;
+                                }
+                                if (settings.game.diurnal.timeOfDayNormalized > 0.75 && settings.game.diurnal.timeOfDayNormalized <= 1) {
+                                    settings.game.diurnal.clockColor = [
+                                        0,
+                                        255 - ((settings.game.diurnal.timeOfDayNormalized - 0.75) * 1023),
+                                        1023 * (settings.game.diurnal.timeOfDayNormalized - 0.75)
+                                    ];
+                                    //cell.color[0] = 0;
+                                    //cell.color[1] = 255 - ((settings.game.diurnal.timeOfDayNormalized - 0.75) * 1023);
+                                    //cell.color[2] = 1023 * (settings.game.diurnal.timeOfDayNormalized - 0.75);
+                                }
+                        // clock
+                        if (cell.clock || cell.clock === 0) {
+                            if (cell.clock === 'centerCross') {
+                                for (var av = 0; av < 3; av++) {
+                                    cell.color[av] = cell.color[av] * 0.5 + settings.game.diurnal.clockColor[av] * 0.75;
+                                }
+                                //cell.color = settings.game.diurnal.clockColor;
+                            }
+                            else {
+                                var greaterClockValue = cell.clock,
+                                    lesserClockValue = settings.game.diurnal.timeOfDayNormalized;
+                                if (cell.clock < settings.game.diurnal.timeOfDayNormalized) {
+                                    greaterClockValue = settings.game.diurnal.timeOfDayNormalized;
+                                    lesserClockValue = cell.clock;
+                                }
+                                for (var au = 0; au < 3; au++) {
+                                   if (
+                                       (settings.game.diurnal.timeOfDayNormalized <
+                                       cell.clock + 0.1 &&
+                                       settings.game.diurnal.timeOfDayNormalized >
+                                       cell.clock - 0.1)
+                                   ) {
+                                        cell.color[au] = (
+                                        cell.color[au] * 0.5 + 0.5 *
+                                        settings.game.diurnal.clockColor[au]
+                                        );
+                                   }
+                                   if (
+                                       (settings.game.diurnal.timeOfDayNormalized <
+                                       cell.clock + 0.06 &&
+                                       settings.game.diurnal.timeOfDayNormalized >
+                                       cell.clock - 0.06)
+                                   ) {
+                                        cell.color[au] = settings.game.diurnal.clockColor[au] * 1.33 + 64;
+                                   }
+                                }
+                            }
+                        }
                     }
                 }
                 //////////////////////////////////////////////////////////////////////////////////

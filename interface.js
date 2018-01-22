@@ -30,5 +30,6 @@ var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68,
                 'displayCenterCellsAverageBrightness': [false, 500] // second item is display interval
         },
         hudSettings = {
-                'displayHUD': false
+                'displayHUD': false,
+                'clockCells': []
         };
