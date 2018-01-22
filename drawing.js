@@ -45,6 +45,25 @@ function drawAllCells(cellsArray) {
 	// ARRRGHGHGH INDENTATION ALL FUCKED UP because of KomodoEdit. Other people have similar problems:
 	// https://community.komodoide.com/t/komodo-edit-9-1-0-indentation-problem/1761/20
         context.clearRect(0, 0, 800, 600); // this calls a function, but I don't know how to recreate this function, or where to find its contents
+        //////////////
+        // game type diurnal updates
+        //////////////
+        // day counter
+        if (settings.game.diurnal.on && frameCounter % settings.game.diurnal.duration === 0) {
+                settings.game.diurnal.dayCounter++;
+                console.log('Day ' + settings.game.diurnal.dayCounter);
+        }
+        // day cycle clock
+        settings.game.diurnal.timeOfDayNormalized = (frameCounter % settings.game.diurnal.duration) / settings.game.diurnal.duration; // 0 and 1 are midnight
+        // midnight. setting the frames for the next noon and midnight
+        if (frameCounter % settings.game.diurnal.duration === 0) {
+            settings.game.diurnal.noon = frameCounter + settings.game.diurnal.duration / 2;
+            settings.game.diurnal.midnight = frameCounter + settings.game.diurnal.duration;
+            //if (cell.index === 2000) console.log('midnight');
+        }
+        //////////////
+        // end game type diurnal updates
+        //////////////
         // if our array of random numbers has been used up during the last loop, reset it;
         if (randomNumberIndex > arrayOfRandomNumbers.length - 1) {
             randomNumberIndex = 0;
@@ -70,15 +89,30 @@ function drawAllCells(cellsArray) {
         // start FUNCTION gameSettings(); // i.e. turning gametypes and associated behaviors on and off
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         /////////////////
-        // start ambient temperature updates
+        // start ambient temperature update
         ///////////////
         if (settings.game.ambientTemperature.noChangeUntil <= frameCounter ||
             !settings.game.ambientTemperature.noChangeUntil) {
                 if (settings.game.diurnal.on) {
+                    // should have temperature lag (look it up re: heat and times of day) so that
+                    //      0.29 on the timeOfDay is the coolest, and 0.625 is the warmest.
+                    //      https://en.wikipedia.org/wiki/Diurnal_temperature_variation#Temperature_lag
+                    if (settings.game.diurnal.timeOfDayNormalized < 0.5) {
+                        settings.game.ambientTemperature.current = settings.game.diurnal.timeOfDayNormalized * 2;
+                    } else settings.game.ambientTemperature.current = 2 - settings.game.diurnal.timeOfDayNormalized * 2;
+                    // limiting max and min ambient temperatures
+                    // WRONG: it would be better to have the temp cycle smoothly between max and min
+                    if (settings.game.ambientTemperature.current > settings.game.ambientTemperature.max) {
+                        settings.game.ambientTemperature.current = settings.game.ambientTemperature.max;
+                    }
+                    if (settings.game.ambientTemperature.current < settings.game.ambientTemperature.min) {
+                        settings.game.ambientTemperature.current = settings.game.ambientTemperature.min;
+                    }
+                    // OLD
                     // time of day affects ambient temperature
                     // UGH! Percariously balanced by hand to make natural times of day's peak and low temperatures (3pm-ish and 7am-ish)
                     // sync with what happens here.
-                    var oClock = settings.game.diurnal.timeOfDayNormalized; // coldest at 0.29 o'clock (7am), warmest at 0.625 (3pm) in .timeOfDayNormalized
+                    /*var oClock = settings.game.diurnal.timeOfDayNormalized; // coldest at 0.29 o'clock (7am), warmest at 0.625 (3pm) in .timeOfDayNormalized
                     // oClock is < 0.625 and > 0.29, i.e. if it's after the coldest part of the day, and before the warmest, ambient temperature is increasing.
                     // cooling phase part I (broken up because the normalizing clock crosses 0 during cooling)
                     if (oClock <= 0.29) {
@@ -100,11 +134,10 @@ function drawAllCells(cellsArray) {
                         // oClock will be at 0.29 when this starts, so we need (pseudo-code):
                         // initial start state = temp of min of 0.25
                         // this rate reaching oClock = 0.625 = temp max of 0.75
-                        settings.game.ambientTemperature.current =
-                        settings.game.ambientTemperature.min + oClock * 1.5 - (0.29 * 1.5) *
-                        settings.game.ambientTemperature.scale;
+                        settings.game.ambientTemperature.current = settings.game.ambientTemperature.min + oClock * 1.5 - (0.29 * 1.5);
                         // this balances out to start at temp min of 0.25, and arrive at 0.75 temp (max) by 0.625 clock (3pm, hottest point in the day)
-                    }
+                    }*/
+                    // EVEN OLDER
                     // could not work out the math on this one, but the basic info is there to actually do this right.
                     /*var decreasingTempDuration = 1 - 0.625 + 0.29, // 0.665 i.e. for how long, in normalized clock time, is the ambient temperature cooling
                         increasingTempDuration = 0.625 - 0.29, // 0.335 i.e. for how long, in normalized clock time, is the ambient temperature warming
@@ -123,15 +156,17 @@ function drawAllCells(cellsArray) {
                         ((settings.game.ambientTemperature.max - settings.game.ambientTemperature.min) *
                         heatingScrunch * (oClock - 0.625 % 1) * settings.game.ambientTemperature.scale);
                     }*/
-                    //console.log('Ambient temp.: ' + settings.game.ambientTemperature.current + ' Time of day: ' + settings.game.diurnal.timeOfDayNormalized);
                 }
                 //limiting max and min ambient temperature
                 if (settings.game.ambientTemperature.current > settings.game.ambientTemperature.max) settings.game.ambientTemperature.current = settings.game.ambientTemperature.max;
-                if (settings.game.ambientTemperature.current < settings.game.ambientTemperature.min) settings.game.ambientTemperature.current = settings.game.ambientTemperature.mmin;
+                if (settings.game.ambientTemperature.current < settings.game.ambientTemperature.min) settings.game.ambientTemperature.current = settings.game.ambientTemperature.min;
                 settings.game.ambientTemperature.noChangeUntil = frameCounter + settings.game.ambientTemperature.intervalBetweenUpdates;
             }
         ////////////////
-        // end ambient temperature updates
+        // end ambient temperature update
+        //////////////////
+        //////////////////
+        // game cycle updates
         //////////////////
         if (settings.game.individualPersonalities.cycle) {
             if (settings.game.individualPersonalities.notOnUntil === frameCounter) {
@@ -167,7 +202,7 @@ function drawAllCells(cellsArray) {
         // end FUNCTION gameSettings();
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////////////////////////////////
-        // start FUNCTION updateLights(); (includes camera movement)
+        // start FUNCTION updateEntities(); (includes camera movement)
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         // WARNING This is some kludgy shit because looping over object properties is apparently a pain or at least obscure in js.
         // Manual updates needed for added entity types.
@@ -215,7 +250,7 @@ function drawAllCells(cellsArray) {
                 if (interfaceSettings.cameraMovingLeft) entityXCellsMoveNextFrame += interfaceSettings.cellsPerMove;
                 if (interfaceSettings.cameraMovingRight) entityXCellsMoveNextFrame -= interfaceSettings.cellsPerMove;
                 // self-movement
-                if (settings.game.individualPersonalities.on) {                    
+                if (settings.game.individualPersonalities.on && entity.entityType === 'light') {                    
                                 if ( // if self movement direction is DOWN
                                     entity.movementDirection === 4 ||
                                     entity.movementDirection === 5 ||
@@ -247,7 +282,7 @@ function drawAllCells(cellsArray) {
                 }
                 // movement toward hot players and away from cool players.
                 // doesn't function if push back ability is being used
-                if (settings.game.slipperySlope.on) {
+                if (settings.game.slipperySlope.on && entity.entityType === 'light') {
                     if (!(player.energyBeingUsed && player.abilities.pushBack)) {
                         if (player.temperature >= 0.5 && frameCounter % 2 === 0) {// && frameCounter % (player.temperature * 3 - player.temperature *3 % 1) === 0) {
                             if (entity.coordinates[0] < 0) entityXCellsMoveNextFrame += 1;//player.temperature * 3 - player.temperature *3 % 1;
@@ -264,7 +299,7 @@ function drawAllCells(cellsArray) {
                     }
                 }
                 // misc. movement/behavior experiments
-                if (settings.game.race.on) {
+                if (settings.game.race.on && entity.entityType === 'light') {
                     if (frameCounter % 300 > 150) {
                         if (frameCounter % 2 === 0) {
                             entityYCellsMoveNextFrame -= 4;
@@ -276,7 +311,7 @@ function drawAllCells(cellsArray) {
                     }
                 }
                 // push back ability's effects
-                if (interfaceSettings.energyBeingUsed && player.abilities.pushBack && entity.entityType !== 'shadow') {
+                if (interfaceSettings.energyBeingUsed && player.abilities.pushBack && entity.entityType === 'light') {
                     var xPushBackAmount,
                         yPushBackAmount;
                     if (((cellsPerRow / 2) / entity.coordinates[0]) - ((cellsPerRow / 2) / entity.coordinates[0] % 1) > (player.abilities.maxPushBackAmount / cellSize)) xPushBackAmount = player.abilities.maxPushBackAmount / cellSize;
@@ -341,7 +376,8 @@ function drawAllCells(cellsArray) {
                 else osc.value = 1 - (((frameCounter + osc.phaseShift) % osc.halfPeriod) / osc.halfPeriod);
         }
         if (osc.waveShape === SAW) osc.value = ((frameCounter+ osc.phaseShift) % osc.period) / osc.period;
-        if (osc.waveShape === SINE) osc.value = Math.sin(osc.value);
+        // Maybe put this back in, but Math.sin() is a function.
+        //if (osc.waveShape === SINE) osc.value = Math.sin(osc.value);
         if (osc.waveShape === SQUARE) {
                 if (frameCounter + osc.phaseShift % osc.period < osc.halfPeriod) osc.value = 0;
                 else osc.value = 1;
@@ -356,14 +392,27 @@ function drawAllCells(cellsArray) {
         //////////////////////////////////////////////////////////////////////////////////
         if (player.noTemperatureChangeUntil <= frameCounter || !player.noTemperatureChangeUntil) {
                 player.brightness = player.temperature * 255;
-                var ambientTempInfluence = 1;
+                /*var ambientTempInfluence = 1;
                 // factoring in ambient tmperature based on time of day
-                if (settings.game.diurnal.on && settings.game.ambientTemperature) ambientTempInfluence = settings.game.ambientTemperature.current * 2;
+                if (settings.game.diurnal.on && settings.game.ambientTemperature) {
+                    ambientTempInfluence = settings.game.ambientTemperature.current;
+                    if (ambientTempInfluence >= 0.5) ambientTempInfluence *= 2 * settings.game.ambientTemperature.scale;
+                    else ambientTempInfluence *= (ambientTempInfluence * (1 / ambientTempInfluence / 2)) * settings.game.ambientTemperature.scale;
+                }
                 var heatGainRate = interfaceSettings.centerCellsAverageBrightness * ambientTempInfluence * player.heatingScale * player.temperatureChangeRateScale * ((interfaceSettings.centerCellsAverageBrightness - player.brightness) / 255),
                         heatLossRate = interfaceSettings.centerCellsAverageBrightness * ambientTempInfluence * player.coolingScale * player.temperatureChangeRateScale * ((player.brightness - interfaceSettings.centerCellsAverageBrightness) / 255);
+                
                 // limiting rate of heat gain or loss
                 if (heatGainRate > player.maxHeatGainRate) heatGainRate = player.maxHeatGainRate;
                 if (heatLossRate > player.maxHeatLossRate) heatLossRate = player.maxHeatLossRate;
+                */
+                ////////////////
+                // PSEUDO CODE:
+                // have ambTemp affect cells when they're drawn
+                // day affects max gain/loss rates
+                ////////////////
+                heatGainRate = player.maxHeatGainRate;
+                heatLossRate = player.maxHeatLossRate;
                 // if the center cells (and ambient temp, if settings.game.diurnal is on) are cooler than the player
                 if (interfaceSettings.centerCellsAverageBrightness <= player.brightness) {
                     player.temperature -= heatLossRate;
@@ -395,7 +444,7 @@ function drawAllCells(cellsArray) {
         // end FUNCTION updateNoise(); // updating the screen noise
         //////////////////////////////////////////////////////////////////////////////////
         //////////////////////////////////////////////////////////////////////////////////
-        // start FUNCTION updatePlyaerHealth() and updatePlayerEnergy(), part 1 (part 2 is per-cell updates to health that affect drawing)
+        // start FUNCTION updatePlayerHealth() and updatePlayerEnergy(), part 1 (part 2 is per-cell updates to health that affect drawing)
         //////////////////////////////////////////////////////////////////////////////////
                 // logging health in the console
                 if (player.displayHealth) {
@@ -503,7 +552,7 @@ function drawAllCells(cellsArray) {
                                 lightLineBrightness =
                                     ((lightLine.range * lightLine.oscillator.value) - distanceToLightLineCoords) /
                                     lightLine.range * lightLine.brightness -
-                                    (arrayOfRandomNumbers[randomNumberIndex] * lightLineNoise * lightLine.oscillator.value)// *
+                                    (arrayOfRandomNumbers[randomNumberIndex] * lightLineNoise * (lightLine.oscillator.value + 0.5))// *
                                     //lightLine.oscillator.value
                                 ;
                                 randomNumberIndex++;
@@ -557,8 +606,16 @@ function drawAllCells(cellsArray) {
                 //////////////////////////////////////////////////////////////////////////////////
                 // end FUNCTION showShadows(cell);
                 //////////////////////////////////////////////////////////////////////////////////
+                /////////
+                // apply ambient temperature to cell brightness
+                ////////
+                cell.color[0] *= settings.game.ambientTemperature.current;
+                cell.color[1] *= settings.game.ambientTemperature.current;
+                cell.color[2] *= settings.game.ambientTemperature.current;
+                //cell.color[2] *= settings.game.ambientTemperature.current * 2;
                 //////////////////////////////////////////////////////////////////////////////////
                 // start FUNCTION normalizeBrightnesses(cell); // make the darkest cell black and lightest cell white
+                // note: this is usually off
                 //////////////////////////////////////////////////////////////////////////////////
                 if (cell.color[0] > drawingSettings.brightestBrightnessThisFrame || !drawingSettings.brightestBrightnessThisFrame) {
                                 drawingSettings.brightestBrightnessThisFrame = cell.color[0];
@@ -723,14 +780,6 @@ function drawAllCells(cellsArray) {
                                     // WRONG this doesn't need to be declared here, and not every frame. Just here for convenience right now.
                                     //settings.game.diurnal.duration = 350; // 3600 frames is two minutes at 30 fps
                                     // 1800 frames (or about a minute) to get to target color
-                                    // this should be run every frame, though
-                                    settings.game.diurnal.timeOfDayNormalized = (frameCounter % settings.game.diurnal.duration) / settings.game.diurnal.duration; // 0 and 1 are midnight
-                                    // midnight. setting the frames for the next noon and midnight
-                                    if (frameCounter % settings.game.diurnal.duration === 0) {
-                                        settings.game.diurnal.noon = frameCounter + settings.game.diurnal.duration / 2;
-                                        settings.game.diurnal.midnight = frameCounter + settings.game.diurnal.duration;
-                                        //if (cell.index === 2000) console.log('midnight');
-                                    }
                                     // rising sun
                                     if (frameCounter < settings.game.diurnal.noon) {
                                         cell.color[0] += (targetColor[0] - cell.color[0]) * settings.game.diurnal.timeOfDayNormalized * 2;
@@ -925,7 +974,7 @@ function drawAllCells(cellsArray) {
                 // end FUNCTION addNoiseToCellColor(cell);
                 //////////////////////////////////////////////////////////////////////////////////
                 //////////////////////////////////////////////////////////////////////////////////
-                // start FUNCTION updatePlayerHealth();
+                // start FUNCTION updatePlayerHealth(); part 2 (cell coloring)
                 //////////////////////////////////////////////////////////////////////////////////
                 // this needs to be here because it impacts cell colors
                 // updatePlayerHealth() is FUNCTION FREE! except for on Date.now() call that only happens once, at the moment of death
@@ -957,7 +1006,7 @@ function drawAllCells(cellsArray) {
                                         }
                                 }
                         } else {
-                        // if in spectrum mode
+                        // if in spectrum mode, screen brightnes on taking heat damage and dims on taking cold damage
                                 var dimmedColor = [];
                                 for (var v = 0; v < 3; v++) {
                                         dimmedColor[v] = Math.max(cell.color[v] - 128, 0);

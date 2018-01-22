@@ -19,13 +19,14 @@ var cells = [],
                 'game': {
                         'ambientTemperature': {
                             'current': 0.5,
-                            'scale': 1, // scales ambient temperature when it's adjusted by other factors
+                            'scale': 10, // Doesn't scale ambient temp, but scales its effect on player temp. If ambTemp is over 0.5, it's multiplied by this. Under, it's divided by this. Other temps are then multiplid by amb temp.
                             'min': 0.25, // keeps other factors from making the ambient temperature too hot or too cold
                             'max': 0.75,
-                            'intervalBetweenUpdates': 20 // frames between updates
+                            'intervalBetweenUpdates': 20, // frames between updates
+                            'log': false
                         },
                         'slipperySlope': {
-                                'on': false, // Whether the behavior is active or not. Cycling turns this on and off automatically at intervals.
+                                'on': true, // Whether the behavior is active or not. Cycling turns this on and off automatically at intervals.
                                 'cycle': false, // turns itself on and off at intervals
                                 'framesOn': 150, // when cycling, for how many frames will it be on?
                                 'framesOff': 300, // when cycling, for how many frames will it be off?
@@ -33,7 +34,7 @@ var cells = [],
                                 'notOffUntil': null
                         },
                         'race': {
-                                'on': false,
+                                'on': true,
                                 'cycle': false,
                                 'framesOn': 90,
                                 'framesOff': 300,
@@ -50,7 +51,9 @@ var cells = [],
                         },
                         'diurnal': {
                             'on': true, // diurnal cycle will play out
-                            'duration': 1800, // length of day, midnight to midnight. 3600 is two minutes at 30fps
+                            'duration': 900, // length of day, midnight to midnight. 3600 is two minutes at 30fps
+                            'dayCounter': 0,
+                            'logTimeOfDay': false
                         }
                 }
         },
@@ -138,7 +141,7 @@ function setPreferences() {
         drawingSettings.normalizeBrightnesses = false;
         drawingSettings.darkStretchScale = 0.7; // affects normalizeBrightness. Values < 1 and >= 0 are valid. Higher values lower contrast and reduce blacks create greys.
         // If 'true', draws the game as rainbow. False is greyscale
-        drawingSettings.greyscaleToSpectrum = true;
+        drawingSettings.greyscaleToSpectrum = false;
         drawingSettings.muteSpectralTones = true;
         // draw screen. Turn off to look at errors without the screen being drawn slowing things down
         drawingSettings.drawScreen = true;
@@ -157,28 +160,30 @@ function setPreferences() {
         player.logPlayerTemperature = false;
         player.logPlayerTemperatureChangeRate = false;
         player.intervalBetweenTemperatureUpdates = 6; // ms between logged temperature updates
+        settings.game.ambientTemperature.log = true;
+        settings.game.diurnal.logTimeOfDay = true;
         
         // GAMEPLAY
         // health regen per second (max health is 100)
         player.healthRegenerationAmount = 1;
         // how quickly the player gains and dissipates heat
-        player.temperatureChangeRateScale = 0.0005;
+        player.temperatureChangeRateScale = 0.0005; // WRONG not being used
         // how much time passed since the start of the game increases the rate at which heat is gained and lost
         player.temperatureChangeRateFrameCounterScale = 0;//0.0000002;
         // how quickly the player cools and heats, specifically
-        player.heatingScale = 1;
-        player.coolingScale = 2.5;
+        player.heatingScale = 1; // WRONG not being used
+        player.coolingScale = 1; // WRONG not being used
         // how cold or hot the player has to get before taking damage (0-1);
-        player.heatDamageThreshold = 1;//0.75; // max 1
-        player.coldDamageThreshold = 0;//0.25; // min 0
+        player.heatDamageThreshold = 0.75; // max 1
+        player.coldDamageThreshold = 0.25; // min 0
         // how fast the player can gain and lose heat
-        player.maxHeatGainRate = 0.15;
-        player.maxHeatLossRate = 0.15;
+        player.maxHeatGainRate = 0.01;
+        player.maxHeatLossRate = 0.01;
         // number of cells per player move (one move per frame)
         interfaceSettings.cellsPerMove = 2;
         // minimum and maximum number of lights on the map at any one time
-        settings.minLights = 5;
-        settings.maxLights = 16;
+        settings.minLights = 3;
+        settings.maxLights = 8;
         // lights parameter ranges
         randomLightSettingsDefault.minBrightness = 0.125;
         randomLightSettingsDefault.maxBrightness = 2;
@@ -246,7 +251,7 @@ initializeDeathAphorisms();
 // TESTING/EXPERIMENTING
 var testLightOscillator = makeOscillator(120, 0, SINE, 'testLightOscillator');
 settings.oscillators.push(testLightOscillator);
-makeLightLine([-40, -10], 20, 250);
+makeLightLine([-40, -10], 40, canvasHeight);
 //settings.entities.lights.push(makeLight(0.5, canvasWidth / 4, [-15, -15], testLightOscillator, 10, 18, 0, 0, 0, 0, cells, settings.entities.lights));
 //makeLineOfLights([-20, -15], 35);
 //makeLineOfLights([-40, 10], 60);
@@ -263,9 +268,16 @@ function makeLightLine(startCoordsXYArray, length, range) {
         'cellIndex': coordinatesToIndex(startCoordsXYArray), // WRONG, maybe. Should just be '.index' ?
         'parentCellsArray': cells,
         'entityType': 'shadow',
+        'state': {
+            'sleeping': false,
+            'chasing': false,
+            'fleeing': false,
+            'wandering': false
+        },
         'personality': {
             'dieChance': 0,
-            'directionChangeChance': 0
+            'directionChangeChance': 0,
+            'sleepChance': 0
         }
     };
     settings.entities.lightLines.push(line);

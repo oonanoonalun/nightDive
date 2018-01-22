@@ -11,7 +11,6 @@ function mainLoop() {
     drawAllCells(cells);
     logging();
 }
-
 // Every .033 seconds run the code in function mainLoop. 40(ms) is 25fps, 33.33etc.ms is 30.
 setInterval(mainLoop, 33.3333333333); // locking this to 25fps for consistency of gameplay
 //setInterval(mainLoop, (33.333333333333 * 0.01)); // high framerate is just to see how efficient things are by seeing how fast they can possibly go
@@ -27,6 +26,12 @@ function logging() {
     if ((player.logPlayerTemperature || player.logPlayerTemperatureChangeRate) && !player.died) logPlayerTemperature(500);
     if (drawingSettings.fpsDisplay.displayFps) countFps(drawingSettings.fpsDisplay.fpsDisplayInterval, drawingSettings.fpsDisplay.fpsDisplayIntervalLongTerm);    
     if (interfaceSettings.displayCenterCellsAverageBrightness[0]) displayCenterCellsAverageBrightness(interfaceSettings.displayCenterCellsAverageBrightness[1]);
+    //if (settings.game.ambientTemperature.log && settings.gamesettings.game.ambientTemperature.current) {
+      //  console.log('Ambient temp.: ' + settings.game.ambientTemperature.current.toFixed(2));
+    //}
+    //if (settings.game.diurnal.timeOfDayNormalized && settings.game.diurnal.on && settings.game.diurnal.logTimeOfDay) {
+      //  console.log(' Time of day: ' + settings.game.diurnal.timeOfDayNormalized.toFixed(2));
+    //}
 }
 
 function countFps(displayInterval, displayIntervalLongTerm) {
