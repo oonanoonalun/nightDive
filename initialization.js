@@ -185,7 +185,7 @@ function setPreferences() {
         // how much faster the player can change temperature each day
         player.dailyMaxGainLossRateIncreaseScale = 1.33; // WRONG Doesn't do anything right now.
         // how strongly the ambient temperature affects the screen (cell brightness is multiplied by ambient temp and then again by this numebr)
-        settings.game.ambientTemperature.scale = 2;
+        settings.game.ambientTemperature.scale = 1;
         // number of cells per player move (one move per frame)
         interfaceSettings.cellsPerMove = 2;
         // minimum and maximum number of lights on the map at any one time

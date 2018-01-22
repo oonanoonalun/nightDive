@@ -925,7 +925,7 @@ function drawAllCells(cellsArray) {
                     // temperature damage threshold indicators
                     // heat damage threshold indicator
                     if (
-                        cell.coordinates[0] >= (canvas.width * (player.heatDamageThreshold - 0.5)) / cellSize && cell.coordinates[0] <= canvas.width * (player.heatDamageThreshold - 0.5) / cellSize + (canvas.width * 0.024 / cellSize) &&
+                        cell.coordinates[0] >= (canvas.width * (player.heatDamageThreshold - 0.5)) / cellSize && cell.coordinates[0] <= canvas.width * (player.heatDamageThreshold - 0.5) / cellSize + (canvas.width * 0.027 / cellSize) &&
                         cell.coordinates[1] <= -((cellsPerColumn / 2) - (0.036 * canvasHeight / cellSize))
                     ) {
                         if (!drawingSettings.greyscaleToSpectrum) {
