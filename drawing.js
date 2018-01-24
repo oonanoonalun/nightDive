@@ -51,7 +51,6 @@ function drawAllCells(cellsArray) {
         // day counter, daily events, things that happen at midnight
         if (settings.game.diurnal.on && frameCounter % settings.game.diurnal.duration === 0) {
             settings.game.diurnal.dayCounter++;
-            console.log('Day ' + settings.game.diurnal.dayCounter + ', midnight');
             settings.game.diurnal.noon = frameCounter + settings.game.diurnal.duration / 2;
             settings.game.diurnal.midnight = frameCounter + settings.game.diurnal.duration;
             if (frameCounter !== 0) {
@@ -61,9 +60,6 @@ function drawAllCells(cellsArray) {
                 if (player.heatDamageThreshold > 0.65) player.heatDamageThreshold = (11 - settings.game.diurnal.dayCounter) * 0.1;
                 if (player.coldDamageThreshold < 0.35) player.coldDamageThreshold = (settings.game.diurnal.dayCounter - 1) * 0.1;
             }
-        }
-        if (settings.game.diurnal.on && frameCounter % settings.game.diurnal.duration === Math.round(settings.game.diurnal.duration / 2)) {
-            console.log('Day ' + settings.game.diurnal.dayCounter + ', noon.');
         }
         // day cycle clock
         settings.game.diurnal.timeOfDayNormalized = (frameCounter % settings.game.diurnal.duration) / settings.game.diurnal.duration; // 0 and 1 are midnight
@@ -103,9 +99,12 @@ function drawAllCells(cellsArray) {
                     // should have temperature lag (look it up re: heat and times of day) so that
                     //      0.29 on the timeOfDay is the coolest, and 0.625 is the warmest.
                     //      https://en.wikipedia.org/wiki/Diurnal_temperature_variation#Temperature_lag
+                    // this is just syncing the ambient temp to the time of day
                     if (settings.game.diurnal.timeOfDayNormalized < 0.5) {
                         settings.game.ambientTemperature.current = settings.game.diurnal.timeOfDayNormalized * 2;
                     } else settings.game.ambientTemperature.current = 2 - settings.game.diurnal.timeOfDayNormalized * 2;
+                    // this commented-out line below makes the impact of time of day on ambient temperature more extreme.
+                    //settings.game.ambientTemperature.scale = settings.game.diurnal.timeOfDayNormalized;
                     // limiting max and min ambient temperatures
                     // WRONG: it would be better to have the temp cycle smoothly between max and min
                     if (settings.game.ambientTemperature.current > settings.game.ambientTemperature.max) {
@@ -303,14 +302,10 @@ function drawAllCells(cellsArray) {
                 }
                 // misc. movement/behavior experiments
                 if (settings.game.race.on && entity.entityType === 'light') {
-                    if (frameCounter % 300 > 150) {
-                        if (frameCounter % 2 === 0) {
-                            entityYCellsMoveNextFrame -= 4;
-                            if (frameCounter % 3 === 0) {
-                                if (entity.coordinates[0] < 0) entityXCellsMoveNextFrame -= 1;
-                                else entityXCellsMoveNextFrame += 1;
-                            }
-                        }
+                    entityYCellsMoveNextFrame -= 1;
+                    if (frameCounter % 3 === 0) {
+                        if (entity.coordinates[0] < 0) entityXCellsMoveNextFrame -= 1;
+                        else entityXCellsMoveNextFrame += 1;
                     }
                 }
                 // push back ability's effects
@@ -437,10 +432,15 @@ function drawAllCells(cellsArray) {
         //////////////////////////////////////////////////////////////////////////////////
         // start FUNCTION updateNoise(); // updating the screen noise
         //////////////////////////////////////////////////////////////////////////////////
-        drawingSettings.noise.globalNoiseScale = player.temperatureCircular * player.temperatureNoiseScale;
-        drawingSettings.noise.redNoise = 1 - player.temperature;
-        drawingSettings.noise.greenNoise = player.temperatureCircular * 0.5;
-        drawingSettings.noise.blueNoise = player.temperature;
+        drawingSettings.noise.globalNoiseScale = (
+            player.temperatureCircular * player.temperatureNoiseScale +
+            player.coldDamageThreshold + (1 - player.heatDamageThreshold)
+        );
+        if (player.temperature < player.heatDamageThreshold) drawingSettings.noise.redNoise = player.heatDamageThreshold - player.temperature;
+        else drawingSettings.noise.redNoise = 0;
+        drawingSettings.noise.greenNoise = player.temperatureCircular * (0.5 * player.heatDamageThreshold - player.coldDamageThreshold);
+        if (player.temperature > player.coldDamageThreshold) drawingSettings.noise.blueNoise = player.temperature - player.coldDamageThreshold;
+        else drawingSettings.noise.blueNoise = 0;
         //////////////////////////////////////////////////////////////////////////////////
         // end FUNCTION updateNoise(); // updating the screen noise
         //////////////////////////////////////////////////////////////////////////////////
@@ -547,11 +547,13 @@ function drawAllCells(cellsArray) {
                                 cell.coordinates[1] < lightLine.coordinates[1] // one-sided
                             ) {
                                 var distanceToLightLineCoords = (lightLine.coordinates[1] - cell.coordinates[1]) * cellSize,
-                                    lightLineNoise = lightLine.noiseFactor;
-                                    lightLineNoise *= (1 - player.energy / player.maxEnergy) * 4;
+                                    lightLineNoise = lightLine.noiseFactor,
+                                    lightLineOscillatorValue = 1;
+                                lightLineNoise *= (1 - player.energy / player.maxEnergy) * 4;
+                                if (lightLine.oscillator) lightLineOscillatorValue = lightLine.oscillator.value;
                                 if (distanceToLightLineCoords < 0) distanceToLightLineCoords = -distanceToLightLineCoords;
                                 lightLineBrightness =
-                                    ((lightLine.range * lightLine.oscillator.value) - distanceToLightLineCoords) /
+                                    ((lightLine.range * lightLineOscillatorValue) - distanceToLightLineCoords) /
                                     lightLine.range * lightLine.brightness -
                                     (arrayOfRandomNumbers[randomNumberIndex] * lightLineNoise * (lightLine.oscillator.value + 0.5))// *
                                     //lightLine.oscillator.value
@@ -567,49 +569,10 @@ function drawAllCells(cellsArray) {
                 //////////////////////////////////////////////////////////////////////////////////
                 // end FUNCTION showLightLines(cell);
                 //////////////////////////////////////////////////////////////////////////////////
-                //////////////////////////////////////////////////////////////////////////////////
-                // start FUNCTION showShadows(cell);
-                //////////////////////////////////////////////////////////////////////////////////
-                // showShadows(cell)
-                /*var darkness;
-                if (settings.entities.shadows.length > 0) {
-                    for (var g = 0; g < settings.entities.shadows.length; g++) {
-                        var shadow = settings.entities.shadows[g];
-                        if (cell.coordinates[0] < shadow.coordinates[0]) {
-                            var xDistanceFromShadow = cell.coordinates[0] - shadow.coordinates [0];
-                            if (xDistanceFromShadow < 0) xDistanceFromShadow = -xDistanceFromShadow;
-                            // Math.max is a function
-                            //brightness = light.radius / Math.max(light.coreRadius, distanceFromLight) * lightOscillatorValue * light.brightness;
-                            darkness = xDistanceFromShadow * 10;
-                            if (darkness < 0) darkness = 0;
-                            for (var aa = 0; aa < 3; aa++) {
-                                cell.color[aa] -= darkness;
-                                if (cell.color[aa] < 0) cell.color[aa] = 0;
-                            }
-                        }
-                        if (cell.coordinates[1] < shadow.coordinates[1]) {
-                            var yDistanceFromShadow = cell.coordinates[1] - shadow.coordinates [1];
-                            if (yDistanceFromShadow < 0) yDistanceFromShadow = -yDistanceFromShadow;
-                            // Math.max is a function
-                            //brightness = light.radius / Math.max(light.coreRadius, distanceFromLight) * lightOscillatorValue * light.brightness;
-                            darkness = yDistanceFromShadow * 10;
-                            if (darkness < 0) darkness = 0;
-                            for (var ab = 0; ab < 3; ab++) {
-                                cell.color[ab] -= darkness;
-                                if (cell.color[ab] < 0) cell.color[ab] = 0;
-                            }
-                        }
-                    }
-                }
-                for (var ac = 0; ac < 3; ac++) {
-                        cell.color[ac] /= settings.entities.shadows.length + 1;
-                }*/
-                //////////////////////////////////////////////////////////////////////////////////
-                // end FUNCTION showShadows(cell);
-                //////////////////////////////////////////////////////////////////////////////////
                 /////////
                 // apply ambient temperature to cell brightness
                 ////////
+                // separated into colors rather than a for loop in case we want to make some color shifts based on ambient temperature
                 cell.color[0] *= settings.game.ambientTemperature.current * settings.game.ambientTemperature.scale;
                 cell.color[1] *= settings.game.ambientTemperature.current * settings.game.ambientTemperature.scale;
                 cell.color[2] *= settings.game.ambientTemperature.current * settings.game.ambientTemperature.scale;
@@ -925,7 +888,7 @@ function drawAllCells(cellsArray) {
                     // temperature damage threshold indicators
                     // heat damage threshold indicator
                     if (
-                        cell.coordinates[0] >= (canvas.width * (player.heatDamageThreshold - 0.5)) / cellSize && cell.coordinates[0] <= canvas.width * (player.heatDamageThreshold - 0.5) / cellSize + (canvas.width * 0.027 / cellSize) &&
+                        cell.coordinates[0] >= (canvas.width * (player.heatDamageThreshold - 0.5)) / cellSize && cell.coordinates[0] <= canvas.width * (player.heatDamageThreshold - 0.5) / cellSize + (canvas.width * 0.024 / cellSize) && // NOTE: this being 0.02*7* here, and the comparable figure in the cold version being 0.02*4* is deliberate and important. Sometimes the hot threshold indicator was too thin.
                         cell.coordinates[1] <= -((cellsPerColumn / 2) - (0.036 * canvasHeight / cellSize))
                     ) {
                         if (!drawingSettings.greyscaleToSpectrum) {
@@ -1114,6 +1077,7 @@ function drawAllCells(cellsArray) {
                                 else randomNumberIndex = 0;
                                 player.died = true;
                                 // FUNCTION calls here (.now() & .toFixed()), but it runs very rarely, at a time when framerate doesn't matter. I can't do this with frames because framerate will vary.
+                                console.log('You died on Day ' + settings.game.diurnal.dayCounter + '.' + (100 * settings.game.diurnal.timeOfDayNormalized.toFixed(2)).toFixed(0) + '.');
                                 console.log('Play time was ' + ((Date.now() - settings.gameStartTime) / 1000).toFixed(2) + ' seconds.');
                         }
                 }
@@ -1192,7 +1156,7 @@ function makeLight(brightness, radius, coordinates, oscillator, coreRadius, diff
                 'radius': radius,
                 'coreRadius': coreRadius,
                 'diffusion': diffusion,
-                'oscillator': oscillator,
+                'oscillator': null,//oscillator,
                 'deathChance': deathChance,
                 'parentCellsArray': allCellsList, // large cellsList of which light's cell is a part
                 'entityParentArray': lightsArray, // lights array

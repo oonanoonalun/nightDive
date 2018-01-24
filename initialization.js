@@ -24,10 +24,18 @@ var cells = [],
                             'max': 0.75,
                             'intervalBetweenUpdates': 20, // frames between updates
                             'log': false,
-                            'settings.game.ambientTemperature.scale': 2 // how strongly the ambient temperature affects screen brightness
+                            'settings.game.ambientTemperature.scale': 1 // how strongly the ambient temperature affects screen brightness
+                        },
+                        'diurnal': {
+                            'on': true, // diurnal cycle will play out
+                            'duration': 900, // length of day, midnight to midnight. 3600 is two minutes at 30fps
+                            'dayCounter': 0,
+                            'logTimeOfDay': false,
+                            'clockColor': [0, 0, 255], // starting color at midnight. Putting this here just to make sure there's an initial value before the update code kicks in.
+                            'logDayCounter': false
                         },
                         'slipperySlope': {
-                                'on': true, // Whether the behavior is active or not. Cycling turns this on and off automatically at intervals.
+                                'on': false, // Whether the behavior is active or not. Cycling turns this on and off automatically at intervals.
                                 'cycle': false, // turns itself on and off at intervals
                                 'framesOn': 150, // when cycling, for how many frames will it be on?
                                 'framesOff': 300, // when cycling, for how many frames will it be off?
@@ -35,7 +43,7 @@ var cells = [],
                                 'notOffUntil': null
                         },
                         'race': {
-                                'on': true,
+                                'on': false,
                                 'cycle': false,
                                 'framesOn': 90,
                                 'framesOff': 300,
@@ -43,19 +51,12 @@ var cells = [],
                                 'notOffUntil': null
                         },
                         'individualPersonalities': {
-                                'on': true,
+                                'on': false,
                                 'cycle': false,
                                 'framesOn': 150,
                                 'framesOff': 150,
                                 'notOnUntil': 0,
                                 'notOffUntil': null
-                        },
-                        'diurnal': {
-                            'on': true, // diurnal cycle will play out
-                            'duration': 900, // length of day, midnight to midnight. 3600 is two minutes at 30fps
-                            'dayCounter': 0,
-                            'logTimeOfDay': false,
-                            'clockColor': [0, 0, 255] // starting color at midnight. Putting this here just to make sure there's an initial value before the update code kicks in.
                         }
                 }
         },
@@ -133,7 +134,7 @@ function setPreferences() {
         drawingSettings.fpsDisplay.fpsDisplayInterval = 5000;      // display it this frequently (in ms)
         drawingSettings.fpsDisplay.fpsDisplayIntervalLongTerm = 30000;     // and this frequently (for a short-term gist and a long-term average)
         // resolution. Currently, 0-7 are valid values. Smaller is chunkier.
-        resolutionFactor = 4; // WARNING not sure this works anymore (?) //Leaps in resolution are pretty big for now due to some current constraints on valid widths and heights.
+        resolutionFactor = 3; // WARNING not sure this works anymore (?) //Leaps in resolution are pretty big for now due to some current constraints on valid widths and heights.
         // add color noise to the screen
         drawingSettings.noise.addNoise = true;
         // log resolution information in the console once at the beginning of running the program
@@ -192,8 +193,8 @@ function setPreferences() {
         settings.minLights = 5;
         settings.maxLights = 12;
         // lights parameter ranges
-        randomLightSettingsDefault.minBrightness = 0.125;
-        randomLightSettingsDefault.maxBrightness = 2;
+        randomLightSettingsDefault.minBrightness = 0.25;
+        randomLightSettingsDefault.maxBrightness = 4;
         randomLightSettingsDefault.minRadius = canvasWidth / 6;
         randomLightSettingsDefault.maxRadius = canvasWidth;
         randomLightSettingsDefault.minCoreRadius = 10;
@@ -202,7 +203,7 @@ function setPreferences() {
         randomLightSettingsDefault.maxDiffusion = 18;
         // how fast the lights chase and flee from you in the Icarus game type. Smaller is fast.
         settings.icarusLightMovementSpeedScale = 0.25; // WRONG doesn't do anything anymore
-        settings.game.diurnal.duration = 300; // how long a full day/night cycle lasts. 3600 is two minutes, 1800 is 1, 900 is 30 seconds
+        settings.game.diurnal.duration = 1800; // how long a full day/night cycle lasts. 3600 is two minutes, 1800 is 1, 900 is 30 seconds
 }
 
 // WARNING setPrefences NEEDS TO BE CALLED HERE, before the following declarations of vars.
@@ -241,25 +242,219 @@ var frameCounter = 0, // using this to avoid Date.now() calls as part of optimiz
         arrayOfRandomNumbersLength = 1000000, // one million
         excludedNamesFromRandomOscillatorSelection = [
                 'playerDamageOscillator'
-        ];
+        ],
+        siphon = {
+            'targets': [
+                Math.round(totalNumberOfCells / 2 + cellsPerRow)
+            ],
+            'transferRateBase': 10          
+        };
         
 settings.oscillators.push(player.damageOscillator);
 initializeLightPersonalities(10000);
-makeRandomOscillators(10, 150, 600, settings.oscillators);
-makeRandomLights(settings.minLights, randomLightSettingsDefault, settings.entities.lights, settings.oscillators);
+//makeRandomOscillators(10, 150, 600, settings.oscillators);
+//makeRandomLights(settings.minLights, randomLightSettingsDefault, settings.entities.lights, settings.oscillators);
 assignDistanceLookupTables();
 initializeCenterCells();
 initializeAllDirections();
 initializeArrayOfRandomNumbers(arrayOfRandomNumbersLength);
 initializeDeathAphorisms();
-initializeClockCells();
+//initializeClockCells();
+
+////////////////////////
+////////////////////////
+// ENERGY DISTRIBUTION TESTING/EXPERIMENTING
+distributeInitialEnergy();
+initializeNeighbors();
+
+function distributeInitialEnergy() {
+    var energyReserve = totalNumberOfCells * 63; // half the possible brightness of the whole cell matrix
+    while (energyReserve > 0) {
+        var randomEnergyAmount = Math.round(Math.random() * 127),
+            randomCell = cells[Math.round(Math.random() * (cells.length - 1))];
+        // if reserve would be more than depleted this iteration, just use the rest of it up
+        if (energyReserve - randomEnergyAmount < 0) randomEnergyAmount = energyReserve;
+        // saturate a cell's brightness, but don't push it over max--use that energy elsewhere.
+        if (randomCell.energy + randomEnergyAmount > 255) {
+            randomEnergyAmount = 255 - randomCell.energy;
+        }
+        randomCell.energy += randomEnergyAmount;
+        energyReserve -= randomEnergyAmount;
+    }
+}
+
+// Every .033 seconds run the code in function mainLoop. 40(ms) is 25fps, 33.33etc.ms is 30.
+setInterval(newMainLoop, 33.3333333333); // locking this to 30fps for consistency of gameplay
+//setInterval(newMainLoop, (33.333333333333 * 0.01)); // high framerate is just to see how efficient things are by seeing how fast they can possibly go
+function newMainLoop() {
+    context.clearRect(0, 0, 800, 600); // this calls a function, but I don't know how to recreate this function, or where to find its contents
+    targetCellControls();
+    for (var i = 0; i < cells.length; i++) {
+        var cell = cells[i];
+        // categorize relationships of a cell to its neighbors
+        sortNeighbors(cell);
+        // move energy around
+        distributeEnergy(cell);
+        // assign the cell its energy as its color
+        cell.color = [cell.energy, cell.energy, cell.energy];
+        // give the target cell a different color
+        if (cell.index === siphon.targets[0]) cell.color = [255, 0, 0];
+        // draw the cell
+        finalDrawing(cell);
+    }
+    countFps(drawingSettings.fpsDisplay.fpsDisplayInterval, drawingSettings.fpsDisplay.fpsDisplayIntervalLongTerm);    
+    frameCounter++;
+}
+
+function distributeEnergy(cell) {
+    siphonEnergy(cell, cell.closestToTargetNeighbor, siphon.transferRateBase);
+    siphonEnergy(cell, cell.neighborUp, siphon.transferRateBase);
+}
+
+function siphonEnergy(originCell, targetCell, amountOfEnergy) {
+    if (!targetCell) return;
+    var e = amountOfEnergy;
+    if (originCell.energy - e < 0) e = originCell.energy; // if the donor would go below zero, the amount to transfer reduces to whatever the donor has left
+    if (targetCell.energy + e > 255) e = 255 - targetCell.energy; // if the recipient would go over 255, the amount to transfer reduces to whatever it would take to top off the receipient
+    originCell.energy -= e; // donor loses the amount to transfer
+    targetCell.energy += e; // recepient gains the amount to transfer
+}
+
+function targetCellControls() {
+    // move target cell up
+    if (keysDown[KEY_W] && siphon.targets[0] - cellsPerRow >= 0) {
+        siphon.targets[0] -= cellsPerRow;
+    }
+    // down
+    if (keysDown[KEY_S] && siphon.targets[0] + cellsPerRow <= totalNumberOfCells - 1) {
+        siphon.targets[0] += cellsPerRow;
+    }
+    // left
+    if (keysDown[KEY_A] && siphon.targets[0] - 1 >= 0 && (siphon.targets[0] + cellsPerRow) % cellsPerRow !== 0) {
+        siphon.targets[0] -= 1;
+    }
+    // right
+    if (keysDown[KEY_D] && siphon.targets[0] + 1 <= totalNumberOfCells - 1 && (siphon.targets[0] + 1) % cellsPerRow !== 0) {
+        siphon.targets[0] += 1;
+    }
+}
+
+function finalDrawing(cell) {
+    for (var x = 0; x < 3; x++) {
+        // cap brightness
+        //if (cell.color[x] > 255) cell.color[x] = 255;
+        // toHexColor
+        for (var w = 0; w < 3; w++) {
+            // Math.round()
+            cell.color[w] -= cell.color[w] % 1;
+            cell.color[w] = cell.color[w].toString(16);
+            if (cell.color[w].length < 2) {
+                cell.color[w] = '0' + cell.color[w];
+            }
+        }
+        cell.color = '#' + cell.color[0] + cell.color[1] + cell.color[2];
+        context.fillStyle = cell.color;
+        context.fillRect(cell.left, cell.top, cell.size, cell.size);
+    }
+}
+
+function initializeNeighbors() {
+    for (var i = 0; i < totalNumberOfCells; i++) {
+        var cell = cells[i];
+        cell.neighbors = [];
+        if (cells[cell.index + cellsPerRow]) {
+            cell.neighbors.push(cells[cell.index + cellsPerRow]); // below
+            cell.neighborDown = cells[cell.index + cellsPerRow];
+        }
+        if (cells[cell.index - cellsPerRow]) {
+            cell.neighbors.push(cells[cell.index - cellsPerRow]); // above
+            cell.neighborUp = cells[cell.index - cellsPerRow];
+        }
+        if ((cell.index + 1) % cellsPerRow !== 0) { // i.e. if cell is not on the right edge
+            cell.neighbors.push(cells[cell.index + 1]); // right
+            cell.neighborRight = cells[cell.index + 1];
+        }
+        if ((cell.index + cellsPerRow) % cellsPerRow !== 0) { // i.e. if cell is not on the left edge
+            cell.neighbors.push(cells[cell.index - 1]); // left
+            cell.neighborLeft = cells[cell.index - 1];
+        }
+        if (cells[cell.index + cellsPerRow + 1] && (cell.index + 1) % cellsPerRow !== 0) {
+            cell.neighbors.push(cells[cell.index + cellsPerRow + 1]); // below-right
+            cell.neighborDownRight = cells[cell.index + cellsPerRow + 1];
+        }
+        if (cells[cell.index + cellsPerRow - 1] && (cell.index + cellsPerRow) % cellsPerRow !== 0) {
+            cell.neighbors.push(cells[cell.index + cellsPerRow - 1]); // below-left
+            cell.neighborDownLeft = cells[cell.index + cellsPerRow - 1];
+        }
+        if (cells[cell.index - cellsPerRow + 1] && (cell.index + 1) % cellsPerRow !== 0) {
+            cell.neighbors.push(cells[cell.index - cellsPerRow + 1]); // above-right
+            cell.neighborUpRight = cells[cell.index - cellsPerRow + 1];
+        }
+        if (cells[cell.index - cellsPerRow - 1] && (cell.index + cellsPerRow) % cellsPerRow !== 0) {
+            cell.neighbors.push(cells[cell.index - cellsPerRow - 1]); // above-left
+            cell.neighborUpLeft = cells[cell.index - cellsPerRow - 1];
+        }
+        if (cell.neighborUp) cell.brightestNeighbor = cell.neighborUp;
+        else cell.brightestNeighbor = cell.neighborDown;
+        if (cell.neighborUp) cell.dimmestNeighbor = cell.neighborUp;
+        else cell.dimmestNeighbor = cell.neighborDown;
+        if (cell.neighborUp) cell.mostSimilarBrightnessNeighbor = cell.neighborUp;
+        else cell.mostSimilarBrightnessNeighbor = cell.neighborDown;
+        if (cell.neighborUp) cell.closestToTargetNeighbor = cell.neighborUp;
+        else cell.closestToTargetNeighbor = cell.neighborDown;
+        if (cell.neighborUp) cell.farthestFromTargetNeighbor = cell.neighborUp;
+        else cell.farthestFromTargetNeighbor = cell.neighborDown;
+        if (cell.neighborUp) cell.middleDistanceFromTargetNeighbor = cell.neighborUp;
+        else cell.middleDistanceFromTargetNeighbor = cell.neighborDown;
+    }
+}
+
+function sortNeighbors(cell) {
+    cell.smallestEnergyDifferenceWithANeighbor = 255;
+    for (var i = 0; i < cell.neighbors.length; i++) {
+        var n = cell.neighbors[i],
+            ce = cell.energy,
+            ne = n.energy,
+            nd2t = n.distanceToIndex[siphon.targets[0]],
+            cd2t = cell.distanceToIndex[siphon.targets[0]],
+            largerOfCellOrNeighborEnergy = ce,
+            smallerOfCellOrNeighborEnergy = ne;
+        // figuring out which of two numbers is smaller for some substraction later, to find out the difference between two numbers. Avoiding Math.abs() function call.
+        if (ne > ce) {
+            largerOfCellOrNeighborEnergy = ne;
+            smallerOfCellOrNeighborEnergy = ce;
+        }
+        // finding the neighbor closest to the target
+        if (nd2t < cell.closestToTargetNeighbor.distanceToIndex[siphon.targets[0]]) {
+            cell.closestToTargetNeighbor = n;
+        }
+        // finding the neighbor farthest from the target
+        if (nd2t > cell.farthestFromTargetNeighbor.distanceToIndex[siphon.targets[0]]) {
+            cell.farthestFromTargetNeighbor = n;
+        }
+        // finding the neighbor with the most moderate distance from the target
+        // ??
+        // finding the brightest neighbor
+        if (ne > cell.brightestNeighbor.energy) cell.brightestNeighbor = n;
+        // finding the dimmest neighbor
+        if (ne < cell.dimmestNeighbor.energy) cell.dimmestNeighbor = n;
+        // finding the neighbor with the nearest energy level to the cell
+        if (largerOfCellOrNeighborEnergy - smallerOfCellOrNeighborEnergy < cell.smallestEnergyDifferenceWithANeighbor) {
+            cell.smallestEnergyDifferenceWithANeighbor = largerOfCellOrNeighborEnergy - smallerOfCellOrNeighborEnergy;
+            cell.mostSimilarBrightnessNeighbor = n;
+        }
+    }
+}
+
+/////////////////
+/////////////////
 
 //////////////////////////
 //////////////////////////
 // TESTING/EXPERIMENTING
 var testLightOscillator = makeOscillator(120, 0, SINE, 'testLightOscillator');
 settings.oscillators.push(testLightOscillator);
-makeLightLine([-40, -10], 40, canvasHeight);
+//makeLightLine([-40, -10], 40, canvasHeight);
 //settings.entities.lights.push(makeLight(0.5, canvasWidth / 4, [-15, -15], testLightOscillator, 10, 18, 0, 0, 0, 0, cells, settings.entities.lights));
 //makeLineOfLights([-20, -15], 35);
 //makeLineOfLights([-40, 10], 60);
@@ -384,10 +579,10 @@ function initializeLightPersonalities(numberOfPersonalities) {
             'orbitChance': 0,
             'expressGlobalPersonalityChance': 0.3,
             'targetCoords': null, // target could be a non-entity, non-player cell. If target is 'player', might treat player coords as 0, 0
-            'targetIndex': null
+            'siphon.targets[0]': null
         };
         // might want to add a weighting factor for each trait. I.e. when movement vector is being averaged, multiply a traits influence by some number, then at that number - 1 to the number the total is divided by.
-        if (personality.targetCoords) personality.targetIndex = coordinatesToIndex(personality.targetCoords);
+        if (personality.targetCoords) personality.siphon.targets[0] = coordinatesToIndex(personality.targetCoords);
         settings.lightPersonalities.push(personality);
     }
     settings.gobalLightPersonality = { // global personality will respond to things like game type, player temperature, number of lights, total screen brightness (often influenced by shadows) etc. in its update.
@@ -402,7 +597,7 @@ function initializeLightPersonalities(numberOfPersonalities) {
         'directionChangeChance': 0.05,
         'expressGlobalPersonalityChance': 0.3,
         'targetCoords': null, // target could be a non-entity, non-player cell. If target is 'player', might treat player coords as 0, 0
-        'targetIndex': null
+        'siphon.targets[0]': null
     };
 }
 
@@ -446,7 +641,8 @@ function makeCells(numberOfCells, cellsPerRow, cellsList) {
                                 'left': j * (800 / cellsPerRow),        //left edge coordinate
                                 'top': (800 / cellsPerRow) * i,        //should be "size * ...rowCounter" but can't get it to work      //top edge coordinate
                                 'centerXY': [],
-                                'index': indexCounter
+                                'index': indexCounter,
+                                'energy': 0
                         };
                         newCell.centerXY = [newCell.left + 0.5 * newCell.size, newCell.top + 0.5 * newCell.size];
                         cellsList.push(newCell);	//adding this cell to the list of all of the "geographical" cells in the level
