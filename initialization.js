@@ -210,7 +210,8 @@ function setPreferences() {
 setPreferences();
 var //current coordinate system needs even number of cells in rows and columns. Either update findValidCellsPerRowForCanvas so that an option is to lock it even numbers in both directions (DONE), or update assignCoordinatesToCells. coordinatesToIndex won't work with odd numbers, either
         arrayOfValidCellsPerRow = findValidCellsPerRowForCanvas(canvasWidth, canvasHeight, false, true),
-        cellsPerRow = arrayOfValidCellsPerRow[resolutionFactor], // Smaller is chunkier.
+        cellsPerRow = 80,
+        //cellsPerRow = arrayOfValidCellsPerRow[resolutionFactor], // Smaller is chunkier.
         //cellsPerRow = cellSizeToCellsPerRow(13),
         totalNumberOfCells = cellsPerRow * cellsPerRow * 0.75, // only works for 4:3 ratio
         cellsPerColumn = totalNumberOfCells / cellsPerRow,
@@ -267,11 +268,14 @@ initializeDeathAphorisms();
 distributeInitialEnergy();
 initializeNeighbors();
 
+//var imageData = context.createImageData(cellsPerColumn, cellsPerRow); // only do this once per page
+var imageData = context.createImageData(cellsPerRow, cellsPerColumn);
+var pixelArray  = imageData.data;                        // only do this once per page
+
 // Every .033 seconds run the code in function mainLoop. 40(ms) is 25fps, 33.33etc.ms is 30.
-setInterval(newMainLoop, 33.3333333333); // locking this to 30fps for consistency of gameplay
-//setInterval(newMainLoop, (33.333333333333 * 0.01)); // high framerate is just to see how efficient things are by seeing how fast they can possibly go
+//setInterval(newMainLoop, 33.3333333333); // locking this to 30fps for consistency of gameplay
+setInterval(newMainLoop, (33.333333333333 * 0.01)); // high framerate is just to see how efficient things are by seeing how fast they can possibly go
 function newMainLoop() {
-    context.clearRect(0, 0, 800, 600); // this calls a function, but I don't know how to recreate this function, or where to find its contents
     // change the location of the target cell
     targetCellControls();
     for (var i = 0; i < cells.length; i++) {
@@ -282,13 +286,15 @@ function newMainLoop() {
         sortNeighbors(cell);
         // move energy around
         distributeEnergy(cell, 1);
-        // assign the cell its energy as its color
-        cell.color = [cell.energy, 0, 0];
         // give the target cell a different color
-        if (cell.index === siphon.targets[0]) cell.color = [255, 0, 0];
-        // draw the cell
-        finalDrawing(cell);
+        //if (cell.index === siphon.targets[0]) cell.color = [255, 0, 0];
+        pixelArray[i * 4 + 0] = cell.energy;
+        pixelArray[i * 4 + 1] = 0;
+        pixelArray[i * 4 + 2] = 0;
+        pixelArray[i * 4 + 3] = 255; // use 255 here to make opaque
     }
+    context.putImageData(imageData, 0, 0);
+    context.drawImage(canvas, 0, 0, cellsPerRow, cellsPerColumn, 0, 0, canvas.width, canvas.height);
     countFps(drawingSettings.fpsDisplay.fpsDisplayInterval, drawingSettings.fpsDisplay.fpsDisplayIntervalLongTerm);    
     frameCounter++;
 }
