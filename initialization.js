@@ -274,6 +274,7 @@ var pixelArray  = imageData.data;                        // only do this once pe
 
 // Every .033 seconds run the code in function mainLoop. 40(ms) is 25fps, 33.33etc.ms is 30.
 setInterval(newMainLoop, 33.3333333333); // locking this to 30fps for consistency of gameplay
+// NOTE: Try this composition at 230ms between frames, for beginning part
 //setInterval(newMainLoop, (33.333333333333 * 0.01)); // high framerate is just to see how efficient things are by seeing how fast they can possibly go
 function newMainLoop() {
     // change the location of the target cell
@@ -290,8 +291,8 @@ function newMainLoop() {
         //if (cell.index === siphon.targets[0]) cell.color = [255, 0, 0];
         pixelArray[i * 4 + 0] = cell.energy;
         if (frameCounter % 90 < 45) pixelArray[i * 4 + 0] -= Math.round(255 * cell.coordinates[1] % 20);
-        if (frameCounter % 90 < 45) pixelArray[i * 4 + 1] = 0;
-        else pixelArray[i * 4 + 1] = cell.energy - 40 - cell.coordinates[0];
+        //if (frameCounter % 90 < 45) pixelArray[i * 4 + 1] = 0;
+        pixelArray[i * 4 + 1] = cell.energy - 40 - cell.coordinates[0];
         pixelArray[i * 4 + 2] = cell.energy * 0.25 - cell.energy * 0.25 % 1;
         pixelArray[i * 4 + 3] = 255; // use 255 here to make opaque
     }
@@ -302,11 +303,10 @@ function newMainLoop() {
 }
 
 function distributeEnergy(cell, siphonRateScale) {
-    if (Math.abs(cell.coordinates[0]) % 15 < 7) siphonEnergy(cell, cell.neighborDown, Math.round(Math.abs(cell.coordinates[1])));
+    if (Math.abs(cell.coordinates[0]) % 15 < 7) siphonEnergy(cell, cell.neighborDown, 5);//Math.round(Math.abs(cell.coordinates[1])));
     else {
-        if (frameCounter % 100 < 30) siphonEnergy(cell, cell.closestToTargetNeighbor, siphon.transferRateBase);
-        else siphonEnergy(cell, cell.farthestFromTargetNeighbor, siphon.transferRateBase);
-        if (cell.index % 9 === 0 && cell.neighborUp) siphonEnergy(cell, cell.neighborUp, siphon.transferRateBase * Math.round(Math.random() * 5));
+        siphonEnergy(cell, cell.farthestFromTargetNeighbor, siphon.transferRateBase);
+        if (cell.index % 9 === 0 && cell.neighborUp) siphonEnergy(cell, cell.neighborUp, siphon.transferRateBase * Math.round(Math.random() * 3));
         if (cell.index % 2 === 0 && cell.neighborDownLeft) siphonEnergy(cell, cell.neighborDownLeft, siphon.transferRateBase * Math.round(Math.random() * 5));
         if (cell.index % 5 === 0 && cell.neighborRigh) siphonEnergy(cell, cell.neighborRight, siphon.transferRateBase * Math.round(Math.random() * 5));
         if (frameCounter % 4 === 0) siphonEnergy(cell, cell.neighbors[Math.round(Math.random() * (cell.neighbors.length - 1))], siphon.transferRateBase * Math.round(Math.random() * 5));
