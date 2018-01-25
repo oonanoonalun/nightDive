@@ -284,7 +284,7 @@ var RED = 'red',
     BLUE = 'blue',
     COLORLESS = 'colorless';
 
-var frameRate = 1000;
+var frameRate = 30;
 setInterval(newMainLoop, 1000 / frameRate);
 // WRONG, generally: A lot of "if" checks for modes (i.e. color settings) could be initialized instead of checked every frame.
 //      I.e. you could just run a slightly different program from the get-go, instead of the same program doing checks
@@ -312,10 +312,12 @@ function newMainLoop() {
 }
 
 function distributeEnergy(cell, siphonRateScale) {
-    siphonEnergy(cell, cell.neighborUp, siphon.transferRateBase * siphonRateScale);
-    siphonEnergy(cell, cell.neighborRight, siphon.transferRateBase * siphonRateScale);
+    siphonEnergy(cell, cell.dimmestNeighbor, siphon.transferRateBase * siphonRateScale);
+    //siphonEnergy(cell, cell.neighborRight, siphon.transferRateBase * siphonRateScale);
     siphonEnergy(cell, cell.closestToTargetNeighbor, siphon.transferRateBase * siphonRateScale);
-    siphonEnergy(cell, cell.brightestNeighbor, siphon.transferRateBase * siphonRateScale);
+    //siphonEnergy(cell, cell.brightestNeighbor, siphon.transferRateBase * siphonRateScale);
+    //siphonEnergy(cell, cell.dimmestNeighbor, siphon.transferRateBase * siphonRateScale);
+    if (Math.random() < 0.1) siphonEnergy(cell, cell.neighbors[Math.round(Math.random() * cell.neighbors.length)], siphon.transferRateBase * siphonRateScale * 10);
 }
 
 function distributeEnergyColors(cell, siphonRateScale) {
