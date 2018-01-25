@@ -273,8 +273,8 @@ var imageData = context.createImageData(cellsPerRow, cellsPerColumn);
 var pixelArray  = imageData.data;                        // only do this once per page
 
 // Every .033 seconds run the code in function mainLoop. 40(ms) is 25fps, 33.33etc.ms is 30.
-//setInterval(newMainLoop, 33.3333333333); // locking this to 30fps for consistency of gameplay
-setInterval(newMainLoop, (33.333333333333 * 0.01)); // high framerate is just to see how efficient things are by seeing how fast they can possibly go
+setInterval(newMainLoop, 33.3333333333); // locking this to 30fps for consistency of gameplay
+//setInterval(newMainLoop, (33.333333333333 * 0.01)); // high framerate is just to see how efficient things are by seeing how fast they can possibly go
 function newMainLoop() {
     // change the location of the target cell
     targetCellControls();
@@ -289,8 +289,10 @@ function newMainLoop() {
         // give the target cell a different color
         //if (cell.index === siphon.targets[0]) cell.color = [255, 0, 0];
         pixelArray[i * 4 + 0] = cell.energy;
-        pixelArray[i * 4 + 1] = 0;
-        pixelArray[i * 4 + 2] = 0;
+        if (frameCounter % 90 < 45) pixelArray[i * 4 + 0] -= Math.round(255 * cell.coordinates[1] % 20);
+        if (frameCounter % 90 < 45) pixelArray[i * 4 + 1] = 0;
+        else pixelArray[i * 4 + 1] = cell.energy - 40 - cell.coordinates[0];
+        pixelArray[i * 4 + 2] = cell.energy * 0.25 - cell.energy * 0.25 % 1;
         pixelArray[i * 4 + 3] = 255; // use 255 here to make opaque
     }
     context.putImageData(imageData, 0, 0);
@@ -300,8 +302,23 @@ function newMainLoop() {
 }
 
 function distributeEnergy(cell, siphonRateScale) {
-    siphonEnergy(cell, cell.closestToTargetNeighbor, siphon.transferRateBase * siphonRateScale);
-    //siphonEnergy(cell, cell.neighborUp, siphon.transferRateBase);
+    if (Math.abs(cell.coordinates[0]) % 15 < 7) siphonEnergy(cell, cell.neighborDown, Math.round(Math.abs(cell.coordinates[1])));
+    else {
+        if (frameCounter % 100 < 30) siphonEnergy(cell, cell.closestToTargetNeighbor, siphon.transferRateBase);
+        else siphonEnergy(cell, cell.farthestFromTargetNeighbor, siphon.transferRateBase);
+        if (cell.index % 9 === 0 && cell.neighborUp) siphonEnergy(cell, cell.neighborUp, siphon.transferRateBase * Math.round(Math.random() * 5));
+        if (cell.index % 2 === 0 && cell.neighborDownLeft) siphonEnergy(cell, cell.neighborDownLeft, siphon.transferRateBase * Math.round(Math.random() * 5));
+        if (cell.index % 5 === 0 && cell.neighborRigh) siphonEnergy(cell, cell.neighborRight, siphon.transferRateBase * Math.round(Math.random() * 5));
+        if (frameCounter % 4 === 0) siphonEnergy(cell, cell.neighbors[Math.round(Math.random() * (cell.neighbors.length - 1))], siphon.transferRateBase * Math.round(Math.random() * 5));
+        siphon.targets[0] = Math.round(Math.random() * (cells.length - 1));
+        siphonEnergy(cell, cells[Math.round(Math.random() * (cells.length - 1))], 10);
+    }
+    //siphonEnergy(cell, cell.neighbors[Math.round(Math.random() * (cell.neighbors.length - 1))], siphon.transferRateBase * 50);//siphonRateScale);
+    //siphonEnergy(cell, cell.neighborDownRight, siphon.transferRateBase * siphonRateScale);
+    //siphonEnergy(cell, cell.neighborRight, siphon.transferRateBase * siphonRateScale);
+    //siphonEnergy(cell, cells[totalNumberOfCells % frameCounter], siphon.transferRateBase * siphonRateScale);
+    //siphonEnergy(cell, cell.dimmestNeighbor, siphon.transferRateBase * siphonRateScale);
+    //siphonEnergy(cell, cell.farthestFromTargetNeighbor, siphon.transferRateBase);
 }
 
 function siphonEnergy(originCell, targetCell, amountOfEnergy) {
@@ -352,27 +369,8 @@ function cellControls(cell, inputScale) {
     }
 }
 
-function finalDrawing(cell) {
-    for (var x = 0; x < 3; x++) {
-        // cap brightness
-        //if (cell.color[x] > 255) cell.color[x] = 255;
-        // toHexColor
-        for (var w = 0; w < 3; w++) {
-            // Math.round()
-            cell.color[w] -= cell.color[w] % 1;
-            cell.color[w] = cell.color[w].toString(16);
-            if (cell.color[w].length < 2) {
-                cell.color[w] = '0' + cell.color[w];
-            }
-        }
-        cell.color = '#' + cell.color[0] + cell.color[1] + cell.color[2];
-        context.fillStyle = cell.color;
-        context.fillRect(cell.left, cell.top, cell.size, cell.size);
-    }
-}
-
 function distributeInitialEnergy() {
-    var energyReserve = totalNumberOfCells * 63; // half the possible brightness of the whole cell matrix
+    /*var energyReserve = totalNumberOfCells * 63; // half the possible brightness of the whole cell matrix
     while (energyReserve > 0) {
         var randomEnergyAmount = Math.round(Math.random() * 127),
             randomCell = cells[Math.round(Math.random() * (cells.length - 1))];
@@ -384,6 +382,9 @@ function distributeInitialEnergy() {
         }
         randomCell.energy += randomEnergyAmount;
         energyReserve -= randomEnergyAmount;
+    }*/
+    for (var i = 0; i < cells.length; i++) {
+        cells[i].energy = 63;
     }
 }
 
@@ -403,7 +404,7 @@ function initializeNeighbors() {
             cell.neighbors.push(cells[cell.index + 1]); // right
             cell.neighborRight = cells[cell.index + 1];
         }
-        if ((cell.index + cellsPerRow) % cellsPerRow !== 0) { // i.e. if cell is not on the left edge
+        if (cell.index % cellsPerRow !== 0) { // i.e. if cell is not on the left edge
             cell.neighbors.push(cells[cell.index - 1]); // left
             cell.neighborLeft = cells[cell.index - 1];
         }
@@ -411,7 +412,7 @@ function initializeNeighbors() {
             cell.neighbors.push(cells[cell.index + cellsPerRow + 1]); // below-right
             cell.neighborDownRight = cells[cell.index + cellsPerRow + 1];
         }
-        if (cells[cell.index + cellsPerRow - 1] && (cell.index + cellsPerRow) % cellsPerRow !== 0) {
+        if (cells[cell.index + cellsPerRow - 1] && cell.index % cellsPerRow !== 0) {
             cell.neighbors.push(cells[cell.index + cellsPerRow - 1]); // below-left
             cell.neighborDownLeft = cells[cell.index + cellsPerRow - 1];
         }
@@ -419,10 +420,11 @@ function initializeNeighbors() {
             cell.neighbors.push(cells[cell.index - cellsPerRow + 1]); // above-right
             cell.neighborUpRight = cells[cell.index - cellsPerRow + 1];
         }
-        if (cells[cell.index - cellsPerRow - 1] && (cell.index + cellsPerRow) % cellsPerRow !== 0) {
+        if (cells[cell.index - cellsPerRow - 1] && cell.index % cellsPerRow !== 0) {
             cell.neighbors.push(cells[cell.index - cellsPerRow - 1]); // above-left
             cell.neighborUpLeft = cells[cell.index - cellsPerRow - 1];
         }
+        // just giving the cell some arbitrary associations as a starting place for later organization
         if (cell.neighborUp) cell.brightestNeighbor = cell.neighborUp;
         else cell.brightestNeighbor = cell.neighborDown;
         if (cell.neighborUp) cell.dimmestNeighbor = cell.neighborUp;
@@ -440,6 +442,7 @@ function initializeNeighbors() {
 
 function sortNeighbors(cell) {
     cell.smallestEnergyDifferenceWithANeighbor = 255;
+    var dimmestNeighborEnergy = 255;
     for (var i = 0; i < cell.neighbors.length; i++) {
         var n = cell.neighbors[i],
             ce = cell.energy,
@@ -466,7 +469,14 @@ function sortNeighbors(cell) {
         // finding the brightest neighbor
         if (ne > cell.brightestNeighbor.energy) cell.brightestNeighbor = n;
         // finding the dimmest neighbor
-        if (ne < cell.dimmestNeighbor.energy) cell.dimmestNeighbor = n;
+        // THIS SEEMS TO BE WORKING CORRECTLY, FROM THE LOGGING, but as the frameCounter progresses, cell.neighborLeft increasingly registers
+        //      as cell.dimmestNeighbor, even though the upper left part of the screen is getting brighter and brighter
+        //      when siphoning is moving energy toward dimmest neighbors.
+        if (ne < dimmestNeighborEnergy) {
+            dimmestNeighborEnergy = ne;
+            cell.dimmestNeighbor = n;
+        }
+        //if (frameCounter === 100 && cell.index === 420) console.log(cell.dimmestNeighbor === cell.neighborLeft, cell.dimmestNeighbor.energy, ne);
         // finding the neighbor with the nearest energy level to the cell
         if (largerOfCellOrNeighborEnergy - smallerOfCellOrNeighborEnergy < cell.smallestEnergyDifferenceWithANeighbor) {
             cell.smallestEnergyDifferenceWithANeighbor = largerOfCellOrNeighborEnergy - smallerOfCellOrNeighborEnergy;
