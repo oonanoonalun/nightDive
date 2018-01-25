@@ -248,7 +248,13 @@ var frameCounter = 0, // using this to avoid Date.now() calls as part of optimiz
             'targets': [
                 Math.round(totalNumberOfCells / 2 + cellsPerRow)
             ],
-            'transferRateBase': 10          
+            'transferRateBase': 1,
+            'colors': {
+                'on': true,
+                'redOn': true,
+                'greenOn': true,
+                'blueOn': true
+            }
         };
         
 settings.oscillators.push(player.damageOscillator);
@@ -265,17 +271,24 @@ initializeDeathAphorisms();
 ////////////////////////
 ////////////////////////
 // ENERGY DISTRIBUTION TESTING/EXPERIMENTING
-distributeInitialEnergy();
+distributeInitialEnergyRandomly();
+//distributeInitialEnergyUniformly();
 initializeNeighbors();
 
 //var imageData = context.createImageData(cellsPerColumn, cellsPerRow); // only do this once per page
 var imageData = context.createImageData(cellsPerRow, cellsPerColumn);
-var pixelArray  = imageData.data;                        // only do this once per page
+var pixelArray  = imageData.data; // only do this once per page
 
-// Every .033 seconds run the code in function mainLoop. 40(ms) is 25fps, 33.33etc.ms is 30.
-setInterval(newMainLoop, 33.3333333333); // locking this to 30fps for consistency of gameplay
-// NOTE: Try this composition at 230ms between frames, for beginning part
-//setInterval(newMainLoop, (33.333333333333 * 0.01)); // high framerate is just to see how efficient things are by seeing how fast they can possibly go
+var RED = 'red',
+    GREEN = 'green',
+    BLUE = 'blue',
+    COLORLESS = 'colorless';
+
+var frameRate = 1000;
+setInterval(newMainLoop, 1000 / frameRate);
+// WRONG, generally: A lot of "if" checks for modes (i.e. color settings) could be initialized instead of checked every frame.
+//      I.e. you could just run a slightly different program from the get-go, instead of the same program doing checks
+//      all the time and getting the same answers each time.
 function newMainLoop() {
     // change the location of the target cell
     targetCellControls();
@@ -286,15 +299,11 @@ function newMainLoop() {
         // categorize relationships of a cell to its neighbors
         sortNeighbors(cell);
         // move energy around
-        distributeEnergy(cell, 1);
-        // give the target cell a different color
-        //if (cell.index === siphon.targets[0]) cell.color = [255, 0, 0];
-        pixelArray[i * 4 + 0] = cell.energy;
-        if (frameCounter % 90 < 45) pixelArray[i * 4 + 0] -= Math.round(255 * cell.coordinates[1] % 20);
-        //if (frameCounter % 90 < 45) pixelArray[i * 4 + 1] = 0;
-        pixelArray[i * 4 + 1] = cell.energy - 40 - cell.coordinates[0];
-        pixelArray[i * 4 + 2] = cell.energy * 0.25 - cell.energy * 0.25 % 1;
-        pixelArray[i * 4 + 3] = 255; // use 255 here to make opaque
+        distributeEnergy(cell, 10);
+        //distributeEnergyColors(cell, 2);
+        // NOTE: WRONG, maybe. Maybe I could not have to repeat this code;
+        energyToColor(cell);
+        //energyToColors(cell, 1, 1, 1);
     }
     context.putImageData(imageData, 0, 0);
     context.drawImage(canvas, 0, 0, cellsPerRow, cellsPerColumn, 0, 0, canvas.width, canvas.height);
@@ -303,31 +312,110 @@ function newMainLoop() {
 }
 
 function distributeEnergy(cell, siphonRateScale) {
-    if (Math.abs(cell.coordinates[0]) % 15 < 7) siphonEnergy(cell, cell.neighborDown, 5);//Math.round(Math.abs(cell.coordinates[1])));
-    else {
-        siphonEnergy(cell, cell.farthestFromTargetNeighbor, siphon.transferRateBase);
-        if (cell.index % 9 === 0 && cell.neighborUp) siphonEnergy(cell, cell.neighborUp, siphon.transferRateBase * Math.round(Math.random() * 3));
-        if (cell.index % 2 === 0 && cell.neighborDownLeft) siphonEnergy(cell, cell.neighborDownLeft, siphon.transferRateBase * Math.round(Math.random() * 5));
-        if (cell.index % 5 === 0 && cell.neighborRigh) siphonEnergy(cell, cell.neighborRight, siphon.transferRateBase * Math.round(Math.random() * 5));
-        if (frameCounter % 4 === 0) siphonEnergy(cell, cell.neighbors[Math.round(Math.random() * (cell.neighbors.length - 1))], siphon.transferRateBase * Math.round(Math.random() * 5));
-        siphon.targets[0] = Math.round(Math.random() * (cells.length - 1));
-        siphonEnergy(cell, cells[Math.round(Math.random() * (cells.length - 1))], 10);
-    }
-    //siphonEnergy(cell, cell.neighbors[Math.round(Math.random() * (cell.neighbors.length - 1))], siphon.transferRateBase * 50);//siphonRateScale);
-    //siphonEnergy(cell, cell.neighborDownRight, siphon.transferRateBase * siphonRateScale);
-    //siphonEnergy(cell, cell.neighborRight, siphon.transferRateBase * siphonRateScale);
-    //siphonEnergy(cell, cells[totalNumberOfCells % frameCounter], siphon.transferRateBase * siphonRateScale);
-    //siphonEnergy(cell, cell.dimmestNeighbor, siphon.transferRateBase * siphonRateScale);
-    //siphonEnergy(cell, cell.farthestFromTargetNeighbor, siphon.transferRateBase);
+    siphonEnergy(cell, cell.neighborUp, siphon.transferRateBase * siphonRateScale);
+    siphonEnergy(cell, cell.neighborRight, siphon.transferRateBase * siphonRateScale);
+    siphonEnergy(cell, cell.closestToTargetNeighbor, siphon.transferRateBase * siphonRateScale);
+    siphonEnergy(cell, cell.brightestNeighbor, siphon.transferRateBase * siphonRateScale);
 }
 
-function siphonEnergy(originCell, targetCell, amountOfEnergy) {
-    if (!targetCell) return;
+function distributeEnergyColors(cell, siphonRateScale) {
+    siphonColoredEnergy(cell, cell.neighborUp, siphon.transferRateBase * siphonRateScale, RED, GREEN);
+    siphonColoredEnergy(cell, cell.neighborUp, siphon.transferRateBase * siphonRateScale, BLUE, BLUE);
+    //siphonColoredEnergy(cell, cell.neighborDown, siphon.transferRateBase * siphonRateScale, GREEN, BLUE);
+    siphonColoredEnergy(cell, cell.neighborLeft, siphon.transferRateBase * siphonRateScale, BLUE, RED);
+    //siphonColoredEnergy(cell, cell.neighborDown, siphon.transferRateBase * siphonRateScale, GREEN, RED);
+    siphonColoredEnergy(cell, cell.closestToTargetNeighbor, siphon.transferRateBase * siphonRateScale, GREEN, RED);
+}
+
+// NOTE: Do some experiments with FPS when there's some color scaling math in here, with and without Math...() function calls.
+function energyToColor(cell) {
+    pixelArray[cell.index * 4 + 0] = cell.energy;
+    pixelArray[cell.index * 4 + 1] = 0;//cell.energy;
+    pixelArray[cell.index * 4 + 2] = 48;
+    pixelArray[cell.index * 4 + 3] = 255; // alpha channel. Use 255 here to make opaque.
+}
+
+function energyToColors(cell, redScale, greenScale, blueScale) {
+        // WRONG, probably. Could maybe turn off the on/off color switches and just rely on color scaling
+        if (siphon.colors.on) {
+            // NOTE: WRONG, maybe. If these are off, energy can still "disapperar into a hidden dimension," then the onscreen energy will actually decrease and increase.
+            if (siphon.colors.redOn) pixelArray[cell.index * 4 + 0] = Math.round(cell.energyRed * redScale);
+            else pixelArray[cell.index * 4 + 0] = 0;
+            if (siphon.colors.greenOn) pixelArray[cell.index * 4 + 1] = Math.round(cell.energyGreen * greenScale);
+            else pixelArray[cell.index * 4 + 1] = 0;
+            if (siphon.colors.blueOn) pixelArray[cell.index * 4 + 2] = Math.round(cell.energyBlue * blueScale);
+            else pixelArray[cell.index * 4 + 2] = 0;
+            // give the target cell a different color
+            //if (cell.index === siphon.targets[0]) pixelArray[i * 4 + 2] = 192;
+            pixelArray[cell.index * 4 + 3] = 255; // alpha channel. Use 255 here to make opaque.
+        } else {
+            if (siphon.colors.redOn) pixelArray[cell.index * 4 + 0] = Math.round(cell.energy * redScale);
+            else pixelArray[cell.index * 4 + 0] = 0;
+            if (siphon.colors.greenOn) pixelArray[cell.index * 4 + 1] = Math.round(cell.energy * greenScale);
+            else pixelArray[cell.index * 4 + 1] = 0;
+            if (siphon.colors.blueOn) pixelArray[cell.index * 4 + 2] = Math.round(cell.energy * blueScale);
+            else pixelArray[cell.index * 4 + 2] = 0;
+            pixelArray[cell.index * 4 + 3] = 255; // alpha channel. Use 255 here to make opaque.
+        }
+}
+
+function siphonEnergy(originCell, destinationCell, amountOfEnergy) {
+    if (!destinationCell) return;
     var e = amountOfEnergy;
     if (originCell.energy - e < 0) e = originCell.energy; // if the donor would go below zero, the amount to transfer reduces to whatever the donor has left
-    if (targetCell.energy + e > 255) e = 255 - targetCell.energy; // if the recipient would go over 255, the amount to transfer reduces to whatever it would take to top off the receipient
+    if (destinationCell.energy + e > 255) e = 255 - destinationCell.energy; // if the recipient would go over 255, the amount to transfer reduces to whatever it would take to top off the receipient
     originCell.energy -= e; // donor loses the amount to transfer
-    targetCell.energy += e; // recepient gains the amount to transfer
+    destinationCell.energy += e; // recepient gains the amount to transfer
+}
+
+// Possibility: some colors are more expensive, with higher exchange rates back and forth.
+function siphonColoredEnergy(originCell, destinationCell, amountOfEnergy, originEnergyColor, destinationEnergyColor) {
+    if (!destinationCell) return; // if a neighbor that doesn't exist is requested (i.e. cell.neighborLeft of a cell on the left edge)
+    var e = amountOfEnergy;
+    // WRONG, maybe. Maybe I could not have to repeat all this code by using vars smore fluidly.
+    // NOTE: This function is tiny if not accommodating RGB (see siphonEnergyColorless())
+    // ALTERING THE AMOUNT OF ENERGY TO TRANSFER
+    //    in order to not take any energy to under 0 or over 255
+    // Limiting origin energy loss so that the origin's energy doesn't go below 0.
+    //     If the donor's energy would go below zero, the amount of energy to transfer is reduced to whatever the donor has left
+    if (originEnergyColor === COLORLESS || !originEnergyColor || !siphon.colors.on) {
+        if (originCell.energy - e < 0) e = originCell.energy;
+    }
+    if (originEnergyColor === RED) {
+        if (originCell.energyRed - e < 0) e = originCell.energyRed;
+    }
+    if (originEnergyColor === GREEN) {
+        if (originCell.energyGreen - e < 0) e = originCell.energyGreen;
+    }
+    if (originEnergyColor === BLUE) {
+        if (originCell.energyBlue - e < 0) e = originCell.energyBlue;
+    }
+    // Limiting origin energy gain so that the destination's energy doesn't go above 255.
+    //     If the recipient's energy would got above 255, the amount of energy to transfer is reduced to whatever would
+    //     top the recipient off.
+    if (destinationEnergyColor === COLORLESS || !destinationEnergyColor || !siphon.colors.on) {
+        if (destinationCell.energy + e > 255) e = 255 - destinationCell.energy;
+    }
+    if (destinationEnergyColor === RED) {
+        if (destinationCell.energyRed + e > 255) e = 255 - destinationCell.energyRed;
+    }
+    if (destinationEnergyColor === GREEN) {
+        if (destinationCell.energyGreen + e > 255) e = 255 - destinationCell.energyGreen;
+    }
+    if (destinationEnergyColor === BLUE) {
+        if (destinationCell.energyBlue + e > 255) e = 255 - destinationCell.energyBlue;
+    }
+    // TRANSFERRING THE ENERGY
+    // Donor loses energy.
+    if (originEnergyColor === COLORLESS || !originEnergyColor || !siphon.colors.on) originCell.energy -= e;
+    if (originEnergyColor === RED) originCell.energyRed -= e;
+    if (originEnergyColor === GREEN) originCell.energyGreen -= e;
+    if (originEnergyColor === BLUE) originCell.energyBlue -= e;
+    // Recipient gains energy.
+    if (destinationEnergyColor === COLORLESS || !destinationEnergyColor || !siphon.colors.on) destinationCell.energy += e;
+    if (destinationEnergyColor === RED) destinationCell.energyRed += e;
+    if (destinationEnergyColor === GREEN) destinationCell.energyGreen += e;
+    if (destinationEnergyColor === BLUE) destinationCell.energyBlue += e;
 }
 
 function targetCellControls() {
@@ -369,22 +457,85 @@ function cellControls(cell, inputScale) {
     }
 }
 
-function distributeInitialEnergy() {
-    /*var energyReserve = totalNumberOfCells * 63; // half the possible brightness of the whole cell matrix
-    while (energyReserve > 0) {
-        var randomEnergyAmount = Math.round(Math.random() * 127),
-            randomCell = cells[Math.round(Math.random() * (cells.length - 1))];
-        // if reserve would be more than depleted this iteration, just use the rest of it up
-        if (energyReserve - randomEnergyAmount < 0) randomEnergyAmount = energyReserve;
-        // saturate a cell's brightness, but don't push it over max--use that energy elsewhere.
-        if (randomCell.energy + randomEnergyAmount > 255) {
-            randomEnergyAmount = 255 - randomCell.energy;
-        }
-        randomCell.energy += randomEnergyAmount;
-        energyReserve -= randomEnergyAmount;
-    }*/
+function distributeInitialEnergyUniformly() {
     for (var i = 0; i < cells.length; i++) {
         cells[i].energy = 63;
+        cells[i].energyRed = 63;
+        cells[i].energyGreen = 63;
+        cells[i].energyBlue = 63;
+    }
+}
+
+function distributeInitialEnergyRandomly() {
+    if (Date.now() <= settings.gameStartTime + 5000) { // stop this function if it's still going on more than 5 seconds after the game has started running
+        // distribute colorless energy
+        var energyReserve = totalNumberOfCells * 63, // a quarter the possible brightness of the whole matrix
+            randomEnergyAmount,
+            randomCell,
+            maxEnergyPerDistribution = 127; // this is the most energy that will be given to a cell in one distribution pass.
+        while (energyReserve > 0) {
+            randomEnergyAmount = Math.round(Math.random() * maxEnergyPerDistribution);
+            randomCell = cells[Math.round(Math.random() * (cells.length - 1))];
+            // if reserve would be more than depleted this iteration, just use the rest of it up
+            if (energyReserve - randomEnergyAmount < 0) randomEnergyAmount = energyReserve;
+            // saturate a cell's brightness, but don't push it over max--use that energy elsewhere.
+            if (randomCell.energy + randomEnergyAmount > 255) {
+                randomEnergyAmount = 255 - randomCell.energy;
+            }
+            randomCell.energy += randomEnergyAmount;
+            energyReserve -= randomEnergyAmount;
+        }
+        // WRONG, maybe. Maybe I could do something more fluid with vars here to keep from having to repeat code for each color.
+        // distribute colored energy
+        // NOTE: Might want to distribute an even amount of energy to each of the three colors. This doesn't do that
+        energyReserve = totalNumberOfCells * 191; // a quarter the possible brightness of the whole cell matrix
+        maxEnergyPerDistribution = 383; // this is the most energy that will be given to a cell in one distribution pass.
+        while (energyReserve > 0) {
+            // leaving maxEnergyPerDistribution the same as it was for the colorless energy distribution
+            randomEnergyAmount = Math.round(Math.random() * maxEnergyPerDistribution);
+            randomCell = cells[Math.round(Math.random() * (cells.length - 1))];
+            // if reserve would be more than depleted this iteration, just use the rest of it up
+            if (energyReserve - randomEnergyAmount < 0) randomEnergyAmount = energyReserve;
+            // sometimes this loop was getting stuck with a very small number in the energy reserve, so I added these +1's so that it would deplete
+            var randomRedEnergyAmount = 1 + Math.round(Math.random() * (randomEnergyAmount / 3));
+                randomGreenEnergyAmount = 1 + Math.round(Math.random() * (randomEnergyAmount / 3));
+                randomBlueEnergyAmount = 1 + Math.round(Math.random() * (randomEnergyAmount / 3));
+            // saturate a cell's brightness, but don't push it over max--use that energy elsewhere.
+            if (randomCell.energyRed + randomRedEnergyAmount > 255) {
+                randomRedEnergyAmount = 255 - randomCell.energyRed;
+            }
+            if (randomCell.energyGreen + randomGreenEnergyAmount > 255) {
+                randomGreenEnergyAmount = 255 - randomCell.energyGreen;
+            }
+            if (randomCell.energyBlue + randomBlueEnergyAmount > 255) {
+                randomBlueEnergyAmount = 255 - randomCell.energyBlue;
+            }
+            randomCell.energyRed += randomRedEnergyAmount;
+            randomCell.energyGreen += randomGreenEnergyAmount;
+            randomCell.energyBlue += randomBlueEnergyAmount;
+            energyReserve -= randomRedEnergyAmount + randomGreenEnergyAmount + randomBlueEnergyAmount;
+            /*if (randomColor === 0) {
+                if (randomCell.energyRed + randomEnergyAmount > 255) {
+                    randomEnergyAmount = 255 - randomCell.energyRed;
+                }
+                randomCell.energyRed += randomEnergyAmount;
+            }
+            if (randomColor === 1) {
+                if (randomCell.energyGreen + randomEnergyAmount > 255) {
+                    randomEnergyAmount = 255 - randomCell.energyGreen;
+                }
+                randomCell.energyGreen += randomEnergyAmount;
+            }
+            if (randomColor === 2) {
+                if (randomCell.energyBlue + randomEnergyAmount > 255) {
+                    randomEnergyAmount = 255 - randomCell.energyBlue;
+                }
+                randomCell.energyBlue += randomEnergyAmount;
+            }*/
+        }
+    } else {
+        console.log('Error: The function "distributeInitialEnergy" ran for too long and terminated.');
+        return;
     }
 }
 
@@ -681,7 +832,10 @@ function makeCells(numberOfCells, cellsPerRow, cellsList) {
                                 'top': (800 / cellsPerRow) * i,        //should be "size * ...rowCounter" but can't get it to work      //top edge coordinate
                                 'centerXY': [],
                                 'index': indexCounter,
-                                'energy': 0
+                                'energy': 0,
+                                'energyRed': 0,
+                                'energyGreen': 0,
+                                'energyBlue': 0
                         };
                         newCell.centerXY = [newCell.left + 0.5 * newCell.size, newCell.top + 0.5 * newCell.size];
                         cellsList.push(newCell);	//adding this cell to the list of all of the "geographical" cells in the level
