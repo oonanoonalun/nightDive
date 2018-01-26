@@ -223,7 +223,7 @@ assignCoordinatesToCells(cells);
 
 // WRONG doesn't work
 //assignDistanceLookupTables();
-var frameCounter = 0, // using this to avoid Date.now() calls as part of optimizing via function call elimination (except during initialization)
+var frameCounter = 1, // using this to avoid Date.now() calls as part of optimizing via function call elimination (except during initialization)
         SINE = 'sineWaveShape',
         TRI = 'triangularWaveShape',
         SQUARE = 'squareWaveShape',
@@ -291,6 +291,7 @@ setInterval(newMainLoop, 1000 / frameRate);
 //      I.e. you could just run a slightly different program from the get-go, instead of the same program doing checks
 //      all the time and getting the same answers each time.
 function newMainLoop() {
+    var cellCounter = 0;
     // change the location of the target cell
     targetCellsControls();
     for (var i = 0; i < cells.length; i++) {
@@ -307,22 +308,26 @@ function newMainLoop() {
         // show target cells
         colorTargetCells(cell);
         //energyToColors(cell, 1, 1, 1);
+        cellCounter++;
     }
     context.putImageData(imageData, 0, 0);
     context.drawImage(canvas, 0, 0, cellsPerRow, cellsPerColumn, 0, 0, canvas.width, canvas.height);
-    countFps(drawingSettings.fpsDisplay.fpsDisplayInterval, drawingSettings.fpsDisplay.fpsDisplayIntervalLongTerm);    
+    //countFps(5000, 30000);    
+    //sumTotalSystemEnergy(90);
     frameCounter++;
 }
 
 function distributeEnergy(cell, siphonRateScale) {
-    // tracking targets
-    siphonEnergy(cell, cell.neighbors.closestToTarget[1], siphon.transferRateBase * siphonRateScale);
+    // tracking targets // WRONG response is biased toward first target referenced here
     siphonEnergy(cell, cell.neighbors.closestToTarget[0], siphon.transferRateBase * siphonRateScale);
-//    siphonEnergy(cell, cell.neighbors.closestToTarget[1], siphon.transferRateBase * siphonRateScale);
+    siphonEnergy(cell, cell.neighbors.closestToTarget[1], siphon.transferRateBase * siphonRateScale);
     // diffusing
-    siphonEnergy(cell, cell.neighbors.dimmest, siphon.transferRateBase * siphonRateScale);
+    equalize(cell, 10);
+    //siphonEnergy(cell, cell.neighbors.all.dimmest, siphon.transferRateBase * siphonRateScale);
+    //radiate(cell, Math.min(255, Math.round(cell.distanceToIndex[siphon.targets[0]] / 10)));
+    //absorb(cell, Math.min(255, Math.round(cell.distanceToIndex[siphon.targets[1]] / 10)));
     // noise
-    if (Math.random() < 0.1) siphonEnergy(cell, cell.neighbors[Math.round(Math.random() * cell.neighbors.length)], siphon.transferRateBase * siphonRateScale * 30);
+    if (Math.random() < 0.1) siphonEnergy(cell, cell.neighbors.all[Math.round(Math.random() * cell.neighbors.all.length)], 30);
 }
 
 function distributeEnergyColors(cell, siphonRateScale) {
@@ -332,6 +337,44 @@ function distributeEnergyColors(cell, siphonRateScale) {
     siphonColoredEnergy(cell, cell.neighbors.left, siphon.transferRateBase * siphonRateScale, BLUE, RED);
     //siphonColoredEnergy(cell, cell.neighbors.down, siphon.transferRateBase * siphonRateScale, GREEN, RED);
     siphonColoredEnergy(cell, cell.neighbors.closestToTarget[0], siphon.transferRateBase * siphonRateScale, GREEN, RED);
+}
+
+function radiate(cell, amountOfEnergy) {
+    for (var i = 0; i < cell.neighbors.all.length; i++) {
+        siphonEnergy(cell, cell.neighbors.all[i], amountOfEnergy);
+    }
+}
+
+function absorb(cell, amountOfEnergy) {
+    for (var i = 0; i < cell.neighbors.all.length; i++) {
+        siphonEnergy(cell.neighbors.all[i], cell, amountOfEnergy);
+    }
+}
+
+function equalize(cell, amountOfEnergy) {
+    var nsl = cell.neighbors.all.length,
+        ns2 = [], // neighbors to siphon to (i.e. that have less energy than this cell)
+        nsf = []; // neighbors to siphon from (i.e. that have more energy than this cell)
+    for (var i = 0; i < nsl; i++) {
+        var n = cell.neighbors.all[i];
+        if (n.energy < cell.energy) ns2.push(n);
+        if (n.energy > cell.energy) nsf.push(n);
+    }
+    for (var j = 0; j < ns2.length; j++) {
+        siphonEnergy(cell, ns2[j], amountOfEnergy);
+    }
+    for (var k = 0; k < nsf.length; k++) {
+        siphonEnergy(nsf[k], cell, amountOfEnergy);
+    }
+}
+
+function siphonEnergy(originCell, destinationCell, amountOfEnergy) {
+    if (!destinationCell) return;
+    var e = amountOfEnergy;
+    if (originCell.energy - e < 0) e = originCell.energy; // if the donor would go below zero, the amount to transfer reduces to whatever the donor has left
+    if (destinationCell.energy + e > 255) e = 255 - destinationCell.energy; // if the recipient would go over 255, the amount to transfer reduces to whatever it would take to top off the receipient
+    originCell.energy -= e; // donor loses the amount to transfer
+    destinationCell.energy += e; // recepient gains the amount to transfer
 }
 
 // NOTE: Do some experiments with FPS when there's some color scaling math in here, with and without Math...() function calls.
@@ -672,6 +715,15 @@ function sortNeighbors(cell) {
     }
 }
 
+function sumTotalSystemEnergy(framesBetweenDisplays) {
+    var totalSystemEnergy = 0;
+    for (var i = 0; i < totalNumberOfCells; i++) {
+        totalSystemEnergy += cells[i].energy;
+    }
+    if (frameCounter % framesBetweenDisplays === 0) console.log('Total system energy is ' + totalSystemEnergy + '.');
+}
+
+// end siphon area
 /////////////////
 /////////////////
 
