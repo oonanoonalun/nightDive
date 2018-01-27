@@ -255,6 +255,21 @@ var frameCounter = 1, // using this to avoid Date.now() calls as part of optimiz
                 'redOn': true,
                 'greenOn': true,
                 'blueOn': true
+            },
+            'input': {
+                'directions': 0,
+                'directionsMagnitude': 35,
+                'modulus': {
+                    'index': 30,
+                    'indexRange': 5,
+                    'coordinatesX': 0.25, // these are all parametric to cellsPerRow/Column
+                    'coordinatesXRange': 0.03125,
+                    'coordinatesY': 0.25,
+                    'coordinatesYRange': 0.03125
+                },
+                'equalize': {
+                    'amount': 2
+                }
             }
         };
         
@@ -291,9 +306,9 @@ setInterval(newMainLoop, 1000 / frameRate);
 //      I.e. you could just run a slightly different program from the get-go, instead of the same program doing checks
 //      all the time and getting the same answers each time.
 function newMainLoop() {
-    var cellCounter = 0;
+    input();
     // change the location of the target cell
-    targetCellsControls();
+    //targetCellsControls();
     for (var i = 0; i < cells.length; i++) {
         var cell = cells[i];
         // affect the cells with input
@@ -301,14 +316,13 @@ function newMainLoop() {
         // categorize relationships of a cell to its neighbors
         sortNeighbors(cell);
         // move energy around
-        distributeEnergy(cell, 10);
+        distributeEnergy(cell);
         //distributeEnergyColors(cell, 2);
-        // NOTE: WRONG, maybe. Maybe I could not have to repeat this code;
         energyToColor(cell);
+        modifyColors(cell);
         // show target cells
-        colorTargetCells(cell);
+        //colorTargetCells(cell);
         //energyToColors(cell, 1, 1, 1);
-        cellCounter++;
     }
     context.putImageData(imageData, 0, 0);
     context.drawImage(canvas, 0, 0, cellsPerRow, cellsPerColumn, 0, 0, canvas.width, canvas.height);
@@ -317,26 +331,67 @@ function newMainLoop() {
     frameCounter++;
 }
 
-function distributeEnergy(cell, siphonRateScale) {
-    // tracking targets // WRONG response is biased toward first target referenced here
-    siphonEnergy(cell, cell.neighbors.closestToTarget[0], siphon.transferRateBase * siphonRateScale);
-    siphonEnergy(cell, cell.neighbors.closestToTarget[1], siphon.transferRateBase * siphonRateScale);
+function distributeEnergy(cell) {
+    // tracking targets
+    //blendTargetInluences(cell, siphon.targets, 60);
     // diffusing
-    equalize(cell, 10);
-    //siphonEnergy(cell, cell.neighbors.all.dimmest, siphon.transferRateBase * siphonRateScale);
-    //radiate(cell, Math.min(255, Math.round(cell.distanceToIndex[siphon.targets[0]] / 10)));
-    //absorb(cell, Math.min(255, Math.round(cell.distanceToIndex[siphon.targets[1]] / 10)));
+    //equalize(cell, 2);
+    equalize(cell, siphon.input.equalize.amount);
+    if (
+        Math.abs(cell.coordinates[0]) % Math.round(siphon.input.modulus.coordinatesX * cellsPerRow) <=
+        Math.round(siphon.input.modulus.coordinatesXRange * cellsPerRow) &&
+        Math.abs(cell.coordinates[1]) % Math.round(siphon.input.modulus.coordinatesX * cellsPerColumn) <=
+        Math.round(siphon.input.modulus.coordinatesXRange * cellsPerColumn)
+    ) siphonEnergy(cell, cell.neighbors.directions[siphon.input.directions], siphon.input.directionsMagnitude);
+    //if (cell.index === 2000 && frameCounter % 10 === 0) console.log(siphon.input.directions);
     // noise
-    if (Math.random() < 0.1) siphonEnergy(cell, cell.neighbors.all[Math.round(Math.random() * cell.neighbors.all.length)], 30);
+    //if (Math.random() < 0.1) siphonEnergy(cell, cell.neighbors.all[Math.round(Math.random() * cell.neighbors.all.length)], 30);
+    // movement
+    //bigRandomMovements(cell, 150, 10, 24, true, true);
 }
 
-function distributeEnergyColors(cell, siphonRateScale) {
-    siphonColoredEnergy(cell, cell.neighbors.up, siphon.transferRateBase * siphonRateScale, RED, GREEN);
-    siphonColoredEnergy(cell, cell.neighbors.up, siphon.transferRateBase * siphonRateScale, BLUE, BLUE);
-    //siphonColoredEnergy(cell, cell.neighbors.down, siphon.transferRateBase * siphonRateScale, GREEN, BLUE);
-    siphonColoredEnergy(cell, cell.neighbors.left, siphon.transferRateBase * siphonRateScale, BLUE, RED);
-    //siphonColoredEnergy(cell, cell.neighbors.down, siphon.transferRateBase * siphonRateScale, GREEN, RED);
-    siphonColoredEnergy(cell, cell.neighbors.closestToTarget[0], siphon.transferRateBase * siphonRateScale, GREEN, RED);
+function input() {
+    // KEY:
+    // With W down:
+    //     IJKL move energy in the directions associated with IJKL.
+    //     They only move energy from cells whose index % input.modulus.index is <= input.modulus.indexRange
+    // changing coordinates modulus range
+    if (keysDown[KEY_S]) {
+        if (keysDown[KEY_J]) siphon.input.modulus.coordinatesXRange = 1 / 16 / 4;
+        if (keysDown[KEY_K]) siphon.input.modulus.coordinatesXRange = 1 / 12 / 4;
+        if (keysDown[KEY_L]) siphon.input.modulus.coordinatesXRange = 1 / 8 / 4;
+        if (keysDown[KEY_U]) siphon.input.modulus.coordinatesXRange = 1 / 6 / 4;
+        if (keysDown[KEY_I]) siphon.input.modulus.coordinatesXRange = 1 / 4 / 4;
+        if (keysDown[KEY_O]) siphon.input.modulus.coordinatesXRange = 1 / 3 / 4;
+        if (keysDown[KEY_SEMICOLON]) siphon.input.modulus.coordinatesX = 0.25;
+    }
+    // changing coordinates modulus
+    if (keysDown[KEY_D]) {
+        if (keysDown[KEY_J]) siphon.input.modulus.coordinatesX = 1 / 16;
+        if (keysDown[KEY_K]) siphon.input.modulus.coordinatesX = 1 / 12;
+        if (keysDown[KEY_L]) siphon.input.modulus.coordinatesX = 1 / 8;
+        if (keysDown[KEY_U]) siphon.input.modulus.coordinatesX = 1 / 6;
+        if (keysDown[KEY_I]) siphon.input.modulus.coordinatesX = 1 / 4;
+        if (keysDown[KEY_O]) siphon.input.modulus.coordinatesX = 1 / 3;
+        if (keysDown[KEY_SEMICOLON]) siphon.input.modulus.coordinatesX = 0.25;
+    }
+    // changing input directionality
+    if (keysDown[KEY_F]) {
+        if (keysDown[KEY_I] && !keysDown[KEY_J] && !keysDown[KEY_L]) siphon.input.directions = 0;
+        if (keysDown[KEY_K] && !keysDown[KEY_J] && !keysDown[KEY_L]) siphon.input.directions = 4;
+        if (keysDown[KEY_J] && !keysDown[KEY_I] && !keysDown[KEY_K]) siphon.input.directions = 6;
+        if (keysDown[KEY_L] && !keysDown[KEY_I] && !keysDown[KEY_K]) siphon.input.directions = 2;
+        if (keysDown[KEY_L] && keysDown[KEY_I]) siphon.input.directions = 1;
+        if (keysDown[KEY_L] && keysDown[KEY_K]) siphon.input.directions = 3;
+        if (keysDown[KEY_J] && keysDown[KEY_I]) siphon.input.directions = 7;
+        if (keysDown[KEY_J] && keysDown[KEY_K]) siphon.input.directions = 5;
+    }
+}
+
+function modifyColors(cell) {
+    //pixelArray[4 * cell.index + 0] = ;
+    //pixelArray[4 * cell.index + 1] = ;
+    //pixelArray[4 * cell.index + 2] = ;
 }
 
 function radiate(cell, amountOfEnergy) {
@@ -354,17 +409,62 @@ function absorb(cell, amountOfEnergy) {
 function equalize(cell, amountOfEnergy) {
     var nsl = cell.neighbors.all.length,
         ns2 = [], // neighbors to siphon to (i.e. that have less energy than this cell)
-        nsf = []; // neighbors to siphon from (i.e. that have more energy than this cell)
+        nsf = [], // neighbors to siphon from (i.e. that have more energy than this cell)
+        e2s = amountOfEnergy; // amount of energy to send
+    // sorting neighbors into those that have less energy than the cell, and those that have more
     for (var i = 0; i < nsl; i++) {
         var n = cell.neighbors.all[i];
         if (n.energy < cell.energy) ns2.push(n);
         if (n.energy > cell.energy) nsf.push(n);
     }
-    for (var j = 0; j < ns2.length; j++) {
-        siphonEnergy(cell, ns2[j], amountOfEnergy);
+    // NOTE: I'm not sure what the consequences of sending before receiving or vice versa. Nothing obvious.
+    // if the cell would run out of energy before sending amountOfEnergy to each of the
+    //     the neighbors it will send to, reduce the amount of energy it will send so that it can
+    //     send equal amounts of energy to all the cells it sends to.
+    if (e2s * ns2.length > cell.energy) e2s = cell.energy / ns2.length - cell.energy / ns2.length % 1; // cheap Math.floor()
+    // send energy to each neighbor with less energy than this cell
+    for (var j = 0; j < ns2.length; j++) siphonEnergy(cell, ns2[j], e2s);
+    // receiving energy
+    for (var k = 0; k < nsf.length; k++) siphonEnergy(nsf[k], cell, amountOfEnergy);
+}
+
+function blendTargetInluences(cell, arrayOfTargets, amountOfEnergy) {
+    var e2t = amountOfEnergy, // energy to transfer
+        gd = 0, // greatest distance
+        t, // target
+        sumTotalOfDistanceToAllTargets = 0;
+    // which distance to a target is biggest, and  the sum of all distances, both for
+    //     normalization purposes
+    for (var i = 0; i < arrayOfTargets.length; i++) {
+        t = arrayOfTargets[i];
+        if (cell.distanceToIndex[t] > gd) gd = cell.distanceToIndex[t];
+        sumTotalOfDistanceToAllTargets += cell.distanceToIndex[t];
     }
-    for (var k = 0; k < nsf.length; k++) {
-        siphonEnergy(nsf[k], cell, amountOfEnergy);
+    // distributing energy to neighbors based on distances of targets
+    for (var k = 0; k < arrayOfTargets.length; k++) {
+        et2 = amountOfEnergy;
+        t = arrayOfTargets[k];
+        // creates a normalized number representing the proportion of this target's distance to the
+        //     cell relative to the distance of all the targets from the cell.
+        //     Used to scale how much energy to set toward a target based on its distance from this cell.
+        var distanceProportion = cell.distanceToIndex[t] / sumTotalOfDistanceToAllTargets;
+        e2t = distanceProportion * e2t - distanceProportion * e2t % 1; // '-' onward is just a cheap Math.floor()
+        if (cells[t].coordinates[0] > cell.coordinates[0]) { // if target is to the right of the cell
+            if ((keysDown[KEY_C] && k === 0) || (keysDown[KEY_M] && k === 1)) siphonEnergy(cell, cell.neighbors.left, e2t); // push
+            else siphonEnergy(cell, cell.neighbors.right, e2t); // pull
+        }
+        if (cells[t].coordinates[0] < cell.coordinates[0]) { // if target to the left of the cell
+            if ((keysDown[KEY_C] && k === 0) || (keysDown[KEY_M] && k === 1)) siphonEnergy(cell, cell.neighbors.right, e2t);
+            else siphonEnergy(cell, cell.neighbors.left, e2t);
+        }
+        if (cells[t].coordinates[1] > cell.coordinates[1]) { // if target is above the cell
+            if ((keysDown[KEY_C] && k === 0) || (keysDown[KEY_M] && k === 1)) siphonEnergy(cell, cell.neighbors.down, e2t);
+            else siphonEnergy(cell, cell.neighbors.up, e2t);
+        }
+        if (cells[t].coordinates[1] < cell.coordinates[1]) { // if target is below the cell
+            if ((keysDown[KEY_C] && k === 0) || (keysDown[KEY_M] && k === 1)) siphonEnergy(cell, cell.neighbors.up, e2t);
+            else siphonEnergy(cell, cell.neighbors.down, e2t);
+        }
     }
 }
 
@@ -377,7 +477,6 @@ function siphonEnergy(originCell, destinationCell, amountOfEnergy) {
     destinationCell.energy += e; // recepient gains the amount to transfer
 }
 
-// NOTE: Do some experiments with FPS when there's some color scaling math in here, with and without Math...() function calls.
 function energyToColor(cell) {
     pixelArray[cell.index * 4 + 0] = cell.energy;
     pixelArray[cell.index * 4 + 1] = 0;//cell.energy;
@@ -409,6 +508,42 @@ function energyToColors(cell, redScale, greenScale, blueScale) {
         }
 }
 
+function bigRandomMovements(cell, maxEnergyPerTransfer, minFramesBetweenDirectionChanges, maxFramesBetweenDirectionChanges, bTowardDirection, bTowardTarget) {
+    if (!siphon.noBigMovementDirectionChangeUntil) {
+        siphon.bigMovementDirection = Math.round(Math.random() * 7);
+        siphon.bigMovementTransferEnergyAmount = Math.round(Math.random() * maxEnergyPerTransfer);
+        siphon.bigMovementTarget = cells[Math.round(Math.random() * (totalNumberOfCells - 1))];
+    }
+    if (siphon.bigMovementTransferEnergyAmount > 0 && siphon.bigMovementTransferEnergyAmount < maxEnergyPerTransfer) {
+        siphon.bigMovementTransferEnergyAmount += Math.round(Math.random() * 2) - 1; // -1 to 1
+    }
+    // change amount of energy transferred every frame
+    // if transfer rate maxes or bottom out, decrease or increase it, respectively
+    if (siphon.bigMovementTransferEnergyAmount === 0) siphon.bigMovementTransferEnergyAmount++;
+    if (siphon.bigMovementTransferEnergyAmount >= maxEnergyPerTransfer) siphon.bigMovementTransferEnergyAmount--;
+    // target changes each frame
+    siphon.bigMovementTarget = siphon.bigMovementTarget.neighbors.all[Math.round(Math.random() * (siphon.bigMovementTarget.neighbors.all.length - 1))];
+    // direction changes periodically, at the same time
+    if (siphon.noBigMovementDirectionChangeUntil <= frameCounter || !siphon.noBigMovementDirectionChangeUntil) {
+        siphon.bigMovementDirection += Math.round((Math.random() * 4) - 2); // -2 to +2
+        if (siphon.bigMovementDirection < 0) siphon.bigMovementDirection += 8;
+        if (siphon.bigMovementDirection > 7) siphon.bigMovementDirection -= 8;
+        siphon.noBigMovementDirectionChangeUntil = frameCounter + (
+            minFramesBetweenDirectionChanges + Math.random () * (maxFramesBetweenDirectionChanges - minFramesBetweenDirectionChanges));
+    }
+    if (bTowardDirection) siphonEnergy(cell, cell.neighbors.directions[siphon.bigMovementDirection], siphon.bigMovementTransferEnergyAmount);
+    if (bTowardTarget) blendTargetInluences(cell, [siphon.bigMovementTarget.index], siphon.bigMovementTransferEnergyAmount);
+}
+
+function distributeEnergyColors(cell, siphonRateScale) {
+    siphonColoredEnergy(cell, cell.neighbors.up, siphon.transferRateBase * siphonRateScale, RED, GREEN);
+    siphonColoredEnergy(cell, cell.neighbors.up, siphon.transferRateBase * siphonRateScale, BLUE, BLUE);
+    //siphonColoredEnergy(cell, cell.neighbors.down, siphon.transferRateBase * siphonRateScale, GREEN, BLUE);
+    siphonColoredEnergy(cell, cell.neighbors.left, siphon.transferRateBase * siphonRateScale, BLUE, RED);
+    //siphonColoredEnergy(cell, cell.neighbors.down, siphon.transferRateBase * siphonRateScale, GREEN, RED);
+    siphonColoredEnergy(cell, cell.neighbors.closestToTarget[0], siphon.transferRateBase * siphonRateScale, GREEN, RED);
+}
+
 function siphonEnergy(originCell, destinationCell, amountOfEnergy) {
     if (!destinationCell) return;
     var e = amountOfEnergy;
@@ -423,9 +558,9 @@ function colorTargetCells(cell) {
         if (cell.index === siphon.targets[i]) pixelArray[cell.index * 4 + 1] = 255;
     }*/
     // target 0
-    if (cell.index === siphon.targets[0]) pixelArray[cell.index * 4 + 1] = 255;
+    if (cell.index === siphon.targets[1]) pixelArray[cell.index * 4 + 1] = 255;
     // target 1
-    if (cell.index === siphon.targets[1]) {
+    if (cell.index === siphon.targets[0]) {
         pixelArray[cell.index * 4 + 0] = 255;
         pixelArray[cell.index * 4 + 1] = 255;
         pixelArray[cell.index * 4 + 2] = 255;
@@ -539,6 +674,42 @@ function cellControls(cell, inputScale) {
     }
 }
 
+// OLD VERSION OF THIS FUNCTION
+/*function controlInputNumbers(minNumber, maxNumber) {
+    for (var i = 0; i < siphon.inputNumbers.length; i++) {
+        var incKey, // key to increment the number
+            decKey; // key to decrement the number
+        if (i === 0) {
+            incKey = KEY_W;
+            decKey = KEY_S;
+        }
+        if (i === 1) {
+            incKey = KEY_D;
+            decKey = KEY_A;
+        }
+        if (i === 2) {
+            incKey = KEY_I;
+            decKey = KEY_K;
+        }
+        if (i === 3) {
+            incKey = KEY_J;
+            decKey = KEY_L;
+        }
+        if (
+            keysDown[incKey] && siphon.inputNumbers[i] + 1 <= maxNumber &&
+            siphon.noInputNumber
+        ) {
+            siphon.inputNumbers[i]++;
+        }
+        if (
+            keysDown[decKey] && siphon.inputNumbers[i] - 1 >= minNumber &&
+            frameCounter % 5 === 0
+        ) {
+            siphon.inputNumbers[i]--;
+        }
+    }
+}*/
+
 function distributeInitialEnergyUniformly() {
     for (var i = 0; i < cells.length; i++) {
         cells[i].energy = 63;
@@ -622,40 +793,49 @@ function distributeInitialEnergyRandomly() {
 }
 
 function initializeNeighbors() {
+    // for directions, 0 = up, 1 = up-right, etc. around clockwise
     for (var i = 0; i < totalNumberOfCells; i++) {
         var cell = cells[i];
         cell.neighbors.all = [];
         if (cells[cell.index + cellsPerRow]) {
             cell.neighbors.all.push(cells[cell.index + cellsPerRow]); // below
             cell.neighbors.down = cells[cell.index + cellsPerRow];
+            cell.neighbors.directions[4] = cells[cell.index + cellsPerRow];
         }
         if (cells[cell.index - cellsPerRow]) {
             cell.neighbors.all.push(cells[cell.index - cellsPerRow]); // above
             cell.neighbors.up = cells[cell.index - cellsPerRow];
+            cell.neighbors.directions[0] = cells[cell.index - cellsPerRow];
         }
         if ((cell.index + 1) % cellsPerRow !== 0) { // i.e. if cell is not on the right edge
             cell.neighbors.all.push(cells[cell.index + 1]); // right
             cell.neighbors.right = cells[cell.index + 1];
+            cell.neighbors.directions[2] = cells[cell.index + 1];
         }
         if (cell.index % cellsPerRow !== 0) { // i.e. if cell is not on the left edge
             cell.neighbors.all.push(cells[cell.index - 1]); // left
             cell.neighbors.left = cells[cell.index - 1];
+            cell.neighbors.directions[6] = cells[cell.index - 1];
         }
         if (cells[cell.index + cellsPerRow + 1] && (cell.index + 1) % cellsPerRow !== 0) {
             cell.neighbors.all.push(cells[cell.index + cellsPerRow + 1]); // below-right
             cell.neighbors.downRight = cells[cell.index + cellsPerRow + 1];
+            cell.neighbors.directions[3] = cells[cell.index + cellsPerRow + 1];
         }
         if (cells[cell.index + cellsPerRow - 1] && cell.index % cellsPerRow !== 0) {
             cell.neighbors.all.push(cells[cell.index + cellsPerRow - 1]); // below-left
             cell.neighbors.downLeft = cells[cell.index + cellsPerRow - 1];
+            cell.neighbors.directions[5] = cells[cell.index + cellsPerRow - 1];
         }
         if (cells[cell.index - cellsPerRow + 1] && (cell.index + 1) % cellsPerRow !== 0) {
             cell.neighbors.all.push(cells[cell.index - cellsPerRow + 1]); // above-right
             cell.neighbors.upRight = cells[cell.index - cellsPerRow + 1];
+            cell.neighbors.directions[1] = cells[cell.index - cellsPerRow + 1];
         }
         if (cells[cell.index - cellsPerRow - 1] && cell.index % cellsPerRow !== 0) {
             cell.neighbors.all.push(cells[cell.index - cellsPerRow - 1]); // above-left
             cell.neighbors.upLeft = cells[cell.index - cellsPerRow - 1];
+            cell.neighbors.directions[7] = cells[cell.index - cellsPerRow - 1];
         }
         // just giving the cell some arbitrary associations as a starting place for later organization
         if (cell.neighbors.up) cell.neighbors.brightest = cell.neighbors.up;
@@ -922,13 +1102,17 @@ function makeCells(numberOfCells, cellsPerRow, cellsList) {
                                 'index': indexCounter,
                                 'neighbors': {
                                     'closestToTarget': [],
-                                    'farthestFromTarget': []
+                                    'farthestFromTarget': [],
+                                    'directions': []    // 0 is neighbor above, then around clockwise
                                 },
                                 'energy': 0,
                                 'energyRed': 0,
                                 'energyGreen': 0,
                                 'energyBlue': 0
                         };
+                        for (var k = 0; k < 8; k++) {
+                            newCell.neighbors.directions.push(null);
+                        }
                         newCell.centerXY = [newCell.left + 0.5 * newCell.size, newCell.top + 0.5 * newCell.size];
                         cellsList.push(newCell);	//adding this cell to the list of all of the "geographical" cells in the level
                 }
