@@ -339,14 +339,25 @@ function distributeEnergy(cell) {
     //blendTargetInfluences(cell, siphon.targets, 60);
     // diffusing
     equalize(cell, 2);//siphon.input.equalize.amount);
-    if (frameCounter % 1 === 0) siphon.input.modulus.coordinatesX = frameCounter * 5 % 400;
+    /*if (frameCounter % 1 === 0) siphon.input.modulus.coordinatesX = frameCounter * 5 % 400;
     if (cell.distanceToIndex[2440] % siphon.input.modulus.coordinatesX < siphon.input.modulus.coordinatesXRange) {
         //siphonEnergy(cell, cell.neighbors.directions[siphon.input.direction], 30);
         absorb(cell, 7);
-    }
+    }*/
+    droplet(cell, 2440, 1, 15, 12, 7, 400);
+    droplet(cell, 1100, 1, 15, 12, 7, 400);
     //if (cell.index === 2000 && frameCounter % 10 === 0) console.log(siphon.targets.length);
     // noise
     //if (Math.random() < 0.1) siphonEnergy(cell, cell.neighbors.all[Math.round(Math.random() * cell.neighbors.all.length)], 30);
+}
+
+function droplet(currentCell, centerIndex, speed, startFrame, rippleWidth, initialBrightness, framesToLive) {
+    if (
+        frameCounter >= startFrame && frameCounter <=  startFrame + framesToLive &&
+        currentCell.distanceToIndex[centerIndex] % (frameCounter - startFrame) * speed < rippleWidth
+    ) {
+        absorb(currentCell, initialBrightness - Math.round((frameCounter - startFrame) / (framesToLive / initialBrightness)));
+    }
 }
 
 function distributeEnergySquares(cell) {
