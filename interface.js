@@ -1,4 +1,9 @@
 //INTERFACE
+// list of keycodes:
+//    https://css-tricks.com/snippets/javascript/javascript-keycodes/
+// also, chris said this but I never got it to work:
+//   In console I just did this: `document.onkeydown = event => console.log(event.keyCode);`
+//   then I typed the `;` key
 var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68, F = 70, Z = 90, X = 88, C = 67, V = 86],
         KEY_W = 87,
         KEY_S = 83,
@@ -31,10 +36,10 @@ var buttonsGridQWERTY = [Q = 81, W = 87, E = 69, R = 82, A = 65, S = 83, D = 68,
         KEY_V = 86,
         KEY_F = 70,
         KEY_P = 80,
-        KEY_SEMICOLON = 59,
-        KEY_SLASH = 47,
-        KEY_COMMA = 60,
-        KEY_PERIOD = 62,
+        KEY_SEMICOLON = 186,
+        KEY_SLASH = 220,
+        KEY_COMMA = 188,
+        KEY_PERIOD = 190,
         keysDown = [],
         X_AXIS = 'xAxis', // for telling straight lines how to draw NOT USED, pretty sure
         Y_AXIS = 'yAxis', // not used, pretty sure

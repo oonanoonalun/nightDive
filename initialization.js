@@ -246,8 +246,8 @@ var frameCounter = 1, // using this to avoid Date.now() calls as part of optimiz
         ],
         siphon = {
             'targets': [
-                0,
-                totalNumberOfCells - 1
+                //0,
+                //totalNumberOfCells - 1
             ],
             'transferRateBase': 1,
             'colors': {
@@ -257,15 +257,15 @@ var frameCounter = 1, // using this to avoid Date.now() calls as part of optimiz
                 'blueOn': true
             },
             'input': {
-                'directions': 0,
-                'directionsMagnitude': 35,
+                'direction': 0,
+                'directionMagnitude': 35,
                 'modulus': {
                     'index': 30,
                     'indexRange': 5,
                     'coordinatesX': 0.25, // these are all parametric to cellsPerRow/Column
-                    'coordinatesXRange': 0.03125,
+                    'coordinatesXRange': 0,//0.03125,
                     'coordinatesY': 0.25,
-                    'coordinatesYRange': 0.03125
+                    'coordinatesYRange': 0//0.03125
                 },
                 'equalize': {
                     'amount': 2
@@ -326,26 +326,27 @@ function newMainLoop() {
     }
     context.putImageData(imageData, 0, 0);
     context.drawImage(canvas, 0, 0, cellsPerRow, cellsPerColumn, 0, 0, canvas.width, canvas.height);
-    //countFps(5000, 30000);    
+    countFps(5000, 30000);    
     //sumTotalSystemEnergy(90);
     frameCounter++;
 }
 
 function distributeEnergy(cell) {
     // tracking targets
-    //blendTargetInluences(cell, siphon.targets, 60);
     // diffusing
-    //equalize(cell, 2);
     equalize(cell, siphon.input.equalize.amount);
     if (
-        Math.abs(cell.coordinates[0]) % Math.round(siphon.input.modulus.coordinatesX * cellsPerRow) <=
-        Math.round(siphon.input.modulus.coordinatesXRange * cellsPerRow) &&
-        Math.abs(cell.coordinates[1]) % Math.round(siphon.input.modulus.coordinatesX * cellsPerColumn) <=
-        Math.round(siphon.input.modulus.coordinatesXRange * cellsPerColumn)
-    ) siphonEnergy(cell, cell.neighbors.directions[siphon.input.directions], siphon.input.directionsMagnitude);
-    //if (cell.index === 2000 && frameCounter % 10 === 0) console.log(siphon.input.directions);
+        (Math.abs(cell.coordinates[0]) - 1) % Math.round(siphon.input.modulus.coordinatesX * cellsPerRow) <=
+        Math.round(siphon.input.modulus.coordinatesXRange * cellsPerRow) //&&
+        //(Math.abs(cell.coordinates[1]) - 1) % Math.round(siphon.input.modulus.coordinatesY * cellsPerColumn) <=
+        //Math.round(siphon.input.modulus.coordinatesYRange * cellsPerColumn)
+    ) {
+        //equalize(cell, siphon.input.equalize.amount);
+        siphonEnergy(cell, cell.neighbors.directions[siphon.input.direction], siphon.input.directionMagnitude);
+    }
+    //if (cell.index === 2000 && frameCounter % 10 === 0) console.log(siphon.targets.length);
     // noise
-    //if (Math.random() < 0.1) siphonEnergy(cell, cell.neighbors.all[Math.round(Math.random() * cell.neighbors.all.length)], 30);
+    if (Math.random() < 0.1) siphonEnergy(cell, cell.neighbors.all[Math.round(Math.random() * cell.neighbors.all.length)], 30);
     // movement
     //bigRandomMovements(cell, 150, 10, 24, true, true);
 }
@@ -360,31 +361,29 @@ function input() {
         if (keysDown[KEY_J]) siphon.input.modulus.coordinatesXRange = 1 / 16 / 4;
         if (keysDown[KEY_K]) siphon.input.modulus.coordinatesXRange = 1 / 12 / 4;
         if (keysDown[KEY_L]) siphon.input.modulus.coordinatesXRange = 1 / 8 / 4;
-        if (keysDown[KEY_U]) siphon.input.modulus.coordinatesXRange = 1 / 6 / 4;
-        if (keysDown[KEY_I]) siphon.input.modulus.coordinatesXRange = 1 / 4 / 4;
-        if (keysDown[KEY_O]) siphon.input.modulus.coordinatesXRange = 1 / 3 / 4;
-        if (keysDown[KEY_SEMICOLON]) siphon.input.modulus.coordinatesX = 0.25;
+        if (keysDown[KEY_SEMICOLON]) siphon.input.modulus.coordinatesXRange = 1 / 6 / 4;
+        if (keysDown[KEY_U]) siphon.input.modulus.coordinatesXRange = 1 / 4 / 4;
+        if (keysDown[KEY_I]) siphon.input.modulus.coordinatesXRange = 1 / 3 / 4;
     }
     // changing coordinates modulus
     if (keysDown[KEY_D]) {
         if (keysDown[KEY_J]) siphon.input.modulus.coordinatesX = 1 / 16;
         if (keysDown[KEY_K]) siphon.input.modulus.coordinatesX = 1 / 12;
         if (keysDown[KEY_L]) siphon.input.modulus.coordinatesX = 1 / 8;
-        if (keysDown[KEY_U]) siphon.input.modulus.coordinatesX = 1 / 6;
-        if (keysDown[KEY_I]) siphon.input.modulus.coordinatesX = 1 / 4;
-        if (keysDown[KEY_O]) siphon.input.modulus.coordinatesX = 1 / 3;
-        if (keysDown[KEY_SEMICOLON]) siphon.input.modulus.coordinatesX = 0.25;
+        if (keysDown[KEY_SEMICOLON]) siphon.input.modulus.coordinatesX = 1 / 6;
+        if (keysDown[KEY_U]) siphon.input.modulus.coordinatesX = 1 / 4;
+        if (keysDown[KEY_I]) siphon.input.modulus.coordinatesX = 1 / 3;
     }
     // changing input directionality
     if (keysDown[KEY_F]) {
-        if (keysDown[KEY_I] && !keysDown[KEY_J] && !keysDown[KEY_L]) siphon.input.directions = 0;
-        if (keysDown[KEY_K] && !keysDown[KEY_J] && !keysDown[KEY_L]) siphon.input.directions = 4;
-        if (keysDown[KEY_J] && !keysDown[KEY_I] && !keysDown[KEY_K]) siphon.input.directions = 6;
-        if (keysDown[KEY_L] && !keysDown[KEY_I] && !keysDown[KEY_K]) siphon.input.directions = 2;
-        if (keysDown[KEY_L] && keysDown[KEY_I]) siphon.input.directions = 1;
-        if (keysDown[KEY_L] && keysDown[KEY_K]) siphon.input.directions = 3;
-        if (keysDown[KEY_J] && keysDown[KEY_I]) siphon.input.directions = 7;
-        if (keysDown[KEY_J] && keysDown[KEY_K]) siphon.input.directions = 5;
+        if (keysDown[KEY_I] && !keysDown[KEY_J] && !keysDown[KEY_L]) siphon.input.direction = 0;
+        if (keysDown[KEY_K] && !keysDown[KEY_J] && !keysDown[KEY_L]) siphon.input.direction = 4;
+        if (keysDown[KEY_J] && !keysDown[KEY_I] && !keysDown[KEY_K]) siphon.input.direction = 6;
+        if (keysDown[KEY_L] && !keysDown[KEY_I] && !keysDown[KEY_K]) siphon.input.direction = 2;
+        if (keysDown[KEY_L] && keysDown[KEY_I]) siphon.input.direction = 1;
+        if (keysDown[KEY_L] && keysDown[KEY_K]) siphon.input.direction = 3;
+        if (keysDown[KEY_J] && keysDown[KEY_I]) siphon.input.direction = 7;
+        if (keysDown[KEY_J] && keysDown[KEY_K]) siphon.input.direction = 5;
     }
 }
 
@@ -428,7 +427,7 @@ function equalize(cell, amountOfEnergy) {
     for (var k = 0; k < nsf.length; k++) siphonEnergy(nsf[k], cell, amountOfEnergy);
 }
 
-function blendTargetInluences(cell, arrayOfTargets, amountOfEnergy) {
+function blendTargetInfluences(cell, arrayOfTargets, amountOfEnergy) {
     var e2t = amountOfEnergy, // energy to transfer
         gd = 0, // greatest distance
         t, // target
@@ -532,7 +531,7 @@ function bigRandomMovements(cell, maxEnergyPerTransfer, minFramesBetweenDirectio
             minFramesBetweenDirectionChanges + Math.random () * (maxFramesBetweenDirectionChanges - minFramesBetweenDirectionChanges));
     }
     if (bTowardDirection) siphonEnergy(cell, cell.neighbors.directions[siphon.bigMovementDirection], siphon.bigMovementTransferEnergyAmount);
-    if (bTowardTarget) blendTargetInluences(cell, [siphon.bigMovementTarget.index], siphon.bigMovementTransferEnergyAmount);
+    if (bTowardTarget) blendTargetInfluences(cell, [siphon.bigMovementTarget.index], siphon.bigMovementTransferEnergyAmount);
 }
 
 function distributeEnergyColors(cell, siphonRateScale) {
