@@ -263,12 +263,12 @@ var frameCounter = 1, // using this to avoid Date.now() calls as part of optimiz
                     'index': 30,
                     'indexRange': 5,
                     'coordinatesX': 5,
-                    'coordinatesXRange': 0,
+                    'coordinatesXRange': 7,
                     'coordinatesY': 5,//0.25,
                     'coordinatesYRange': 0//0.03125
                 },
                 'equalize': {
-                    'amount': 2
+                    'amount': 1
                 },
                 'framesBetweenInputs': 5
             }
@@ -307,7 +307,8 @@ setInterval(newMainLoop, 1000 / frameRate);
 //      I.e. you could just run a slightly different program from the get-go, instead of the same program doing checks
 //      all the time and getting the same answers each time.
 function newMainLoop() {
-    input();
+    //input();
+    inputSquares();
     // change the location of the target cell
     //targetCellsControls();
     for (var i = 0; i < cells.length; i++) {
@@ -318,6 +319,7 @@ function newMainLoop() {
         sortNeighbors(cell);
         // move energy around
         distributeEnergy(cell);
+        //distributeEnergySquares(cell);
         //distributeEnergyColors(cell, 2);
         energyToColor(cell);
         modifyColors(cell);
@@ -333,6 +335,21 @@ function newMainLoop() {
 }
 
 function distributeEnergy(cell) {
+    // tracking targets
+    //blendTargetInfluences(cell, siphon.targets, 60);
+    // diffusing
+    equalize(cell, 2);//siphon.input.equalize.amount);
+    if (frameCounter % 1 === 0) siphon.input.modulus.coordinatesX = frameCounter * 5 % 400;
+    if (cell.distanceToIndex[2440] % siphon.input.modulus.coordinatesX < siphon.input.modulus.coordinatesXRange) {
+        //siphonEnergy(cell, cell.neighbors.directions[siphon.input.direction], 30);
+        absorb(cell, 7);
+    }
+    //if (cell.index === 2000 && frameCounter % 10 === 0) console.log(siphon.targets.length);
+    // noise
+    //if (Math.random() < 0.1) siphonEnergy(cell, cell.neighbors.all[Math.round(Math.random() * cell.neighbors.all.length)], 30);
+}
+
+function distributeEnergySquares(cell) {
     // tracking targets
     //blendTargetInfluences(cell, siphon.targets, 60);
     // diffusing
@@ -352,6 +369,35 @@ function distributeEnergy(cell) {
 }
 
 function input() {
+    // KEY:
+    // With W down:
+    //     IJKL move energy in the directions associated with IJKL.
+    //     They only move energy from cells whose index % input.modulus.index is <= input.modulus.indexRange
+    if (siphon.input.noInputUntil <= frameCounter || !siphon.input.noInputUntil) {
+        // changing coordinates modulus range
+        if (keysDown[KEY_S]) {
+            
+        }
+        // changing coordinates modulus
+        if (keysDown[KEY_D]) {
+            
+        }
+        // changing input directionality
+        if (keysDown[KEY_F]) {
+            if (keysDown[KEY_I] && !keysDown[KEY_J] && !keysDown[KEY_L]) siphon.input.direction = 0;
+            if (keysDown[KEY_K] && !keysDown[KEY_J] && !keysDown[KEY_L]) siphon.input.direction = 4;
+            if (keysDown[KEY_J] && !keysDown[KEY_I] && !keysDown[KEY_K]) siphon.input.direction = 6;
+            if (keysDown[KEY_L] && !keysDown[KEY_I] && !keysDown[KEY_K]) siphon.input.direction = 2;
+            if (keysDown[KEY_L] && keysDown[KEY_I]) siphon.input.direction = 1;
+            if (keysDown[KEY_L] && keysDown[KEY_K]) siphon.input.direction = 3;
+            if (keysDown[KEY_J] && keysDown[KEY_I]) siphon.input.direction = 7;
+            if (keysDown[KEY_J] && keysDown[KEY_K]) siphon.input.direction = 5;
+        }
+    siphon.input.noInputUntil = frameCounter + siphon.input.framesBetweenInputs;
+    }
+}
+
+function inputSquares() {
     // KEY:
     // With W down:
     //     IJKL move energy in the directions associated with IJKL.
@@ -388,6 +434,7 @@ function input() {
             if (keysDown[KEY_L] && keysDown[KEY_K]) siphon.input.direction = 3;
             if (keysDown[KEY_J] && keysDown[KEY_I]) siphon.input.direction = 7;
             if (keysDown[KEY_J] && keysDown[KEY_K]) siphon.input.direction = 5;
+            console.log('direction: ' + siphon.input.direction);
         }
     siphon.input.noInputUntil = frameCounter + siphon.input.framesBetweenInputs;
     }
